@@ -56,7 +56,8 @@ repos:
         name: Prevent Apple metadata artifacts
         entry: python3 scripts/check_apple_metadata.py
         language: system
-        files: '(^|/)(\._[^/]+|\.DS_Store|\.AppleDouble)(/|$)|(^|/)\.(Spotlight-V100|Trashes)(/|$)'
+        files: >-
+          (^|/)(\._[^/]+|\.DS_Store|\.AppleDouble)(/|$)|(^|/)\.(Spotlight-V100|Trashes)(/|$)
         pass_filenames: true
         stages: [commit]
 
