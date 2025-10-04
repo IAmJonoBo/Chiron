@@ -42,7 +42,7 @@ repos:
     rev: v1.4.0
     hooks:
       - id: detect-secrets
-        args: ['--baseline', '.secrets.baseline']
+        args: ["--baseline", ".secrets.baseline"]
 
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v3.13.0
@@ -52,6 +52,14 @@ repos:
 
   - repo: local
     hooks:
+      - id: block-apple-metadata
+        name: Prevent Apple metadata artifacts
+        entry: python3 scripts/check_apple_metadata.py
+        language: system
+        files: '(^|/)(\._[^/]+|\.DS_Store|\.AppleDouble)(/|$)|(^|/)\.(Spotlight-V100|Trashes)(/|$)'
+        pass_filenames: true
+        stages: [commit]
+
       - id: pytest
         name: pytest
         entry: uv run pytest
@@ -62,14 +70,18 @@ repos:
 
       - id: sbom-check
         name: Check SBOM freshness
-        entry: bash -c 'if [ -f sbom.json ]; then echo "SBOM exists"; else echo "⚠️  SBOM missing - run: syft . -o cyclonedx-json=sbom.json"; fi'
+        entry: >-
+          bash -c 'if [ -f sbom.json ]; then echo "SBOM exists"; else
+          echo "⚠️  SBOM missing - run: syft . -o cyclonedx-json=sbom.json"; fi'
         language: system
         files: pyproject.toml
         pass_filenames: false
 
       - id: vulnerability-scan
         name: Vulnerability scan
-        entry: bash -c 'if command -v grype &> /dev/null; then grype . --fail-on medium; else echo "⚠️  Install grype for vulnerability scanning"; fi'
+        entry: >-
+          bash -c 'if command -v grype &> /dev/null; then grype . --fail-on medium;
+          else echo "⚠️  Install grype for vulnerability scanning"; fi'
         language: system
         stages: [push]
         pass_filenames: false

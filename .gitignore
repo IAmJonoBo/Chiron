@@ -137,6 +137,12 @@ cython_debug/
 # OS
 .DS_Store
 Thumbs.db
+._*
+.AppleDouble
+.Spotlight-V100
+.Trashes
+Icon?
+__MACOSX/
 
 # Airgap bundles
 airgap-bundles/

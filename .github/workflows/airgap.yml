@@ -96,7 +96,7 @@ jobs:
           opentelemetry-exporter-otlp>=1.37.0
           EOF
 
-          # Security requirements  
+          # Security requirements
           cat > requirements-security.txt << EOF
           chiron[security]
           bandit>=1.7.0
@@ -120,15 +120,15 @@ jobs:
               f.write('<h1>Chiron Offline Package Index</h1>\n')
               f.write('<p>Generated on $(date)</p>\n')
               f.write('<h2>Wheel Files</h2>\n<ul>\n')
-              
+
               for wheel in sorted(wheels):
                   f.write(f'<li><a href="{wheel.name}">{wheel.name}</a></li>\n')
-              
+
               f.write('</ul>\n<h2>Source Distributions</h2>\n<ul>\n')
-              
+
               for tarball in sorted(tarballs):
                   f.write(f'<li><a href="{tarball.name}">{tarball.name}</a></li>\n')
-              
+
               f.write('</ul>\n</body>\n</html>')
           EOF
 

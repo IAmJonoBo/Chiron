@@ -1,0 +1,37 @@
+name: Apple Metadata Guard
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ensure-clean-repo:
+    name: Ensure repository is free of Apple metadata artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan for Apple metadata files
+        run: |
+          set -euo pipefail
+
+          PATTERN='(^|/)\._|(^|/)\.DS_Store$|(^|/)\.AppleDouble($|/)|(^|/)\.Spotlight-V100($|/)|(^|/)\.Trashes($|/)|(^|/)Icon\?($|/)|(^|/)__MACOSX($|/)'
+
+          matches=$(git ls-files -z | tr '\0' '\n' | grep -E "$PATTERN" || true)
+
+          if [[ -n "${matches}" ]]; then
+            echo "❌ Detected Apple metadata artifacts tracked in the repository:" >&2
+            echo "${matches}" >&2
+            echo >&2
+            echo "Run scripts/cleanup-macos-cruft.sh locally and recommit without these artifacts." >&2
+            exit 1
+          fi
+
+          echo "✅ No Apple metadata artifacts found."
