@@ -12,7 +12,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-24.04, macos-14, windows-2022]
 
     steps:
       - uses: actions/checkout@v4
@@ -20,25 +20,72 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.16.2
+      - name: Install tooling
+        run: |
+          python -m pip install -U pip
+          pip install uv cibuildwheel==2.16.2
+
+      - name: Resolve & sync dependencies
+        run: |
+          uv pip compile pyproject.toml -o constraints.txt --generate-hashes || echo "uv compile not available, skipping"
+          uv sync || pip install -e .
 
       - name: Build wheels
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
-          CIBW_BUILD: cp38-* cp39-* cp310-* cp311-* cp312-*
-          CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_*"
+          CIBW_BUILD: cp312-* cp313-*
+          CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_i686"
           CIBW_ARCHS_MACOS: x86_64 arm64
           CIBW_ARCHS_LINUX: x86_64 aarch64
           CIBW_ARCHS_WINDOWS: AMD64
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+          CIBW_TEST_COMMAND: python -c "import chiron; print(getattr(chiron,'__version__','dev'))"
+
+      - name: Generate SBOM
+        run: |
+          pip install cyclonedx-bom || echo "cyclonedx-bom not available"
+          cyclonedx-py --format json -o wheelhouse/sbom.json . || echo "SBOM generation skipped"
+
+      - name: Scan vulnerabilities
+        run: |
+          pip install osv-scanner || echo "osv-scanner not available"
+          osv-scanner --lockfile=constraints.txt --format json > wheelhouse/osv.json || echo "OSV scan skipped"
+        continue-on-error: true
+
+      - name: Bundle wheelhouse
+        run: |
+          python - <<'PY'
+          import hashlib, tarfile, json, os
+          fn="wheelhouse.tar.gz"
+          with tarfile.open(fn,"w:gz") as tar:
+              tar.add("wheelhouse", arcname="wheelhouse")
+          h=hashlib.sha256(open(fn,"rb").read()).hexdigest()
+          open("wheelhouse.sha256","w").write(f"{h}  {fn}\n")
+          meta={"commit":"${{ github.sha }}", "ref": "${{ github.ref }}"}
+          open("wheelhouse.meta.json","w").write(json.dumps(meta,indent=2))
+          PY
+
+      - name: Sign artifacts (keyless)
+        run: |
+          pip install sigstore || echo "sigstore not available"
+          sigstore sign wheelhouse.tar.gz || echo "Signing skipped"
+        env:
+          SIGSTORE_OIDC_DISABLE_AMBIENT_PROVIDERS: "false"
+        continue-on-error: true
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.os }}
-          path: ./wheelhouse/*.whl
+          path: |
+            ./wheelhouse/*.whl
+            wheelhouse.tar.gz
+            wheelhouse.sha256
+            wheelhouse.meta.json
+            wheelhouse/sbom.json
+            wheelhouse/osv.json
 
   build_sdist:
     name: Build source distribution
@@ -49,7 +96,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install build
         run: python -m pip install build

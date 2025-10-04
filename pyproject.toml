@@ -17,15 +17,13 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Security",
   "Topic :: System :: Monitoring",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.118.0",
   "uvicorn[standard]>=0.37.0",
@@ -40,6 +38,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+cli = [
+  "typer>=0.12",
+]
+otel = [
+  "opentelemetry-sdk>=1.37.0",
+  "opentelemetry-exporter-otlp>=1.37.0",
+  "opentelemetry-instrumentation-fastapi>=0.42b0",
+]
 dev = [
   "pytest>=8.4.2",
   "pytest-cov>=7.0.0",
@@ -111,7 +117,7 @@ markers = [
 
 # Type checking configuration
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
@@ -134,7 +140,7 @@ disallow_untyped_defs = false
 
 # Linting and formatting configuration
 [tool.ruff]
-target-version = "py39"
+target-version = "py312"
 line-length = 88
 select = [
   "E",   # pycodestyle errors
@@ -223,3 +229,19 @@ allowed_tags = [
 ]
 minor_tags = ["feat"]
 patch_tags = ["fix", "perf"]
+
+# cibuildwheel configuration
+[tool.cibuildwheel]
+build = "cp312-* cp313-*"
+skip = "pp* *-musllinux_i686 *_i686"
+test-command = "python -c \"import chiron; print(getattr(chiron,'__version__','dev'))\""
+
+[tool.cibuildwheel.linux]
+repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
+
+[tool.cibuildwheel.macos]
+repair-wheel-command = "delocate-wheel -w {dest_dir} -v {wheel}"
+
+[tool.cibuildwheel.windows]
+before-build = "pip install delvewheel"
+repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
