@@ -17,10 +17,8 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Security",
   "Topic :: System :: Monitoring",
@@ -234,7 +232,7 @@ patch_tags = ["fix", "perf"]
 
 # cibuildwheel configuration
 [tool.cibuildwheel]
-build = "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"
+build = "cp312-* cp313-*"
 skip = "pp* *-musllinux_i686 *_i686"
 test-command = "python -c \"import chiron; print(getattr(chiron,'__version__','dev'))\""
 
