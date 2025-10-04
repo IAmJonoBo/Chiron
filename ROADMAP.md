@@ -34,13 +34,13 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 - ✅ `.github/workflows/` - CI/CD pipelines
 - ✅ `.devcontainer/` - Dev container configuration
 
-#### 4. pyproject.toml Configuration 🚧
+#### 4. pyproject.toml Configuration ✅
 - ✅ Basic configuration with Hatchling
 - ✅ Optional dependencies for dev, security, service, docs
-- 🚧 Update requires-python to >=3.12 (frontier spec)
-- 🚧 Add cibuildwheel configuration to pyproject.toml
-- 🚧 Add typer to CLI optional dependencies
-- 🚧 Configure wheel repair commands (auditwheel/delocate/delvewheel)
+- ✅ Update requires-python to >=3.12 (frontier spec)
+- ✅ Add cibuildwheel configuration to pyproject.toml
+- ✅ Add typer to CLI optional dependencies
+- ✅ Configure wheel repair commands (auditwheel/delocate/delvewheel)
 
 ### Dependency Management (Section 5)
 
@@ -82,16 +82,16 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 - ✅ Coverage reporting
 - ✅ Build distribution artifacts
 
-#### 6.2 Wheels Workflow (wheels.yml) 🚧
+#### 6.2 Wheels Workflow (wheels.yml) ✅
 - ✅ Basic cibuildwheel setup
 - ✅ Multi-OS wheel building
 - ✅ Multi-architecture support
-- 🚧 Update to use manylinux_2_28 (currently uses defaults)
-- 🚧 Add SBOM generation in wheels workflow
-- 🚧 Add OSV vulnerability scanning
-- 🚧 Add artifact signing with cosign
-- 🚧 Create wheelhouse bundle with checksums
-- 🚧 Add SLSA provenance generation
+- ✅ Update to use manylinux_2_28 (frontier spec)
+- ✅ Add SBOM generation in wheels workflow (CycloneDX + Syft)
+- ✅ Add OSV vulnerability scanning
+- ✅ Add artifact signing with cosign (Sigstore keyless)
+- ✅ Create wheelhouse bundle with checksums
+- ✅ Add SLSA provenance metadata generation
 
 #### 6.3 Release Workflow (release.yml) ✅
 - ✅ PyPI trusted publishing (OIDC)
@@ -134,13 +134,13 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 
 ### Security & Supply Chain (Section 10)
 
-#### 10. Security Hardening 🚧
+#### 10. Security Hardening ✅
 - ✅ SBOM generation (Syft, CycloneDX)
 - ✅ Vulnerability scanning (Grype, OSV, Safety)
 - ✅ Security scanning (Bandit, Semgrep)
 - ✅ Supply chain modules implemented
-- 🚧 Add cosign signing to wheels workflow
-- 🚧 Add SLSA provenance generation
+- ✅ Add cosign signing to wheels workflow
+- ✅ Add SLSA provenance metadata generation
 - 🚧 Implement --require-hashes in CI
 
 ### CLI Features (Section 12)
@@ -225,11 +225,11 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 
 ## Priority Implementation Plan
 
-### Phase 1: Immediate (This Sprint) 🚧
-1. 🚧 Update pyproject.toml with cibuildwheel configuration
-2. 🚧 Enhance wheels.yml workflow with SBOM, signing, and bundling
-3. 🚧 Update requires-python to >=3.12 for frontier spec
-4. 🚧 Add repair wheel commands for all platforms
+### Phase 1: Immediate (This Sprint) ✅
+1. ✅ Update pyproject.toml with cibuildwheel configuration
+2. ✅ Enhance wheels.yml workflow with SBOM, signing, and bundling
+3. ✅ Update requires-python to >=3.12 for frontier spec
+4. ✅ Add repair wheel commands for all platforms
 
 ### Phase 2: Short-term (Next Sprint) 📋
 1. 📋 Complete verify command implementation

@@ -232,16 +232,21 @@ patch_tags = ["fix", "perf"]
 
 # cibuildwheel configuration
 [tool.cibuildwheel]
-build = "cp312-* cp313-*"
-skip = "pp* *-musllinux_i686 *_i686"
+build = "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"
+skip = "pp* *-musllinux_i686 *_i686 *-win32"
 test-command = "python -c \"import chiron; print(getattr(chiron,'__version__','dev'))\""
 
 [tool.cibuildwheel.linux]
+# Use manylinux_2_28 for frontier spec (glibc 2.28+)
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
 repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
 
 [tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
 repair-wheel-command = "delocate-wheel -w {dest_dir} -v {wheel}"
 
 [tool.cibuildwheel.windows]
+archs = ["AMD64"]
 before-build = "pip install delvewheel"
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
