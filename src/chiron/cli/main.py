@@ -65,9 +65,21 @@ def cli(
 
 
 @cli.command()
+@click.option("--wizard", is_flag=True, help="Use interactive wizard mode")
 @click.pass_context
-def init(ctx: click.Context) -> None:
+def init(ctx: click.Context, wizard: bool) -> None:
     """Initialize a new Chiron project."""
+    if wizard:
+        from chiron.wizard import run_init_wizard
+        
+        try:
+            config = run_init_wizard()
+            # Config is already saved by wizard
+            return
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Wizard cancelled[/yellow]")
+            return
+    
     config_path = Path("chiron.json")
 
     if config_path.exists():
