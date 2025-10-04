@@ -47,6 +47,9 @@ otel = [
   "opentelemetry-exporter-otlp>=1.37.0",
   "opentelemetry-instrumentation-fastapi>=0.42b0",
 ]
+features = [
+  "openfeature-sdk>=0.7.0",
+]
 dev = [
   "pytest>=8.4.2",
   "pytest-cov>=7.0.0",

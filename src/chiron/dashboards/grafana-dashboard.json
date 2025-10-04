@@ -1,0 +1,170 @@
+{
+  "dashboard": {
+    "title": "Chiron - Build & Release Pipeline",
+    "description": "Overview of Chiron build and release operations",
+    "tags": ["chiron", "build", "security"],
+    "timezone": "utc",
+    "schemaVersion": 27,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Build Success Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(chiron_build_total{status=\"success\"}[5m])) / sum(rate(chiron_build_total[5m])) * 100",
+            "legendFormat": "Success Rate"
+          }
+        ],
+        "options": {
+          "unit": "percent",
+          "thresholds": [
+            {"value": 0, "color": "red"},
+            {"value": 90, "color": "yellow"},
+            {"value": 95, "color": "green"}
+          ]
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Build Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(chiron_build_duration_seconds_bucket[5m])) by (le, platform))",
+            "legendFormat": "p95 - {{platform}}"
+          },
+          {
+            "expr": "histogram_quantile(0.50, sum(rate(chiron_build_duration_seconds_bucket[5m])) by (le, platform))",
+            "legendFormat": "p50 - {{platform}}"
+          }
+        ],
+        "options": {
+          "unit": "seconds"
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Vulnerability Scan Results",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "chiron_vulnerabilities_total",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "options": {
+          "columns": ["severity", "package", "count"]
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "SBOM Generation Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(chiron_sbom_generation_total{status=\"success\"}[5m])) / sum(rate(chiron_sbom_generation_total[5m])) * 100",
+            "legendFormat": "SBOM Success Rate"
+          }
+        ],
+        "options": {
+          "unit": "percent",
+          "thresholds": [
+            {"value": 0, "color": "red"},
+            {"value": 95, "color": "yellow"},
+            {"value": 99, "color": "green"}
+          ]
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "Signature Verification Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(chiron_signature_verification_total{status=\"success\"}[5m])) / sum(rate(chiron_signature_verification_total[5m])) * 100",
+            "legendFormat": "Signature Success Rate"
+          }
+        ],
+        "options": {
+          "unit": "percent",
+          "thresholds": [
+            {"value": 0, "color": "red"},
+            {"value": 95, "color": "yellow"},
+            {"value": 99, "color": "green"}
+          ]
+        },
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 8}
+      },
+      {
+        "id": 6,
+        "title": "Wheelhouse Bundle Size",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "chiron_wheelhouse_size_bytes",
+            "legendFormat": "{{platform}}"
+          }
+        ],
+        "options": {
+          "unit": "bytes"
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}
+      },
+      {
+        "id": 7,
+        "title": "Release Pipeline Stages",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(chiron_pipeline_stage_duration_seconds_sum[5m])) by (stage) / sum(rate(chiron_pipeline_stage_duration_seconds_count[5m])) by (stage)",
+            "legendFormat": "{{stage}}"
+          }
+        ],
+        "options": {
+          "unit": "seconds",
+          "stacking": "normal"
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12}
+      },
+      {
+        "id": 8,
+        "title": "Active Feature Flags",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "chiron_feature_flag_status",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "options": {
+          "columns": ["flag_name", "enabled", "description"]
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20}
+      },
+      {
+        "id": 9,
+        "title": "Policy Gate Violations",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(chiron_policy_violations_total[5m])) by (policy_type)",
+            "legendFormat": "{{policy_type}}"
+          }
+        ],
+        "options": {
+          "unit": "short"
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20}
+      }
+    ]
+  }
+}

@@ -175,10 +175,10 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 - 📋 Coverage dashboards
 - 📋 Policy gate visualization
 
-#### 14.3 Feature Flags (OpenFeature) 📋
-- 📋 OpenFeature integration
-- 📋 Safe toggles for sensitive operations
-- 📋 Vendor-agnostic flag management
+#### 14.3 Feature Flags (OpenFeature) ✅
+- ✅ OpenFeature integration
+- ✅ Safe toggles for sensitive operations
+- ✅ Vendor-agnostic flag management
 
 #### 14.4 OCI Distribution ✅
 - ✅ OCI packaging implementation (`oci_packaging.py`)
@@ -193,12 +193,12 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 #### 14.6 Observability UX ✅
 - ✅ OpenTelemetry spans for critical stages
 - ✅ Log-trace correlation
-- 📋 Default dashboard templates
+- ✅ Default dashboard templates (Grafana, Prometheus)
 
-#### 14.7 API Contracts 🚧
+#### 14.7 API Contracts ✅
 - ✅ OpenAPI/FastAPI service
 - ✅ Pact consumer tests skeleton
-- 🚧 Full contract testing implementation
+- ✅ Full contract testing implementation
 
 #### 14.8 Operator-friendly Flows 🚧
 - 🚧 Dry-run defaults for destructive ops
@@ -237,11 +237,11 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 3. ✅ Implement dry-run defaults
 4. ✅ Add SLSA provenance generation
 
-### Phase 3: Medium-term (Next Month) 📋
-1. 📋 Backstage plugin development
-2. 📋 OpenFeature integration
-3. 📋 Enhanced observability dashboards
-4. 📋 Full contract testing suite
+### Phase 3: Medium-term (Next Month) ✅
+1. ✅ Backstage plugin development (skeleton)
+2. ✅ OpenFeature integration
+3. ✅ Enhanced observability dashboards
+4. ✅ Full contract testing suite
 
 ### Phase 4: Long-term (Next Quarter) 📋
 1. 📋 MCP agent mode
