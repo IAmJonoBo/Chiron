@@ -15,24 +15,28 @@ Chiron is designed for organizations that need:
 ## Key Features
 
 ### 🔒 Security & Compliance
+
 - **SBOM Generation**: Automatic Software Bill of Materials in CycloneDX and SPDX formats
 - **Vulnerability Scanning**: Integrated scanning with Grype and Safety
 - **Artifact Signing**: Keyless signing with Sigstore Cosign
 - **SLSA Provenance**: Supply chain attestation and verification
 
 ### 📊 Observability
+
 - **OpenTelemetry Integration**: Distributed tracing and metrics
 - **Structured Logging**: JSON logs with trace correlation
 - **Health Endpoints**: Kubernetes-ready health checks
 - **Performance Monitoring**: Built-in metrics and profiling
 
 ### 🚀 Developer Experience
+
 - **Modern Tooling**: uv for fast dependency management
 - **Dev Containers**: Consistent development environment
 - **Pre-commit Hooks**: Automated code quality checks
 - **Rich CLI**: Comprehensive command-line interface
 
 ### 🏗️ Architecture
+
 - **Library Mode**: Use as a Python library in your applications
 - **Service Mode**: Deploy as a FastAPI service with OpenAPI docs
 - **Plugin System**: Extensible architecture with entry points
@@ -89,21 +93,25 @@ chiron doctor
 ## Use Cases
 
 ### Enterprise Applications
+
 - Secure data processing with audit trails
 - Compliance reporting and documentation
 - Multi-environment deployment with consistent security
 
 ### API Services
+
 - FastAPI services with built-in observability
 - Automatic OpenAPI documentation
 - Health monitoring and alerting
 
 ### CI/CD Pipelines
+
 - Secure build processes with SBOM generation
 - Artifact signing and verification
 - Vulnerability scanning and reporting
 
 ### Air-gapped Environments
+
 - Offline package bundles with verification
 - Internal PyPI mirrors
 - Complete dependency auditing

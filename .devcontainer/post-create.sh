@@ -11,7 +11,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 source $HOME/.cargo/env
 
 # Add uv to PATH
-echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
+echo 'export PATH="$HOME/.cargo/bin:$PATH"' >>~/.bashrc
 
 # Install dependencies
 echo "📦 Installing Python dependencies..."
@@ -37,7 +37,7 @@ curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh 
 
 # Create useful aliases
 echo "📝 Setting up aliases..."
-cat >> ~/.bashrc << 'EOF'
+cat >>~/.bashrc <<'EOF'
 
 # Chiron development aliases
 alias chiron-test="uv run pytest"

@@ -3,6 +3,6 @@
 import sys
 
 if __name__ == "__main__":
-    from chiron.cli import main
+    from chiron.cli.main import cli
 
-    sys.exit(main())
+    sys.exit(cli())

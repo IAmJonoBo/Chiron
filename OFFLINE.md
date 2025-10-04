@@ -170,6 +170,7 @@ Create a `chiron.json` configuration for offline use:
 If you encounter missing dependencies:
 
 1. On a connected system, download the missing package:
+
    ```bash
    uv pip download -d wheelhouse <package-name>
    ```
@@ -186,11 +187,13 @@ If you encounter missing dependencies:
 If you have version conflicts:
 
 1. Check installed versions:
+
    ```bash
    pip list
    ```
 
 2. Uninstall conflicting packages:
+
    ```bash
    pip uninstall <package-name>
    ```
@@ -205,11 +208,13 @@ If you have version conflicts:
 If the service fails to start:
 
 1. Check configuration:
+
    ```bash
    chiron doctor
    ```
 
 2. Run in debug mode:
+
    ```bash
    chiron serve --debug --log-level debug
    ```

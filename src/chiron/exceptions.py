@@ -6,7 +6,7 @@ class ChironError(Exception):
 
     def __init__(self, message: str, details: dict | None = None) -> None:
         """Initialize ChironError.
-        
+
         Args:
             message: Error message
             details: Optional additional error details
@@ -27,7 +27,7 @@ class ChironValidationError(ChironError):
         details: dict | None = None,
     ) -> None:
         """Initialize ChironValidationError.
-        
+
         Args:
             message: Error message
             field: Field that failed validation

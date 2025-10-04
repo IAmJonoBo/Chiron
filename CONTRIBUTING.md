@@ -97,6 +97,7 @@ type(scope): description
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -107,6 +108,7 @@ type(scope): description
 - `ci`: CI/CD changes
 
 **Examples:**
+
 ```
 feat(cli): add new doctor command for health checks
 fix(core): handle None input in process_data method
@@ -149,6 +151,7 @@ git push origin feature/your-feature-name
 - Follow the AAA pattern (Arrange, Act, Assert)
 
 **Test Categories:**
+
 - Unit tests: Test individual functions/methods
 - Integration tests: Test component interactions
 - Contract tests: Test API contracts
@@ -208,6 +211,7 @@ Releases are automated through semantic versioning:
 ## Recognition
 
 Contributors are recognized in:
+
 - Release notes
 - Contributors file
 - Documentation acknowledgments

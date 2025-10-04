@@ -1,9 +1,11 @@
 """Core functionality for Chiron."""
 
 import logging
-import structlog
 from typing import Any, Dict, Optional
-from chiron.exceptions import ChironError, ChironConfigurationError
+
+import structlog
+
+from chiron.exceptions import ChironConfigurationError, ChironError
 
 
 class ChironCore:
@@ -25,7 +27,7 @@ class ChironCore:
         self.config = config or {}
         self.enable_telemetry = enable_telemetry
         self.security_mode = security_mode
-        
+
         # Configure structured logging
         structlog.configure(
             processors=[
@@ -44,12 +46,12 @@ class ChironCore:
             wrapper_class=structlog.stdlib.BoundLogger,
             cache_logger_on_first_use=True,
         )
-        
+
         self.logger = structlog.get_logger(__name__)
-        
+
         if self.enable_telemetry:
             self._setup_telemetry()
-        
+
         if self.security_mode:
             self._setup_security()
 
@@ -57,28 +59,29 @@ class ChironCore:
         """Set up OpenTelemetry instrumentation."""
         try:
             from opentelemetry import trace
+            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+                OTLPSpanExporter,
+            )
             from opentelemetry.sdk.trace import TracerProvider
             from opentelemetry.sdk.trace.export import BatchSpanProcessor
-            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-            
+
             # Set up tracing
             trace.set_tracer_provider(TracerProvider())
             tracer = trace.get_tracer(__name__)
-            
+
             # Configure OTLP exporter
             otlp_exporter = OTLPSpanExporter(
                 endpoint=self.config.get("otlp_endpoint", "http://localhost:4317")
             )
             span_processor = BatchSpanProcessor(otlp_exporter)
             trace.get_tracer_provider().add_span_processor(span_processor)
-            
+
             self.tracer = tracer
             self.logger.info("OpenTelemetry instrumentation enabled")
-            
+
         except ImportError as e:
             self.logger.warning(
-                "OpenTelemetry not available, telemetry disabled",
-                error=str(e)
+                "OpenTelemetry not available, telemetry disabled", error=str(e)
             )
             self.tracer = None
 
@@ -101,13 +104,13 @@ class ChironCore:
             ChironConfigurationError: If configuration is invalid
         """
         required_fields = ["service_name"]
-        
+
         for field in required_fields:
             if field not in self.config:
                 raise ChironConfigurationError(
                     f"Required configuration field '{field}' is missing"
                 )
-        
+
         return True
 
     def health_check(self) -> Dict[str, Any]:
@@ -121,9 +124,11 @@ class ChironCore:
             "version": "0.1.0",
             "telemetry_enabled": self.enable_telemetry,
             "security_mode": self.security_mode,
-            "timestamp": structlog.processors.TimeStamper(fmt="iso")._stamper(),
+            "timestamp": structlog.processors.TimeStamper(fmt="iso")(
+                logger=None, name="", event_dict={}
+            )["timestamp"],
         }
-        
+
         self.logger.info("Health check performed", **status)
         return status
 
@@ -152,14 +157,14 @@ class ChironCore:
             # Security validation
             if self.security_mode:
                 self._validate_input(data)
-            
+
             # Process the data
             self.logger.info("Processing data", data_type=type(data).__name__)
-            
+
             # For now, just return the data as-is
             # In a real implementation, this would contain the core business logic
             return {"processed": True, "original": data}
-            
+
         except Exception as e:
             self.logger.error("Data processing failed", error=str(e))
             raise ChironError(f"Failed to process data: {e}") from e
@@ -168,7 +173,7 @@ class ChironCore:
         """Validate input data for security."""
         if data is None:
             raise ChironError("Input data cannot be None")
-        
+
         # Additional security validations would go here
         # - Input sanitization
         # - Schema validation

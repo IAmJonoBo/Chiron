@@ -125,7 +125,7 @@ chiron serve        # Start the service
 
 - **Distributed Tracing**: OpenTelemetry with OTLP export
 - **Structured Logging**: JSON logs with trace correlation
-- **Metrics**: Prometheus-compatible metrics
+- **Metrics**: OpenTelemetry-compatible metrics
 - **Health Checks**: Kubernetes-ready endpoints (`/health`, `/ready`, `/live`)
 
 ## 🌐 Service Mode
@@ -242,9 +242,9 @@ Chiron is actively developed and maintained. We follow semantic versioning and m
 
 <div align="center">
 
-**[Documentation](https://github.com/IAmJonoBo/Chiron/docs)** • 
-**[PyPI](https://pypi.org/project/chiron/)** • 
-**[Issues](https://github.com/IAmJonoBo/Chiron/issues)** • 
+**[Documentation](https://github.com/IAmJonoBo/Chiron/docs)** •
+**[PyPI](https://pypi.org/project/chiron/)** •
+**[Issues](https://github.com/IAmJonoBo/Chiron/issues)** •
 **[Discussions](https://github.com/IAmJonoBo/Chiron/discussions)**
 
 Made with ❤️ for the Python community

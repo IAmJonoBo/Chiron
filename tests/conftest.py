@@ -1,7 +1,8 @@
 """Test configuration and fixtures."""
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
 
 from chiron.core import ChironCore
 

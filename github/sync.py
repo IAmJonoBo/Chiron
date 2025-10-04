@@ -67,7 +67,7 @@ class GitHubArtifactSync:
 
     def __init__(
         self,
-        repo: str = "IAmJonoBo/Prometheus",
+        repo: str = "IAmJonoBo/Chiron",
         target_dir: Path | None = None,
         verbose: bool = False,
     ):
@@ -320,7 +320,7 @@ def download_artifacts(
     run_id: int | str,
     artifact_names: list[str] | None = None,
     output_dir: Path | None = None,
-    repo: str = "IAmJonoBo/Prometheus",
+    repo: str = "IAmJonoBo/Chiron",
 ) -> SyncResult:
     """
     Convenience function to download artifacts from a workflow run.
@@ -401,7 +401,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--repo",
-        default="IAmJonoBo/Prometheus",
+        default="IAmJonoBo/Chiron",
         help="GitHub repository (owner/repo)",
     )
     parser.add_argument(

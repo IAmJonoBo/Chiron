@@ -1,0 +1,12 @@
+{
+  "service_name": "chiron-service",
+  "version": "0.1.0",
+  "telemetry": {
+    "enabled": true,
+    "otlp_endpoint": "http://localhost:4317"
+  },
+  "security": {
+    "enabled": true,
+    "audit_logging": true
+  }
+}

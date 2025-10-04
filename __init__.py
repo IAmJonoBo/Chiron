@@ -1,8 +1,8 @@
 """Chiron — Packaging, dependency management, and developer tooling subsystem.
 
 Chiron handles all aspects of dependency management, packaging, offline deployment,
-remediation, and GitHub synchronization. It is a separate subsystem from the core
-Prometheus event-driven pipeline.
+remediation, and GitHub synchronization. It provides comprehensive tooling for
+modern Python project management and air-gapped deployments.
 
 Modules:
 - packaging: Offline packaging orchestration and metadata handling

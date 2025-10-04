@@ -9,7 +9,6 @@ from pydantic import BaseModel
 from chiron.core import ChironCore
 from chiron.exceptions import ChironError
 
-
 logger = structlog.get_logger(__name__)
 router = APIRouter()
 
@@ -49,27 +48,27 @@ async def readiness_check(core: ChironCore = Depends(get_core)) -> HealthRespons
     try:
         # Perform more thorough checks
         health_data = core.health_check()
-        
+
         # Add readiness-specific checks
         checks = {
             "config_valid": True,
             "dependencies": "ok",
         }
-        
+
         # Validate configuration
         try:
             core.validate_config()
         except ChironError:
             checks["config_valid"] = False
-        
+
         health_data["checks"] = checks
-        
+
         # Return unhealthy if any critical checks fail
         if not checks["config_valid"]:
             raise HTTPException(status_code=503, detail="Service not ready")
-        
+
         return HealthResponse(**health_data)
-        
+
     except ChironError as e:
         logger.error("Readiness check failed", error=str(e))
         raise HTTPException(status_code=503, detail="Service not ready") from e

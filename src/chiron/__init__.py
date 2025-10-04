@@ -13,7 +13,7 @@ from chiron.exceptions import ChironError, ChironValidationError
 
 __all__ = [
     "ChironCore",
-    "ChironError", 
+    "ChironError",
     "ChironValidationError",
     "__version__",
 ]
