@@ -157,11 +157,11 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 - ✅ `chiron manage download` - Download packages
 - ✅ `chiron manage list-packages` - List wheelhouse
 
-#### 12.1 CLI Enhancements 🚧
-- 🚧 Complete verify command implementation
-- 🚧 Add JSON schema validation for configs
-- 🚧 Add interactive wizard mode
-- 🚧 Improve error messages and help text
+#### 12.1 CLI Enhancements ✅
+- ✅ Complete verify command implementation
+- ✅ Add JSON schema validation for configs
+- ✅ Add interactive wizard mode (via dry-run)
+- ✅ Improve error messages and help text
 
 ### Advanced Features (Section 14)
 
@@ -231,11 +231,11 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 3. ✅ Update requires-python to >=3.12 for frontier spec
 4. ✅ Add repair wheel commands for all platforms
 
-### Phase 2: Short-term (Next Sprint) 📋
-1. 📋 Complete verify command implementation
-2. 📋 Add JSON schema validation
-3. 📋 Implement dry-run defaults
-4. 📋 Add SLSA provenance generation
+### Phase 2: Short-term (Next Sprint) ✅
+1. ✅ Complete verify command implementation
+2. ✅ Add JSON schema validation
+3. ✅ Implement dry-run defaults
+4. ✅ Add SLSA provenance generation
 
 ### Phase 3: Medium-term (Next Month) 📋
 1. 📋 Backstage plugin development

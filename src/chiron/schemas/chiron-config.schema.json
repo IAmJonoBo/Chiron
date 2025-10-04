@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/IAmJonoBo/Chiron/schemas/chiron-config.schema.json",
+  "title": "Chiron Configuration",
+  "description": "Configuration schema for Chiron frontier-grade dependency & wheelhouse system",
+  "type": "object",
+  "properties": {
+    "service_name": {
+      "type": "string",
+      "description": "Name of the Chiron service",
+      "default": "chiron-service",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "string",
+      "description": "Version of the configuration",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "telemetry": {
+      "type": "object",
+      "description": "OpenTelemetry configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable/disable telemetry",
+          "default": true
+        },
+        "otlp_endpoint": {
+          "type": "string",
+          "description": "OTLP endpoint URL",
+          "format": "uri",
+          "default": "http://localhost:4317"
+        },
+        "service_namespace": {
+          "type": "string",
+          "description": "Service namespace for telemetry"
+        },
+        "export_interval_ms": {
+          "type": "integer",
+          "description": "Export interval in milliseconds",
+          "minimum": 1000,
+          "default": 5000
+        }
+      },
+      "required": ["enabled"],
+      "additionalProperties": false
+    },
+    "security": {
+      "type": "object",
+      "description": "Security configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable/disable security features",
+          "default": true
+        },
+        "audit_logging": {
+          "type": "boolean",
+          "description": "Enable/disable audit logging",
+          "default": true
+        },
+        "require_signatures": {
+          "type": "boolean",
+          "description": "Require artifact signatures",
+          "default": false
+        },
+        "require_sbom": {
+          "type": "boolean",
+          "description": "Require SBOM for all artifacts",
+          "default": false
+        },
+        "allowed_registries": {
+          "type": "array",
+          "description": "List of allowed package registries",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "default": ["https://pypi.org/simple"]
+        }
+      },
+      "required": ["enabled"],
+      "additionalProperties": false
+    },
+    "wheelhouse": {
+      "type": "object",
+      "description": "Wheelhouse configuration",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to wheelhouse directory",
+          "default": "wheelhouse"
+        },
+        "include_extras": {
+          "type": "array",
+          "description": "List of extras to include",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "platforms": {
+          "type": "array",
+          "description": "Target platforms for wheels",
+          "items": {
+            "type": "string",
+            "enum": ["linux", "macos", "windows"]
+          },
+          "default": ["linux", "macos", "windows"]
+        },
+        "python_versions": {
+          "type": "array",
+          "description": "Python versions to build for",
+          "items": {
+            "type": "string",
+            "pattern": "^3\\.(8|9|10|11|12|13)$"
+          },
+          "default": ["3.12", "3.13"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "airgap": {
+      "type": "object",
+      "description": "Air-gap bundle configuration",
+      "properties": {
+        "output_path": {
+          "type": "string",
+          "description": "Path for air-gap bundle output",
+          "default": "airgap-bundle.tar.gz"
+        },
+        "include_security_tools": {
+          "type": "boolean",
+          "description": "Include security scanning tools",
+          "default": false
+        },
+        "include_dev_tools": {
+          "type": "boolean",
+          "description": "Include development tools",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "policy": {
+      "type": "object",
+      "description": "Policy configuration",
+      "properties": {
+        "allow_prerelease": {
+          "type": "boolean",
+          "description": "Allow pre-release versions",
+          "default": false
+        },
+        "max_age_days": {
+          "type": "integer",
+          "description": "Maximum age of dependencies in days",
+          "minimum": 0
+        },
+        "blocked_packages": {
+          "type": "array",
+          "description": "List of blocked package names",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "allowed_licenses": {
+          "type": "array",
+          "description": "List of allowed licenses",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["service_name", "version"],
+  "additionalProperties": true
+}
