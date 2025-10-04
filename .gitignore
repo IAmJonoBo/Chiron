@@ -150,6 +150,7 @@ airgap-bundles/
 
 # uv
 .uv/
+uv/
 uv.lock
 
 # Additional Chiron-specific ignores

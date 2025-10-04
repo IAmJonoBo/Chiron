@@ -46,20 +46,32 @@ jobs:
 
       - name: Create wheelhouse
         run: |
+          set -euo pipefail
+
           mkdir -p wheelhouse
 
-          # Download current project and dependencies
-          if [[ "${{ github.event.inputs.include_extras }}" == "true" ]]; then
+          INCLUDE_EXTRAS="${{ github.event.inputs.include_extras }}"
+          if [[ -z "${INCLUDE_EXTRAS}" ]]; then
+            INCLUDE_EXTRAS="true"
+          fi
+
+          if [[ "${INCLUDE_EXTRAS}" == "true" ]]; then
             uv pip download -d wheelhouse ".[all]"
           else
             uv pip download -d wheelhouse .
           fi
 
-                    # Download core dependencies
-          uv pip download -d wheelhouse fastapi uvicorn
+          # Ensure critical runtime bundles are always present
+          uv pip download -d wheelhouse "chiron[service]"
+          uv pip download -d wheelhouse "chiron[security]"
 
-          # Download security tools
-          uv pip download -d wheelhouse bandit safety
+          # Extra guard rails for remote runners
+          uv pip download -d wheelhouse "chiron[observability]"
+          uv pip download -d wheelhouse "chiron[pii]"
+          uv pip download -d wheelhouse "chiron[rag]"
+          uv pip download -d wheelhouse "chiron[llm]"
+          uv pip download -d wheelhouse "chiron[governance]"
+          uv pip download -d wheelhouse "chiron[integrations]"
 
       - name: Install tools for bundle creation
         run: |
@@ -78,22 +90,31 @@ jobs:
         run: |
           grype wheelhouse/ -o json --file wheelhouse-vulnerabilities.json || true
 
+      - name: Bundle uv binary for offline install
+        run: |
+          set -euo pipefail
+
+          mkdir -p uv
+          UV_PATH="$(command -v uv)"
+          if [[ -z "${UV_PATH}" ]]; then
+            echo "uv binary not found on PATH" >&2
+            exit 1
+          fi
+
+          cp "${UV_PATH}" uv/
+          chmod +x uv/uv
+          uv --version > uv/VERSION.txt
+
       - name: Create requirements files
         run: |
           # Base requirements
           cat > requirements.txt << EOF
-          chiron
-          fastapi>=0.104.0
-          uvicorn[standard]>=0.24.0
+          chiron[all]
           EOF
 
           # Production requirements
           cat > requirements-prod.txt << EOF
-          chiron[service]
-          gunicorn>=21.2.0
-          opentelemetry-api>=1.37.0
-          opentelemetry-sdk>=1.37.0
-          opentelemetry-exporter-otlp>=1.37.0
+          chiron[service,observability,governance,integrations]
           EOF
 
           # Security requirements
@@ -144,13 +165,27 @@ jobs:
           python3 -c "import sys; assert sys.version_info >= (3, 9), 'Python 3.9+ required'"
 
           # Install from wheelhouse
-          pip3 install --no-index --find-links=wheelhouse chiron
+          pip3 install --no-index --find-links=wheelhouse "chiron[all]"
 
           # Verify installation
           python3 -c "import chiron; print(f'✅ Chiron {chiron.__version__} installed successfully')"
 
           # Run health check
           chiron doctor
+
+          if [[ -x uv/uv ]]; then
+            echo "📦 Installing bundled uv binary to \"${HOME}/.local/bin\"..."
+            TARGET_DIR="${HOME}/.local/bin"
+            mkdir -p "${TARGET_DIR}"
+            if install -m 0755 uv/uv "${TARGET_DIR}/uv"; then
+              echo "✅ uv installed at ${TARGET_DIR}/uv"
+            else
+              echo "⚠️  Failed to install uv automatically. Copy uv/uv to a directory on your PATH manually (e.g. sudo install -m 0755 uv/uv /usr/local/bin/uv)." >&2
+            fi
+            if ! command -v uv >/dev/null 2>&1; then
+              echo "ℹ️  Add ${TARGET_DIR} to your PATH to use the bundled uv binary."
+            fi
+          fi
 
           echo "🎉 Installation complete!"
           echo "Start the service with: chiron serve"
@@ -168,6 +203,7 @@ jobs:
 
           tar -czf "airgap-bundles/${BUNDLE_NAME}.tar.gz" \
             wheelhouse/ \
+            uv/ \
             requirements*.txt \
             wheelhouse-sbom*.json \
             wheelhouse-vulnerabilities.json \
@@ -194,6 +230,7 @@ jobs:
 
           Contents:
           - Wheelhouse with all dependencies
+          - uv runtime binary and version metadata
           - SBOM in CycloneDX and SPDX formats
           - Vulnerability scan report
           - Installation scripts and documentation

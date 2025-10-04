@@ -43,9 +43,43 @@ cli = [
   "jsonschema>=4.23.0",
 ]
 otel = [
+cli = ["typer>=0.19.2"]
+observability = [
+  "opentelemetry-api>=1.37.0",
   "opentelemetry-sdk>=1.37.0",
   "opentelemetry-exporter-otlp>=1.37.0",
   "opentelemetry-instrumentation-fastapi>=0.42b0",
+  "opentelemetry-instrumentation-logging>=0.42b0",
+  "opentelemetry-instrumentation-requests>=0.42b0",
+]
+pii = [
+  "spacy>=3.8.7",
+  "spacy-transformers>=1.3.9",
+  "huggingface-hub>=0.35.3",
+  "sentence-transformers>=5.1.1",
+]
+rag = [
+  "langchain>=0.3.27",
+  "chromadb>=1.1.0",
+  "qdrant-client>=1.15.1",
+  "faiss-cpu>=1.12.0",
+]
+llm = [
+  "openai>=2.1.0",
+  "anthropic>=0.69.0",
+  "google-generativeai>=0.8.5",
+  "cohere>=5.18.0",
+]
+governance = [
+  "policyuniverse>=1.5.1.20231109",
+  "jsonschema>=4.25.1",
+  "pyyaml>=6.0.3",
+]
+integrations = [
+  "boto3>=1.40.45",
+  "azure-identity>=1.25.0",
+  "google-cloud-storage>=3.4.0",
+  "snowflake-connector-python>=3.17.4",
 ]
 features = [
   "openfeature-sdk>=0.7.0",
@@ -67,13 +101,52 @@ security = [
   "bandit>=1.8.6",
   "semgrep>=1.139.0",
 ]
-service = ["gunicorn>=21.2.0"]
+service = ["gunicorn>=23.0.0"]
 docs = [
   "mkdocs>=1.6.1",
   "mkdocs-material>=9.6.21",
   "mkdocstrings[python]>=0.30.1",
 ]
-test = ["pact-python>=2.0.0", "httpx>=0.25.0", "pytest-benchmark>=4.0.0"]
+test = ["pact-python>=2.3.3", "httpx>=0.28.1", "pytest-benchmark>=5.1.0"]
+all = [
+  "typer>=0.19.2",
+  "opentelemetry-api>=1.37.0",
+  "opentelemetry-sdk>=1.37.0",
+  "opentelemetry-exporter-otlp>=1.37.0",
+  "opentelemetry-instrumentation-fastapi>=0.42b0",
+  "opentelemetry-instrumentation-logging>=0.42b0",
+  "opentelemetry-instrumentation-requests>=0.42b0",
+  "spacy>=3.8.7",
+  "spacy-transformers>=1.3.9",
+  "huggingface-hub>=0.35.3",
+  "sentence-transformers>=5.1.1",
+  "langchain>=0.3.27",
+  "chromadb>=1.1.0",
+  "qdrant-client>=1.15.1",
+  "faiss-cpu>=1.12.0",
+  "openai>=2.1.0",
+  "anthropic>=0.69.0",
+  "google-generativeai>=0.8.5",
+  "cohere>=5.18.0",
+  "policyuniverse>=1.5.1.20231109",
+  "jsonschema>=4.25.1",
+  "pyyaml>=6.0.3",
+  "boto3>=1.40.45",
+  "azure-identity>=1.25.0",
+  "google-cloud-storage>=3.4.0",
+  "snowflake-connector-python>=3.17.4",
+  "cyclonedx-bom>=7.1.0",
+  "safety>=3.6.2",
+  "bandit>=1.8.6",
+  "semgrep>=1.139.0",
+  "gunicorn>=23.0.0",
+  "mkdocs>=1.6.1",
+  "mkdocs-material>=9.6.21",
+  "mkdocstrings[python]>=0.30.1",
+  "pact-python>=2.3.3",
+  "httpx>=0.28.1",
+  "pytest-benchmark>=5.1.0",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/IAmJonoBo/Chiron"

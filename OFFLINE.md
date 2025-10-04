@@ -21,7 +21,7 @@ cd chiron-airgap-YYYYMMDD-HHMMSS
 Install Chiron and all dependencies from the included wheelhouse:
 
 ```bash
-pip install --no-index --find-links=wheelhouse chiron
+pip install --no-index --find-links=wheelhouse "chiron[all]"
 ```
 
 Or install specific packages:
@@ -178,6 +178,7 @@ If you encounter missing dependencies:
 2. Transfer the wheel file to your offline environment
 
 3. Install with:
+
    ```bash
    pip install --no-index --find-links=wheelhouse <package-name>
    ```
@@ -199,6 +200,7 @@ If you have version conflicts:
    ```
 
 3. Reinstall from wheelhouse:
+
    ```bash
    pip install --no-index --find-links=wheelhouse <package-name>
    ```
@@ -220,6 +222,7 @@ If the service fails to start:
    ```
 
 3. Check logs:
+
    ```bash
    tail -f /var/log/chiron.log
    ```
