@@ -39,11 +39,9 @@ dependencies = [
 
 [project.optional-dependencies]
 cli = [
-  "typer>=0.12",
+  "typer>=0.19.2",
   "jsonschema>=4.23.0",
 ]
-otel = [
-cli = ["typer>=0.19.2"]
 observability = [
   "opentelemetry-api>=1.37.0",
   "opentelemetry-sdk>=1.37.0",
