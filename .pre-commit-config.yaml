@@ -1,0 +1,75 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: check-executables-have-shebangs
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.6
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.1
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-all]
+        args: [--strict, --ignore-missing-imports]
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: [-r, src/]
+        exclude: tests/
+
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
+    rev: v1.3.2
+    hooks:
+      - id: python-safety-dependencies-check
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.13.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: uv run pytest
+        language: system
+        types: [python]
+        stages: [push]
+        pass_filenames: false
+
+      - id: sbom-check
+        name: Check SBOM freshness
+        entry: bash -c 'if [ -f sbom.json ]; then echo "SBOM exists"; else echo "⚠️  SBOM missing - run: syft . -o cyclonedx-json=sbom.json"; fi'
+        language: system
+        files: pyproject.toml
+        pass_filenames: false
+
+      - id: vulnerability-scan
+        name: Vulnerability scan
+        entry: bash -c 'if command -v grype &> /dev/null; then grype . --fail-on medium; else echo "⚠️  Install grype for vulnerability scanning"; fi'
+        language: system
+        stages: [push]
+        pass_filenames: false

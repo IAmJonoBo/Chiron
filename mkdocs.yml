@@ -1,0 +1,107 @@
+site_name: Chiron Documentation
+site_description: Frontier-grade, production-ready Python library and service
+site_url: https://github.com/IAmJonoBo/Chiron
+repo_url: https://github.com/IAmJonoBo/Chiron
+repo_name: IAmJonoBo/Chiron
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.code.annotate
+    - content.code.copy
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            heading_level: 2
+
+markdown_extensions:
+  - admonition
+  - codehilite:
+      guess_lang: false
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.critic
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Configuration: getting-started/configuration.md
+  - User Guide:
+    - Library Usage: guide/library.md
+    - Service Mode: guide/service.md
+    - CLI Commands: guide/cli.md
+    - Security Features: guide/security.md
+    - Observability: guide/observability.md
+  - API Reference:
+    - Core: api/core.md
+    - Service: api/service.md
+    - CLI: api/cli.md
+    - Exceptions: api/exceptions.md
+  - Architecture:
+    - Overview: architecture/overview.md
+    - Security Model: architecture/security.md
+    - Deployment: architecture/deployment.md
+  - Development:
+    - Contributing: development/contributing.md
+    - Testing: development/testing.md
+    - Release Process: development/releases.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/IAmJonoBo/Chiron
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/chiron/

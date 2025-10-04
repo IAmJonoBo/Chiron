@@ -1,0 +1,266 @@
+name: Airgap Bundle
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      include_extras:
+        description: 'Include extra dependencies'
+        required: false
+        default: 'true'
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  create-airgap-bundle:
+    name: Create Airgap Bundle
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Create wheelhouse
+        run: |
+          mkdir -p wheelhouse
+          
+          # Download current project and dependencies
+          if [[ "${{ github.event.inputs.include_extras }}" == "true" ]]; then
+            uv pip download -d wheelhouse ".[all]"
+          else
+            uv pip download -d wheelhouse .
+          fi
+          
+          # Download common production dependencies
+          uv pip download -d wheelhouse fastapi uvicorn gunicorn
+          uv pip download -d wheelhouse prometheus-client
+          
+          # Download security tools
+          uv pip download -d wheelhouse bandit safety
+
+      - name: Install tools for bundle creation
+        run: |
+          # Install Syft for SBOM generation
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          
+          # Install Grype for vulnerability scanning
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Generate SBOM for wheelhouse
+        run: |
+          syft wheelhouse/ -o cyclonedx-json=wheelhouse-sbom.json
+          syft wheelhouse/ -o spdx-json=wheelhouse-sbom-spdx.json
+
+      - name: Scan wheelhouse for vulnerabilities
+        run: |
+          grype wheelhouse/ -o json --file wheelhouse-vulnerabilities.json || true
+
+      - name: Create requirements files
+        run: |
+          # Base requirements
+          cat > requirements.txt << EOF
+          chiron
+          fastapi>=0.104.0
+          uvicorn[standard]>=0.24.0
+          EOF
+          
+          # Production requirements
+          cat > requirements-prod.txt << EOF
+          chiron[service]
+          gunicorn>=21.2.0
+          prometheus-client>=0.19.0
+          EOF
+          
+          # Security requirements  
+          cat > requirements-security.txt << EOF
+          chiron[security]
+          bandit>=1.7.0
+          safety>=2.3.0
+          EOF
+
+      - name: Create simple PyPI index
+        run: |
+          cd wheelhouse
+          python3 << 'EOF'
+          import os
+          from pathlib import Path
+          
+          wheels = list(Path('.').glob('*.whl'))
+          tarballs = list(Path('.').glob('*.tar.gz'))
+          
+          with open('index.html', 'w') as f:
+              f.write('<!DOCTYPE html>\n<html>\n<head>\n')
+              f.write('<title>Chiron Offline Package Index</title>\n')
+              f.write('<meta charset="utf-8">\n</head>\n<body>\n')
+              f.write('<h1>Chiron Offline Package Index</h1>\n')
+              f.write('<p>Generated on $(date)</p>\n')
+              f.write('<h2>Wheel Files</h2>\n<ul>\n')
+              
+              for wheel in sorted(wheels):
+                  f.write(f'<li><a href="{wheel.name}">{wheel.name}</a></li>\n')
+              
+              f.write('</ul>\n<h2>Source Distributions</h2>\n<ul>\n')
+              
+              for tarball in sorted(tarballs):
+                  f.write(f'<li><a href="{tarball.name}">{tarball.name}</a></li>\n')
+              
+              f.write('</ul>\n</body>\n</html>')
+          EOF
+
+      - name: Create offline installation script
+        run: |
+          cat > install-offline.sh << 'EOF'
+          #!/bin/bash
+          set -e
+          
+          echo "🚀 Installing Chiron from offline bundle..."
+          
+          # Check Python version
+          python3 -c "import sys; assert sys.version_info >= (3, 9), 'Python 3.9+ required'"
+          
+          # Install from wheelhouse
+          pip3 install --no-index --find-links=wheelhouse chiron
+          
+          # Verify installation
+          python3 -c "import chiron; print(f'✅ Chiron {chiron.__version__} installed successfully')"
+          
+          # Run health check
+          chiron doctor
+          
+          echo "🎉 Installation complete!"
+          echo "Start the service with: chiron serve"
+          echo "View documentation with: chiron --help"
+          EOF
+          
+          chmod +x install-offline.sh
+
+      - name: Create airgap bundle
+        run: |
+          mkdir -p airgap-bundles
+          
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          BUNDLE_NAME="chiron-airgap-${TIMESTAMP}"
+          
+          tar -czf "airgap-bundles/${BUNDLE_NAME}.tar.gz" \
+            wheelhouse/ \
+            requirements*.txt \
+            wheelhouse-sbom*.json \
+            wheelhouse-vulnerabilities.json \
+            install-offline.sh \
+            OFFLINE.md \
+            README.md \
+            LICENSE
+
+      - name: Calculate checksums and signatures
+        run: |
+          cd airgap-bundles
+          
+          # Generate checksums
+          sha256sum *.tar.gz > SHA256SUMS
+          
+          # Generate detailed manifest
+          cat > MANIFEST.txt << EOF
+          Chiron Airgap Bundle Manifest
+          =============================
+          
+          Generated: $(date -u)
+          Git Commit: ${{ github.sha }}
+          Git Ref: ${{ github.ref }}
+          
+          Contents:
+          - Wheelhouse with all dependencies
+          - SBOM in CycloneDX and SPDX formats
+          - Vulnerability scan report
+          - Installation scripts and documentation
+          
+          Verification:
+          1. Verify checksums: sha256sum -c SHA256SUMS
+          2. Review SBOM: cat wheelhouse-sbom.json
+          3. Check vulnerabilities: cat wheelhouse-vulnerabilities.json
+          4. Install: bash install-offline.sh
+          
+          EOF
+
+      - name: Install Cosign
+        if: github.event_name == 'release'
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign airgap bundle
+        if: github.event_name == 'release'
+        run: |
+          cd airgap-bundles
+          for file in *.tar.gz; do
+            cosign sign-blob --yes --bundle "${file}.sigstore.json" "$file"
+          done
+
+      - name: Generate attestations
+        if: github.event_name == 'release'
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: 'airgap-bundles/*.tar.gz'
+
+      - name: Upload airgap bundle artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: airgap-bundle-${{ github.run_number }}
+          path: airgap-bundles/
+          retention-days: 30
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: airgap-bundles/*
+          body: |
+            ## Airgap Bundle
+            
+            This release includes a complete airgap bundle for offline installation.
+            
+            ### Contents
+            - All Python dependencies as wheels
+            - SBOM in CycloneDX and SPDX formats
+            - Vulnerability scan report
+            - Offline installation scripts
+            - Complete documentation
+            
+            ### Installation
+            ```bash
+            tar -xzf chiron-airgap-*.tar.gz
+            cd chiron-airgap-*
+            bash install-offline.sh
+            ```
+            
+            ### Verification
+            ```bash
+            # Verify checksums
+            sha256sum -c SHA256SUMS
+            
+            # Verify signatures (requires cosign)
+            cosign verify-blob --bundle chiron-airgap-*.tar.gz.sigstore.json chiron-airgap-*.tar.gz
+            ```
+            
+            See OFFLINE.md for complete installation and usage instructions.

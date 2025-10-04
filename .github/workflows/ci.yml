@@ -1,0 +1,213 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  test:
+    name: Test / Python ${{ matrix.python-version }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras --dev
+
+      - name: Run pre-commit hooks
+        run: |
+          uv run pre-commit run --all-files
+
+      - name: Run tests
+        run: |
+          uv run pytest --cov=chiron --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.12' && matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras --dev
+
+      - name: Run bandit security scan
+        run: |
+          uv run bandit -r src/ -f json -o bandit-report.json || true
+
+      - name: Run safety vulnerability scan
+        run: |
+          uv run safety check --json --output safety-report.json || true
+
+      - name: Run semgrep security scan
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: auto
+          generate-sarif-file: semgrep.sarif
+
+      - name: Upload SARIF results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+
+  sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras --dev
+
+      - name: Install Syft
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Generate SBOM
+        run: |
+          syft . -o cyclonedx-json=sbom.json
+          syft . -o spdx-json=sbom-spdx.json
+
+      - name: Install Grype
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Scan for vulnerabilities
+        run: |
+          grype sbom.json -o json --file vulnerability-report.json
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-reports
+          path: |
+            sbom.json
+            sbom-spdx.json
+            vulnerability-report.json
+
+  build:
+    name: Build distribution
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Build source distribution
+        run: |
+          uv build --sdist
+
+      - name: Build wheel
+        run: |
+          uv build --wheel
+
+      - name: Check distribution
+        run: |
+          uv run twine check dist/*
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+  build-wheels:
+    name: Build wheels
+    runs-on: ${{ matrix.os }}
+    needs: [test, security]
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU (for ARM builds)
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.16.2
+        env:
+          CIBW_BUILD: cp39-* cp310-* cp311-* cp312-*
+          CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_i686"
+          CIBW_ARCHS_LINUX: x86_64 aarch64
+          CIBW_ARCHS_MACOS: x86_64 arm64
+          CIBW_ARCHS_WINDOWS: x86_64
+          CIBW_BUILD_VERBOSITY: 1
+          CIBW_TEST_COMMAND: python -c "import chiron; print(chiron.__version__)"
+
+      - name: Upload wheel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
