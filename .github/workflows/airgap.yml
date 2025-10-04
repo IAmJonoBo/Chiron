@@ -72,6 +72,13 @@ jobs:
           uv pip download -d wheelhouse "chiron[llm]"
           uv pip download -d wheelhouse "chiron[governance]"
           uv pip download -d wheelhouse "chiron[integrations]"
+          uv pip download -d wheelhouse "chiron[features]"
+          uv pip download -d wheelhouse "chiron[docs]"
+          uv pip download -d wheelhouse "chiron[cli]"
+
+          # Testing stack for offline validation
+          uv pip download -d wheelhouse "chiron[dev]"
+          uv pip download -d wheelhouse "chiron[test]"
 
       - name: Install tools for bundle creation
         run: |

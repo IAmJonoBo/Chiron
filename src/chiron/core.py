@@ -1,9 +1,21 @@
 """Core functionality for Chiron."""
 
-import logging
-from typing import Any, Dict, Optional
+from typing import Any, cast
 
 import structlog
+
+try:  # pragma: no cover - optional dependency
+    from opentelemetry import trace  # type: ignore
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # type: ignore
+        OTLPSpanExporter,
+    )
+    from opentelemetry.sdk.trace import TracerProvider  # type: ignore
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor  # type: ignore
+except ImportError:  # pragma: no cover - telemetry optional
+    trace = None  # type: ignore[assignment]
+    OTLPSpanExporter = None  # type: ignore[assignment]
+    TracerProvider = None  # type: ignore[assignment]
+    BatchSpanProcessor = None  # type: ignore[assignment]
 
 from chiron.exceptions import ChironConfigurationError, ChironError
 
@@ -13,7 +25,7 @@ class ChironCore:
 
     def __init__(
         self,
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
         enable_telemetry: bool = True,
         security_mode: bool = True,
     ) -> None:
@@ -27,6 +39,7 @@ class ChironCore:
         self.config = config or {}
         self.enable_telemetry = enable_telemetry
         self.security_mode = security_mode
+        self.tracer: Any | None = None
 
         # Configure structured logging
         structlog.configure(
@@ -57,33 +70,41 @@ class ChironCore:
 
     def _setup_telemetry(self) -> None:
         """Set up OpenTelemetry instrumentation."""
-        try:
-            from opentelemetry import trace
-            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+        if not all(
+            dependency is not None
+            for dependency in (
+                trace,
                 OTLPSpanExporter,
+                TracerProvider,
+                BatchSpanProcessor,
             )
-            from opentelemetry.sdk.trace import TracerProvider
-            from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-            # Set up tracing
-            trace.set_tracer_provider(TracerProvider())
-            tracer = trace.get_tracer(__name__)
-
-            # Configure OTLP exporter
-            otlp_exporter = OTLPSpanExporter(
-                endpoint=self.config.get("otlp_endpoint", "http://localhost:4317")
-            )
-            span_processor = BatchSpanProcessor(otlp_exporter)
-            trace.get_tracer_provider().add_span_processor(span_processor)
-
-            self.tracer = tracer
-            self.logger.info("OpenTelemetry instrumentation enabled")
-
-        except ImportError as e:
+        ):
             self.logger.warning(
-                "OpenTelemetry not available, telemetry disabled", error=str(e)
+                "OpenTelemetry not available, telemetry disabled",
+                error="missing dependency",
             )
             self.tracer = None
+            return
+
+        assert trace is not None  # for type checkers
+        assert OTLPSpanExporter is not None
+        assert TracerProvider is not None
+        assert BatchSpanProcessor is not None
+
+        # Set up tracing
+        trace.set_tracer_provider(TracerProvider())
+        tracer = trace.get_tracer(__name__)
+
+        # Configure OTLP exporter
+        otlp_exporter = OTLPSpanExporter(
+            endpoint=self.config.get("otlp_endpoint", "http://localhost:4317")
+        )
+        span_processor = BatchSpanProcessor(otlp_exporter)
+        provider = cast(Any, trace.get_tracer_provider())
+        provider.add_span_processor(span_processor)
+
+        self.tracer = tracer
+        self.logger.info("OpenTelemetry instrumentation enabled")
 
     def _setup_security(self) -> None:
         """Set up security features."""
@@ -113,7 +134,7 @@ class ChironCore:
 
         return True
 
-    def health_check(self) -> Dict[str, Any]:
+    def health_check(self) -> dict[str, Any]:
         """Perform a health check.
 
         Returns:

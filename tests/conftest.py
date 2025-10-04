@@ -1,10 +1,20 @@
 """Test configuration and fixtures."""
 
+import sys
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
 
-from chiron.core import ChironCore
+try:
+    from chiron.core import ChironCore
+except ModuleNotFoundError:  # pragma: no cover - fallback for local execution
+    root = Path(__file__).resolve().parents[1]
+    src_path = root / "src"
+    if src_path.is_dir():
+        sys.path.insert(0, str(src_path))
+        sys.modules.pop("chiron", None)
+    from chiron.core import ChironCore
 
 
 @pytest.fixture
