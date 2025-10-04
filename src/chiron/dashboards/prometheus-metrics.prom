@@ -1,0 +1,151 @@
+# Chiron Prometheus Metrics Configuration
+#
+# This file documents the metrics emitted by Chiron for observability.
+# Use this as a reference for setting up alerts and dashboards.
+
+# Build Metrics
+# --------------
+
+# Total number of builds
+# Type: Counter
+# Labels: platform, python_version, status
+chiron_build_total{platform="linux",python_version="3.12",status="success"} 42
+
+# Build duration in seconds
+# Type: Histogram
+# Labels: platform, python_version
+chiron_build_duration_seconds_bucket{platform="linux",python_version="3.12",le="60"} 10
+chiron_build_duration_seconds_bucket{platform="linux",python_version="3.12",le="120"} 35
+chiron_build_duration_seconds_bucket{platform="linux",python_version="3.12",le="300"} 40
+chiron_build_duration_seconds_bucket{platform="linux",python_version="3.12",le="+Inf"} 42
+chiron_build_duration_seconds_sum{platform="linux",python_version="3.12"} 3840
+chiron_build_duration_seconds_count{platform="linux",python_version="3.12"} 42
+
+# Security Metrics
+# ----------------
+
+# Total vulnerabilities detected
+# Type: Gauge
+# Labels: severity, package, cve
+chiron_vulnerabilities_total{severity="critical",package="example-pkg",cve="CVE-2024-1234"} 1
+
+# SBOM generation status
+# Type: Counter
+# Labels: format, status
+chiron_sbom_generation_total{format="cyclonedx",status="success"} 50
+
+# Signature verification status
+# Type: Counter
+# Labels: signature_type, status
+chiron_signature_verification_total{signature_type="sigstore",status="success"} 48
+
+# Artifact Metrics
+# ----------------
+
+# Wheelhouse bundle size in bytes
+# Type: Gauge
+# Labels: platform, python_version
+chiron_wheelhouse_size_bytes{platform="linux",python_version="3.12"} 157286400
+
+# Number of wheels in bundle
+# Type: Gauge
+# Labels: platform, python_version
+chiron_wheelhouse_wheel_count{platform="linux",python_version="3.12"} 145
+
+# Pipeline Metrics
+# ----------------
+
+# Pipeline stage duration
+# Type: Summary
+# Labels: stage
+chiron_pipeline_stage_duration_seconds{stage="build",quantile="0.5"} 45.2
+chiron_pipeline_stage_duration_seconds{stage="build",quantile="0.9"} 89.5
+chiron_pipeline_stage_duration_seconds{stage="build",quantile="0.99"} 145.0
+chiron_pipeline_stage_duration_seconds_sum{stage="build"} 2310
+chiron_pipeline_stage_duration_seconds_count{stage="build"} 50
+
+chiron_pipeline_stage_duration_seconds{stage="sbom",quantile="0.5"} 5.1
+chiron_pipeline_stage_duration_seconds{stage="sbom",quantile="0.9"} 8.2
+chiron_pipeline_stage_duration_seconds{stage="sbom",quantile="0.99"} 12.0
+chiron_pipeline_stage_duration_seconds_sum{stage="sbom"} 255
+chiron_pipeline_stage_duration_seconds_count{stage="sbom"} 50
+
+chiron_pipeline_stage_duration_seconds{stage="sign",quantile="0.5"} 3.5
+chiron_pipeline_stage_duration_seconds{stage="sign",quantile="0.9"} 6.8
+chiron_pipeline_stage_duration_seconds{stage="sign",quantile="0.99"} 10.2
+chiron_pipeline_stage_duration_seconds_sum{stage="sign"} 175
+chiron_pipeline_stage_duration_seconds_count{stage="sign"} 50
+
+# Feature Flag Metrics
+# --------------------
+
+# Feature flag status (1=enabled, 0=disabled)
+# Type: Gauge
+# Labels: flag_name, description
+chiron_feature_flag_status{flag_name="allow_public_publish",description="Allow publishing to public PyPI"} 0
+chiron_feature_flag_status{flag_name="require_slsa_provenance",description="Require SLSA provenance"} 1
+chiron_feature_flag_status{flag_name="enable_oci_distribution",description="Enable OCI distribution"} 0
+
+# Policy Metrics
+# --------------
+
+# Policy violations
+# Type: Counter
+# Labels: policy_type, severity
+chiron_policy_violations_total{policy_type="dependency_age",severity="warning"} 3
+chiron_policy_violations_total{policy_type="license",severity="error"} 0
+
+# Dependency Metrics
+# ------------------
+
+# Total dependencies tracked
+# Type: Gauge
+chiron_dependencies_total 145
+
+# Outdated dependencies
+# Type: Gauge
+chiron_dependencies_outdated 12
+
+# Dependency age in days
+# Type: Histogram
+# Labels: package
+chiron_dependency_age_days_bucket{package="example",le="30"} 100
+chiron_dependency_age_days_bucket{package="example",le="90"} 135
+chiron_dependency_age_days_bucket{package="example",le="180"} 142
+chiron_dependency_age_days_bucket{package="example",le="+Inf"} 145
+chiron_dependency_age_days_sum{package="example"} 8500
+chiron_dependency_age_days_count{package="example"} 145
+
+# Alert Rules Suggestions
+# ------------------------
+# 
+# groups:
+#   - name: chiron_alerts
+#     interval: 30s
+#     rules:
+#       - alert: ChironBuildFailureRate
+#         expr: rate(chiron_build_total{status="failure"}[5m]) / rate(chiron_build_total[5m]) > 0.1
+#         for: 5m
+#         labels:
+#           severity: warning
+#         annotations:
+#           summary: "High build failure rate"
+#           description: "Build failure rate is {{ $value | humanizePercentage }}"
+#       
+#       - alert: ChironCriticalVulnerability
+#         expr: chiron_vulnerabilities_total{severity="critical"} > 0
+#         for: 1m
+#         labels:
+#           severity: critical
+#         annotations:
+#           summary: "Critical vulnerability detected"
+#           description: "Critical vulnerability in {{ $labels.package }}: {{ $labels.cve }}"
+#       
+#       - alert: ChironSBOMGenerationFailure
+#         expr: rate(chiron_sbom_generation_total{status="failure"}[5m]) / rate(chiron_sbom_generation_total[5m]) > 0.05
+#         for: 5m
+#         labels:
+#           severity: warning
+#         annotations:
+#           summary: "SBOM generation failure rate high"
+#           description: "SBOM generation failing at {{ $value | humanizePercentage }}"
