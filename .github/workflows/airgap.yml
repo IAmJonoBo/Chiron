@@ -1,0 +1,62 @@
+name: Airgap Bundle
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  create-airgap-bundle:
+    name: Create Airgap Bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Create wheelhouse
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          mkdir -p wheelhouse
+          uv pip download -d wheelhouse .
+          uv pip download -d wheelhouse fastapi uvicorn
+
+      - name: Create requirements.txt
+        run: |
+          echo "chiron" > requirements.txt
+          echo "fastapi>=0.104.0" >> requirements.txt
+          echo "uvicorn[standard]>=0.24.0" >> requirements.txt
+
+      - name: Create airgap bundle
+        run: |
+          mkdir -p airgap-bundles
+          tar -czf airgap-bundles/chiron-airgap-$(date +%Y%m%d-%H%M%S).tar.gz \
+            wheelhouse/ \
+            requirements.txt \
+            OFFLINE.md \
+            README.md
+
+      - name: Calculate checksums
+        run: |
+          cd airgap-bundles
+          sha256sum *.tar.gz > SHA256SUMS
+
+      - name: Upload airgap bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: airgap-bundle
+          path: airgap-bundles/
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: airgap-bundles/*
