@@ -142,10 +142,12 @@ while [[ $# -gt 0 ]]; do
 
 done
 
+# shellcheck disable=SC2310
 if truthy "${MANAGE_DEPS_RUN_SYNC-}"; then
 	RUN_SYNC=true
 fi
 
+# shellcheck disable=SC2310
 if truthy "${MANAGE_DEPS_RUN_PREFLIGHT-}"; then
 	RUN_PREFLIGHT=true
 fi
