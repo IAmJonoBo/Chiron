@@ -9,7 +9,7 @@
 | CLI (`chiron.cli.main`)                                         | 🟡     | Commands use shared subprocess wrapper with error handling; 30% test coverage added; relies on subprocess_utils for robust execution; many commands still untested.               |
 | Feature flags (`chiron.features`)                               | 🟡     | Global `get_feature_flags()` accessor and env fallback behave (60% coverage); OpenFeature-backed flows remain partially tested.                                                   |
 | MCP server (`chiron.mcp.server`)                                | 🔴     | Tools return `dry_run`/`not_implemented`; 96% coverage on infrastructure but no real operations exist.                                                                            |
-| Supply-chain helpers (`chiron.deps/*`)                          | 🟡     | Modules exist but still have 0% coverage (explicitly omitted); no integration proving end-to-end upgrade or policy flows.                                                         |
+| Supply-chain helpers (`chiron.deps/*`)                          | 🟡     | Modules migrating to subprocess_utils; policy & constraints have test coverage; remaining 22 modules still omitted but tracked in DEPS_MODULES_STATUS.md for systematic testing.   |
 | Observability (`chiron/telemetry.py`, `chiron/observability/*`) | 🟢     | **96-100% test coverage**. Telemetry (98%), logging (100%), metrics (96%), tracing (96%) fully tested with graceful degradation paths.                                            |
 | Documentation                                                   | 🟡     | Status docs refreshed and accurate; roadmap/guides need alignment with actual feature status.                                                                                      |
 | Security toolchain extras                                       | 🟢     | **IMPROVED**: Shared subprocess wrapper with path probing, timeout handling, and graceful fallbacks for `uv`, `syft`, `cosign`, `semantic-release` binaries. Quality gates active.|
@@ -21,8 +21,8 @@
 2. **MCP Tooling** – Replace placeholder responses with real integrations (wheelhouse build/verify, policy enforcement). Until then, mark MCP agent as experimental.
 3. **External Command Wrappers** – ✅ **RESOLVED**: Created shared `subprocess_utils` module with executable path probing, configurable timeouts, graceful error handling, and comprehensive tests. CLI and service routes updated to use new utilities.
 4. **Dependency Hygiene** – ✅ **RESOLVED**: Dependency conflicts fixed (rich, jsonschema, click versions aligned with semgrep constraints). Document why `semgrep<1.80` is pinned alongside OpenTelemetry ≥1.37.
-5. **Test Coverage** – ✅ **SIGNIFICANT PROGRESS**: Coverage increased from ~39% to 55.45% (+16.67%). Core, observability, telemetry, and CLI now well-tested. Still need supply-chain module coverage.
-6. **Docs Audit** – ✅ **IMPROVED**: Added ENVIRONMENT_SYNC.md guide. Updated IMPLEMENTATION_SUMMARY.md to reflect testing progress. Continue aligning remaining guides with actual implementation status.
+5. **Test Coverage** – ✅ **SIGNIFICANT PROGRESS**: Coverage increased from ~39% to 55.45% (+16.67%). Core, observability, telemetry, and CLI now well-tested. Deps modules have policy & constraints tests; systematic testing plan documented in DEPS_MODULES_STATUS.md.
+6. **Docs Audit** – ✅ **IMPROVED**: Added ENVIRONMENT_SYNC.md guide. Updated IMPLEMENTATION_SUMMARY.md to reflect testing progress. Added DEPS_MODULES_STATUS.md tracking document. Continue aligning remaining guides with actual implementation status.
 7. **Quality Gates** – ✅ **NEW**: Implemented frontier-grade quality gates workflow with coverage, security, type safety, SBOM, code quality, test, dependency, and documentation gates.
 
 ## Recent Completions (Current Sprint)
@@ -55,6 +55,14 @@
    - Consistent error handling across all subprocess operations
    - Proper timeout handling prevents hung operations
    - Binary availability validated before execution
+
+4. **Supply-Chain Module Progress**
+   - Updated `chiron.deps.constraints` to use subprocess_utils
+   - Added comprehensive tests for `policy.py` (50+ tests)
+   - Added comprehensive tests for `constraints.py` (30+ tests)
+   - Created DEPS_MODULES_STATUS.md tracking document
+   - Updated coverage configuration to explicitly list deps modules
+   - Systematic testing plan for remaining 22 modules
 
 ### TODOs Implemented ✅
 

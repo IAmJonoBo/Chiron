@@ -9,30 +9,14 @@ This ensures deterministic, verifiable dependency installations.
 from __future__ import annotations
 
 import logging
-import shutil
-import subprocess
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from chiron.subprocess_utils import run_subprocess
+
 logger = logging.getLogger(__name__)
-
-
-def _run_command(cmd: Sequence[str], **kwargs: object) -> subprocess.CompletedProcess:
-    """Execute a command after resolving the executable path."""
-
-    if not cmd:
-        raise ValueError("Command must not be empty.")
-
-    executable = cmd[0]
-    path = Path(executable)
-    if not path.is_absolute():
-        resolved = shutil.which(executable)
-        if resolved:
-            cmd = [resolved, *cmd[1:]]
-
-    return subprocess.run(cmd, **kwargs)  # noqa: S603
 
 
 @dataclass(slots=True)
@@ -99,7 +83,7 @@ class ConstraintsGenerator:
 
         try:
             logger.info(f"Running: {' '.join(cmd)}")
-            result = _run_command(
+            result = run_subprocess(
                 cmd,
                 cwd=self.config.project_root,
                 capture_output=True,
@@ -144,7 +128,7 @@ class ConstraintsGenerator:
 
         try:
             logger.info(f"Running: {' '.join(cmd)}")
-            result = _run_command(
+            result = run_subprocess(
                 cmd,
                 cwd=self.config.project_root,
                 capture_output=True,
