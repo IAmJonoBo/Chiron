@@ -95,7 +95,7 @@ security = [
   "cyclonedx-bom>=7.1.0",
   "safety>=3.6.2",
   "bandit>=1.8.6",
-  "semgrep>=1.79.0,<1.80.0",
+  "semgrep>=1.139.0,<1.140.0",
 ]
 dev = [
   "pytest>=8.4.2",
@@ -144,7 +144,7 @@ all = [
   "cyclonedx-bom>=7.1.0",
   "safety>=3.6.2",
   "bandit>=1.8.6",
-  "semgrep>=1.79.0,<1.80.0",
+  "semgrep>=1.139.0,<1.140.0",
   "pytest>=8.4.2",
   "pytest-cov>=7.0.0",
   "pytest-asyncio>=1.2.0",
