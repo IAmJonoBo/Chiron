@@ -409,3 +409,105 @@ class TestInitCommand:
         result = runner.invoke(cli, ["init", "--wizard"])
 
         assert "cancelled" in result.output.lower()
+
+
+class TestBuildCommand:
+    """Tests for build command."""
+
+    @patch("chiron.cli.main._run_command")
+    def test_build_dry_run(self, mock_run: Mock) -> None:
+        """Test build command in dry run mode."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["--dry-run", "build"])
+
+        assert result.exit_code == 0
+        assert "DRY RUN" in result.output
+        assert "cibuildwheel" in result.output
+        # _run_command should not be called in dry run
+        mock_run.assert_not_called()
+
+    @patch("chiron.cli.main._run_command")
+    def test_build_success(self, mock_run: Mock) -> None:
+        """Test successful build."""
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=["uv", "run", "cibuildwheel"],
+            returncode=0,
+            stdout="Build output",
+            stderr="",
+        )
+
+        runner = CliRunner()
+        result = runner.invoke(cli, ["build"])
+
+        assert result.exit_code == 0
+        assert "Build completed successfully" in result.output
+        mock_run.assert_called_once()
+
+    @patch("chiron.cli.main._run_command")
+    def test_build_failure(self, mock_run: Mock) -> None:
+        """Test build failure."""
+        mock_run.side_effect = subprocess.CalledProcessError(
+            1, ["uv", "run", "cibuildwheel"], stderr="Build error"
+        )
+
+        runner = CliRunner()
+        result = runner.invoke(cli, ["build"])
+
+        assert result.exit_code == 1
+        assert "Build failed" in result.output
+
+
+class TestReleaseCommand:
+    """Tests for release command."""
+
+    @patch("chiron.cli.main._run_command")
+    def test_release_success(self, mock_run: Mock) -> None:
+        """Test successful release."""
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=["uv", "run", "semantic-release"],
+            returncode=0,
+            stdout="Release output",
+            stderr="",
+        )
+
+        runner = CliRunner()
+        result = runner.invoke(cli, ["release"])
+
+        assert result.exit_code == 0
+        assert "Release created successfully" in result.output
+        mock_run.assert_called_once()
+
+    @patch("chiron.cli.main._run_command")
+    def test_release_failure(self, mock_run: Mock) -> None:
+        """Test release failure."""
+        mock_run.side_effect = subprocess.CalledProcessError(
+            1, ["semantic-release"], stderr="Release error"
+        )
+
+        runner = CliRunner()
+        result = runner.invoke(cli, ["release"])
+
+        assert result.exit_code == 1
+        assert "Release failed" in result.output
+
+
+class TestWheelhouseCommand:
+    """Tests for wheelhouse command."""
+
+    def test_wheelhouse_help(self) -> None:
+        """Test wheelhouse command help."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["wheelhouse", "--help"])
+
+        assert result.exit_code == 0
+        assert "wheelhouse" in result.output.lower()
+
+    @patch("chiron.cli.main._run_command")
+    def test_wheelhouse_dry_run(self, mock_run: Mock) -> None:
+        """Test wheelhouse build in dry run mode."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["--dry-run", "wheelhouse"])
+
+        assert result.exit_code == 0
+        # Command should show it would run
+        assert "Would" in result.output or "DRY RUN" in result.output
