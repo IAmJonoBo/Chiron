@@ -320,13 +320,11 @@ omit = [
   "src/chiron/tools/*",
   "src/chiron/typer_cli.py",
   # Deps modules - gradual inclusion as tests are added
-  # Tested modules (removed from omit): bundler, constraints, policy, supply_chain, signing, guard, planner, sync, drift, status, verify, security_overlay, preflight_summary, graph
-  "src/chiron/deps/conflict_resolver.py",
+  # Tested modules (removed from omit): bundler, constraints, policy, supply_chain, signing, guard, planner, sync, drift, status, verify, security_overlay, preflight_summary, graph, conflict_resolver, reproducibility
   "src/chiron/deps/mirror_manager.py",
   "src/chiron/deps/oci_packaging.py",
   "src/chiron/deps/preflight.py",
   "src/chiron/deps/private_mirror.py",
-  "src/chiron/deps/reproducibility.py",
   "src/chiron/deps/safe_upgrade.py",
   "src/chiron/deps/upgrade_advisor.py",
 ]
