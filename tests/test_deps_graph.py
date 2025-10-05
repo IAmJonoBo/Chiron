@@ -17,11 +17,13 @@ class TestParseImports:
     def test_parse_imports_simple(self, tmp_path: Path) -> None:
         """Test parsing simple imports."""
         py_file = tmp_path / "test.py"
-        py_file.write_text("""
+        py_file.write_text(
+            """
 import os
 import sys
 from pathlib import Path
-""")
+"""
+        )
 
         imports = parse_imports(py_file, tmp_path)
 
@@ -32,10 +34,12 @@ from pathlib import Path
     def test_parse_imports_from_imports(self, tmp_path: Path) -> None:
         """Test parsing from imports."""
         py_file = tmp_path / "test.py"
-        py_file.write_text("""
+        py_file.write_text(
+            """
 from collections import defaultdict
 from typing import Any
-""")
+"""
+        )
 
         imports = parse_imports(py_file, tmp_path)
 
@@ -45,11 +49,13 @@ from typing import Any
     def test_parse_imports_skips_relative(self, tmp_path: Path) -> None:
         """Test that relative imports are skipped."""
         py_file = tmp_path / "test.py"
-        py_file.write_text("""
+        py_file.write_text(
+            """
 from .base import BaseClass
 from ..utils import helper
 import os
-""")
+"""
+        )
 
         imports = parse_imports(py_file, tmp_path)
 
@@ -62,11 +68,13 @@ import os
     def test_parse_imports_deduplicates(self, tmp_path: Path) -> None:
         """Test that duplicate imports are deduplicated."""
         py_file = tmp_path / "test.py"
-        py_file.write_text("""
+        py_file.write_text(
+            """
 import json
 from json import dumps
 from json.decoder import JSONDecoder
-""")
+"""
+        )
 
         imports = parse_imports(py_file, tmp_path)
 
@@ -76,11 +84,13 @@ from json.decoder import JSONDecoder
     def test_parse_imports_syntax_error(self, tmp_path: Path) -> None:
         """Test handling syntax errors in files."""
         py_file = tmp_path / "bad.py"
-        py_file.write_text("""
+        py_file.write_text(
+            """
 import os
 def broken(
 # Syntax error - unclosed parenthesis
-""")
+"""
+        )
 
         imports = parse_imports(py_file, tmp_path)
 
@@ -104,11 +114,13 @@ def broken(
         chiron_dir = tmp_path / "chiron"
         chiron_dir.mkdir()
         py_file = chiron_dir / "test.py"
-        py_file.write_text("""
+        py_file.write_text(
+            """
 from chiron.core import something
 from chiron.utils import helper
 import external_module
-""")
+"""
+        )
 
         imports = parse_imports(py_file, tmp_path)
 
@@ -120,11 +132,13 @@ import external_module
     def test_parse_imports_nested_modules(self, tmp_path: Path) -> None:
         """Test parsing imports with nested module paths."""
         py_file = tmp_path / "test.py"
-        py_file.write_text("""
+        py_file.write_text(
+            """
 from collections.abc import Mapping
 from typing.io import TextIO
 import os.path
-""")
+"""
+        )
 
         imports = parse_imports(py_file, tmp_path)
 
@@ -150,11 +164,13 @@ class TestAnalyzeDependencies:
         chiron_dir = tmp_path / "chiron"
         chiron_dir.mkdir()
         test_file = chiron_dir / "test.py"
-        test_file.write_text("""
+        test_file.write_text(
+            """
 import os
 import json
 from pathlib import Path
-""")
+"""
+        )
 
         graph = analyze_dependencies(tmp_path)
 
@@ -176,10 +192,12 @@ from pathlib import Path
         chiron_dir = tmp_path / "chiron"
         chiron_dir.mkdir()
         chiron_file = chiron_dir / "main.py"
-        chiron_file.write_text("""
+        chiron_file.write_text(
+            """
 from common import utils
 import json
-""")
+"""
+        )
 
         graph = analyze_dependencies(tmp_path)
 

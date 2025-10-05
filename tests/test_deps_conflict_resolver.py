@@ -327,3 +327,5 @@ class TestConflictResolver:
                 "warnings",
             }
             assert set(report.summary.keys()) == expected_keys
+        # Should have at least total_conflicts count
+        assert "total_conflicts" in report.summary or len(report.summary) == 0

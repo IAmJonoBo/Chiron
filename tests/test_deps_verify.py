@@ -164,11 +164,14 @@ class TestCheckWorkflowIntegration:
         # Create preflight workflow
         preflight = workflows_dir / "dependency-preflight.yml"
         preflight.write_text("""
+        preflight.write_text(
+            """
 steps:
   - run: chiron deps preflight
   - run: chiron deps guard
   - run: chiron deps snapshot ensure
-""")
+"""
+        )
 
         # Create contract check workflow
         contract = workflows_dir / "dependency-contract-check.yml"
@@ -236,12 +239,14 @@ class TestCheckDocumentation:
         docs_dir.mkdir()
 
         governance_doc = docs_dir / "dependency-governance.md"
-        governance_doc.write_text("""
+        governance_doc.write_text(
+            """
 # Dependency Governance
 
 See [packaging-workflow-integration.md](packaging-workflow-integration.md)
 for details.
-""")
+"""
+        )
 
         with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
             results = check_documentation()

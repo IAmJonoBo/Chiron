@@ -19,7 +19,7 @@ console = Console()
 class ChironWizard:
     """Interactive wizard for Chiron operations."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize wizard."""
         self.config: dict[str, Any] = {}
 
