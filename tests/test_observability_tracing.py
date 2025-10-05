@@ -82,9 +82,7 @@ class TestConfigureTracing:
         mock_load_exporter.return_value = None
         custom_attrs = {"custom.key": "custom.value"}
 
-        provider = configure_tracing(
-            "test-service", resource_attributes=custom_attrs
-        )
+        provider = configure_tracing("test-service", resource_attributes=custom_attrs)
 
         assert isinstance(provider, TracerProvider)
 

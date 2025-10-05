@@ -9,8 +9,8 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import click
-from click.testing import CliRunner
 import pytest
+from click.testing import CliRunner
 
 from chiron.cli.main import _resolve_executable, _run_command, cli
 
@@ -60,9 +60,7 @@ class TestResolveExecutable:
         assert "this-executable-does-not-exist-12345" in str(exc_info.value)
 
     @patch("chiron.cli.main.shutil.which")
-    def test_resolve_executable_which_returns_none(
-        self, mock_which: Mock
-    ) -> None:
+    def test_resolve_executable_which_returns_none(self, mock_which: Mock) -> None:
         """Test when shutil.which returns None."""
         mock_which.return_value = None
 
@@ -77,9 +75,7 @@ class TestRunCommand:
 
     @patch("chiron.cli.main._resolve_executable")
     @patch("chiron.cli.main.subprocess.run")
-    def test_run_command_success(
-        self, mock_run: Mock, mock_resolve: Mock
-    ) -> None:
+    def test_run_command_success(self, mock_run: Mock, mock_resolve: Mock) -> None:
         """Test running a command successfully."""
         mock_resolve.return_value = "/usr/bin/echo"
         mock_result = Mock(spec=subprocess.CompletedProcess)
@@ -101,9 +97,7 @@ class TestRunCommand:
 
     @patch("chiron.cli.main._resolve_executable")
     @patch("chiron.cli.main.subprocess.run")
-    def test_run_command_with_kwargs(
-        self, mock_run: Mock, mock_resolve: Mock
-    ) -> None:
+    def test_run_command_with_kwargs(self, mock_run: Mock, mock_resolve: Mock) -> None:
         """Test running a command with additional kwargs."""
         mock_resolve.return_value = "/usr/bin/ls"
         mock_result = Mock(spec=subprocess.CompletedProcess)
@@ -206,9 +200,7 @@ class TestCliGroup:
     def test_cli_with_nonexistent_config_file(self) -> None:
         """Test CLI with non-existent config file."""
         runner = CliRunner()
-        result = runner.invoke(
-            cli, ["--config", "/nonexistent/path/config.json"]
-        )
+        result = runner.invoke(cli, ["--config", "/nonexistent/path/config.json"])
 
         # Should fail due to exists=True constraint or show error
         assert result.exit_code != 0 or "does not exist" in result.output.lower()
@@ -282,11 +274,11 @@ class TestInitCommand:
     def test_init_without_wizard(self, mock_print: Mock, tmp_path: Path) -> None:
         """Test init command without wizard mode."""
         runner = CliRunner()
-        
+
         # Run in isolated filesystem
         with runner.isolated_filesystem(temp_dir=tmp_path):
             result = runner.invoke(cli, ["init"])
-            
+
             # Should create or prompt about chiron.json
             assert result.exit_code == 0 or "already exists" in result.output.lower()
 

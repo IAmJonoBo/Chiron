@@ -8,8 +8,8 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from chiron.telemetry import (
-    ChironTelemetry,
     HAS_OTEL,
+    ChironTelemetry,
     OperationMetrics,
     get_telemetry,
     track_operation,
@@ -265,9 +265,7 @@ class TestTrackOperation:
 
     @pytest.mark.skipif(not HAS_OTEL, reason="OpenTelemetry not available")
     @patch("chiron.telemetry.trace.get_tracer")
-    def test_track_operation_with_otel_success(
-        self, mock_get_tracer: Mock
-    ) -> None:
+    def test_track_operation_with_otel_success(self, mock_get_tracer: Mock) -> None:
         """Test tracking operation with OpenTelemetry span."""
         mock_tracer = MagicMock()
         mock_span = MagicMock()
@@ -284,9 +282,7 @@ class TestTrackOperation:
 
     @pytest.mark.skipif(not HAS_OTEL, reason="OpenTelemetry not available")
     @patch("chiron.telemetry.trace.get_tracer")
-    def test_track_operation_with_otel_failure(
-        self, mock_get_tracer: Mock
-    ) -> None:
+    def test_track_operation_with_otel_failure(self, mock_get_tracer: Mock) -> None:
         """Test tracking failed operation with OpenTelemetry span."""
         mock_tracer = MagicMock()
         mock_span = MagicMock()

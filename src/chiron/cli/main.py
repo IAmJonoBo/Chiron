@@ -1,8 +1,12 @@
 """Command-line interface for Chiron."""
 
+# mypy: disallow-any-decorated = False
+
+import hashlib
 import json
 import sys
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 
 import click
@@ -22,6 +26,8 @@ from chiron.subprocess_utils import (
 
 console = Console()
 logger = structlog.get_logger(__name__)
+
+WHEELHOUSE_CHECKSUM_FILENAME = "wheelhouse.sha256"
 
 
 def _run_command(
@@ -47,6 +53,65 @@ def _run_command(
         raise click.ClickException(str(e)) from e
     except subprocess.CalledProcessError as e:
         raise click.ClickException(f"Command failed with exit code {e.returncode}") from e
+
+
+def _current_git_commit() -> str | None:
+    """Return the current git commit SHA if available."""
+
+    try:
+        result = _run_command(
+            ["git", "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (
+        click.ClickException,
+        subprocess.CalledProcessError,
+    ):  # pragma: no cover - best effort
+        return None
+
+    return result.stdout.strip() or None
+
+
+def _write_wheel_checksums(wheelhouse_dir: Path) -> Path | None:
+    """Generate SHA256 sums for wheels in *wheelhouse_dir*.
+
+    Returns the path of the checksum file when wheels are present, otherwise ``None``.
+    """
+
+    wheels = sorted(wheelhouse_dir.glob("*.whl"))
+    if not wheels:
+        return None
+
+    checksum_path = wheelhouse_dir / WHEELHOUSE_CHECKSUM_FILENAME
+    lines: list[str] = []
+    for wheel in wheels:
+        sha256 = hashlib.sha256()
+        with wheel.open("rb") as fh:
+            for chunk in iter(lambda: fh.read(8192), b""):
+                sha256.update(chunk)
+        lines.append(f"{sha256.hexdigest()}  {wheel.name}\n")
+
+    checksum_path.write_text("".join(lines), encoding="utf-8")
+    return checksum_path
+
+
+def _write_manifest(path: Path, extras: Sequence[str]) -> None:
+    """Write a lightweight wheelhouse manifest."""
+
+    payload = {
+        "generated_at": datetime.now(UTC).isoformat(),
+        "extras": list(extras),
+        "include_dev": "dev" in extras,
+        "create_archive": False,
+        "commit": _current_git_commit(),
+    }
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
 
 
 @click.group()
@@ -193,37 +258,159 @@ def release(ctx: click.Context) -> None:
 
 
 @cli.command()
-@click.option("--output-dir", "-o", default="wheelhouse", help="Output directory")
+@click.option(
+    "--output-dir",
+    "-o",
+    default="vendor/wheelhouse",
+    show_default=True,
+    help="Output directory for the wheelhouse",
+)
+@click.option(
+    "--extra",
+    "-e",
+    "extras",
+    multiple=True,
+    help="Extra requirement groups to include (defaults to dev,test unless --base-only)",
+)
+@click.option(
+    "--base-only",
+    is_flag=True,
+    help="Only package core dependencies (ignore default extras).",
+)
+@click.option(
+    "--include-all-extras",
+    is_flag=True,
+    help="Include the consolidated 'all' extra in addition to any explicit extras.",
+)
+@click.option(
+    "--clean/--no-clean",
+    default=True,
+    show_default=True,
+    help="Clean the output directory before downloading dependencies.",
+)
 @click.option("--with-sbom", is_flag=True, help="Generate SBOM")
 @click.option("--with-signatures", is_flag=True, help="Sign artifacts")
 @click.pass_context
 def wheelhouse(
-    ctx: click.Context, output_dir: str, with_sbom: bool, with_signatures: bool
+    ctx: click.Context,
+    output_dir: str,
+    extras: tuple[str, ...],
+    base_only: bool,
+    include_all_extras: bool,
+    clean: bool,
+    with_sbom: bool,
+    with_signatures: bool,
 ) -> None:
-    """Create wheelhouse bundle with SBOM and signatures."""
+    """Create/offline-sync wheelhouse bundles for reproducible installs."""
+
     dry_run = ctx.obj.get("dry_run", False)
+    default_extras: tuple[str, ...] = ("dev", "test")
+
+    if base_only:
+        selected_extras: list[str] = []
+    elif extras:
+        # Preserve user-specified ordering while removing duplicates
+        seen: set[str] = set()
+        selected_extras = []
+        for extra in extras:
+            extra_name = extra.strip()
+            if not extra_name or extra_name in seen:
+                continue
+            selected_extras.append(extra_name)
+            seen.add(extra_name)
+    else:
+        selected_extras = list(default_extras)
+
+    if include_all_extras and "all" not in selected_extras:
+        selected_extras.append("all")
+
+    extras_label = ",".join(selected_extras) if selected_extras else "(base only)"
 
     if dry_run:
         console.print("[yellow]DRY RUN - No changes will be made[/yellow]")
         console.print(f"[blue]Would create wheelhouse in: {output_dir}[/blue]")
+        console.print(f"[blue]Extras: {extras_label}[/blue]")
+        console.print(f"[blue]Clean output directory: {clean}[/blue]")
         console.print(f"[blue]Generate SBOM: {with_sbom}[/blue]")
         console.print(f"[blue]Sign artifacts: {with_signatures}[/blue]")
         console.print("[dim]Run without --dry-run to actually create wheelhouse[/dim]")
         return
 
-    console.print(f"[blue]Creating wheelhouse in {output_dir}...[/blue]")
+    console.print(
+        f"[blue]Creating wheelhouse in {output_dir} (extras: {extras_label})...[/blue]"
+    )
 
     try:
         wheelhouse_path = Path(output_dir)
-        wheelhouse_path.mkdir(exist_ok=True)
+        wheelhouse_path.mkdir(parents=True, exist_ok=True)
 
-        # Download dependencies
-        console.print("[blue]Downloading dependencies...[/blue]")
+        if clean:
+            for path in wheelhouse_path.iterdir():
+                try:
+                    if path.is_dir():
+                        shutil.rmtree(path)
+                    else:
+                        path.unlink()
+                except FileNotFoundError:
+                    continue
+
+        console.print("[blue]Freezing dependency manifest...[/blue]")
+        requirements_path = wheelhouse_path / "requirements.txt"
+        compile_cmd = [
+            "uv",
+            "pip",
+            "compile",
+            "pyproject.toml",
+            "--generate-hashes",
+            "-o",
+            str(requirements_path),
+        ]
+        for extra in selected_extras:
+            compile_cmd.extend(["--extra", extra])
         _run_command(
-            ["uv", "pip", "download", "-d", str(wheelhouse_path), "."],
+            compile_cmd,
             check=True,
-            capture_output=True,
+            capture_output=not ctx.obj.get("verbose", False),
+            text=True,
         )
+
+        console.print("[blue]Downloading dependency wheels...[/blue]")
+        _run_command(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "download",
+                "-d",
+                str(wheelhouse_path),
+                "-r",
+                str(requirements_path),
+            ],
+            check=True,
+            capture_output=not ctx.obj.get("verbose", False),
+            text=True,
+        )
+
+        console.print("[blue]Building project wheel...[/blue]")
+        _run_command(
+            ["uv", "build", "--wheel", "-o", str(wheelhouse_path)],
+            check=True,
+            capture_output=not ctx.obj.get("verbose", False),
+            text=True,
+        )
+
+        manifest_path = wheelhouse_path / "manifest.json"
+        _write_manifest(manifest_path, selected_extras)
+
+        checksum_path = _write_wheel_checksums(wheelhouse_path)
+
+        wheel_count = len(list(wheelhouse_path.glob("*.whl")))
+        console.print(
+            f"[green]Fetched {wheel_count} wheel(s) into {wheelhouse_path.resolve()}[/green]"
+        )
+
+        if checksum_path:
+            console.print(f"[green]Wrote checksums to {checksum_path}[/green]")
 
         # Generate SBOM if requested
         if with_sbom:
@@ -232,7 +419,8 @@ def wheelhouse(
                 _run_command(
                     ["syft", str(wheelhouse_path), "-o", "cyclonedx-json=sbom.json"],
                     check=True,
-                    capture_output=True,
+                    capture_output=not ctx.obj.get("verbose", False),
+                    text=True,
                 )
                 console.print("[green]SBOM generated: sbom.json[/green]")
             except (subprocess.CalledProcessError, FileNotFoundError):
@@ -255,7 +443,8 @@ def wheelhouse(
                             str(wheel),
                         ],
                         check=True,
-                        capture_output=True,
+                        capture_output=not ctx.obj.get("verbose", False),
+                        text=True,
                     )
                 console.print("[green]Artifacts signed with Sigstore[/green]")
             except (subprocess.CalledProcessError, FileNotFoundError):
@@ -279,7 +468,7 @@ def wheelhouse(
 @click.pass_context
 def airgap(
     ctx: click.Context, output: str, include_extras: bool, include_security: bool
-) -> None:
+) -> None:  # type: ignore[no-untyped-def]
     """Create an offline bundle for air-gapped environments."""
     dry_run = ctx.obj.get("dry_run", False)
 
@@ -348,7 +537,7 @@ def verify(
     verify_provenance: bool,
     verify_hashes: bool,
     verify_all: bool,
-) -> None:
+) -> None:  # type: ignore[no-untyped-def]
     """Verify signatures, provenance, and SBOM of artifacts."""
     console.print("[blue]Verifying artifacts...[/blue]")
 
@@ -372,9 +561,9 @@ def verify(
     if verify_hashes:
         console.print("[blue]Verifying checksums...[/blue]")
         sha256_file = (
-            target_path / "wheelhouse.sha256"
+            target_path / WHEELHOUSE_CHECKSUM_FILENAME
             if target_path.is_dir()
-            else target_path.parent / "wheelhouse.sha256"
+            else target_path.parent / WHEELHOUSE_CHECKSUM_FILENAME
         )
 
         if sha256_file.exists():
@@ -555,7 +744,7 @@ def verify(
 
 
 @cli.group()
-def manage() -> None:
+def manage() -> None:  # type: ignore[no-untyped-def]
     """Manage wheelhouses and packages."""
     pass
 
@@ -563,7 +752,7 @@ def manage() -> None:
 @manage.command()
 @click.argument("packages", nargs=-1, required=True)
 @click.option("--output-dir", "-o", default="wheelhouse", help="Output directory")
-def download(packages: tuple[str, ...], output_dir: str) -> None:
+def download(packages: tuple[str, ...], output_dir: str) -> None:  # type: ignore[no-untyped-def]
     """Download packages to wheelhouse."""
     console.print(
         f"[blue]Downloading {len(packages)} packages to {output_dir}...[/blue]"
@@ -587,7 +776,7 @@ def download(packages: tuple[str, ...], output_dir: str) -> None:
 
 @manage.command()
 @click.argument("wheelhouse_dir", default="wheelhouse")
-def list_packages(wheelhouse_dir: str) -> None:
+def list_packages(wheelhouse_dir: str) -> None:  # type: ignore[no-untyped-def]
     """List packages in wheelhouse."""
     from pathlib import Path
 
@@ -621,7 +810,7 @@ def list_packages(wheelhouse_dir: str) -> None:
 
 @cli.command()
 @click.pass_context
-def doctor(ctx: click.Context) -> None:
+def doctor(ctx: click.Context) -> None:  # type: ignore[no-untyped-def]
     """Run policy checks and provide upgrade advice."""
     console.print("[blue]Running health checks...[/blue]")
 
@@ -656,7 +845,7 @@ def serve(
     host: str,
     port: int,
     reload: bool,
-) -> None:
+) -> None:  # type: ignore[no-untyped-def]
     """Start the Chiron service."""
     console.print(f"[blue]Starting Chiron service on {host}:{port}...[/blue]")
 

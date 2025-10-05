@@ -5,7 +5,7 @@ Wheelhouse bundle generation for offline/air-gapped deployments.
 Creates portable wheelhouse bundles with:
 - All wheel files
 - requirements.txt
-- SHA256 checksums
+- wheelhouse.sha256 checksums
 - Simple index for pip
 - Metadata and provenance
 """
@@ -22,6 +22,8 @@ from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+CHECKSUM_FILENAME = "wheelhouse.sha256"
 
 
 @dataclass(slots=True)
@@ -117,7 +119,7 @@ class WheelhouseBundler:
         metadata_path.write_text(json.dumps(metadata.to_dict(), indent=2))
 
         # Write checksums file
-        checksums_path = self.wheelhouse_dir / "SHA256SUMS"
+        checksums_path = self.wheelhouse_dir / CHECKSUM_FILENAME
         self._write_checksums_file(checksums_path, checksums)
 
         # Write simple index
@@ -136,7 +138,7 @@ class WheelhouseBundler:
 
             # Add metadata and checksums
             tar.add(metadata_path, arcname="wheelhouse/bundle-metadata.json")
-            tar.add(checksums_path, arcname="wheelhouse/SHA256SUMS")
+            tar.add(checksums_path, arcname=f"wheelhouse/{CHECKSUM_FILENAME}")
 
             # Add simple index
             simple_dir = self.wheelhouse_dir / "simple"

@@ -182,12 +182,12 @@ class TUFKeyManager:
         - System keyring
         """
         import os
-        
+
         # Priority 1: Check environment variable
         env_password = os.environ.get(f"TUF_{role.upper()}_KEY_PASSWORD")
         if env_password:
             return env_password
-        
+
         # Priority 2: Try system keyring if available
         try:
             import keyring
@@ -199,7 +199,7 @@ class TUFKeyManager:
             pass  # keyring not installed
         except Exception as e:
             logger.debug(f"Could not access keyring: {e}")
-        
+
         # Priority 3: Try AWS Secrets Manager
         try:
             import boto3
@@ -216,12 +216,12 @@ class TUFKeyManager:
             pass  # boto3 not installed
         except Exception as e:
             logger.debug(f"Could not access AWS Secrets Manager: {e}")
-        
+
         # Priority 4: Try Azure Key Vault
         try:
             from azure.identity import DefaultAzureCredential
             from azure.keyvault.secrets import SecretClient
-            
+
             vault_url = os.environ.get("TUF_AZURE_VAULT_URL")
             if vault_url:
                 credential = DefaultAzureCredential()
@@ -234,11 +234,11 @@ class TUFKeyManager:
             pass  # azure libraries not installed
         except Exception as e:
             logger.debug(f"Could not access Azure Key Vault: {e}")
-        
+
         # Priority 5: Try HashiCorp Vault
         try:
             import hvac
-            
+
             vault_addr = os.environ.get("VAULT_ADDR")
             vault_token = os.environ.get("VAULT_TOKEN")
             if vault_addr and vault_token:
@@ -254,7 +254,7 @@ class TUFKeyManager:
             pass  # hvac not installed
         except Exception as e:
             logger.debug(f"Could not access HashiCorp Vault: {e}")
-        
+
         # Fallback: Use default (insecure, for development only)
         logger.warning(
             f"Using default password for {role} key - not secure for production! "

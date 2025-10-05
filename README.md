@@ -167,12 +167,19 @@ git commit -m "Update dependencies"
 ```
 
 The sync system:
+
 - ✅ Keeps `.devcontainer/post-create.sh` aligned with CI workflows
 - ✅ Validates consistency across all environments
 - ✅ Automatically creates PRs for sync changes on main branch
 - ✅ Prevents environment drift with pre-commit and CI checks
 
 See [Environment Sync Documentation](docs/ENVIRONMENT_SYNC.md) for details.
+
+### Vendored Dependencies & Offline Installs
+
+- Refresh the repository wheelhouse with `uv run chiron wheelhouse` (defaults to packaging the `dev` and `test` extras) before running `pip install -e '.[dev,test]'` in fresh environments.
+- The repository-level `sitecustomize.py` automatically points pip at `vendor/wheelhouse` and raises the network timeout so installation succeeds without extra flags.
+- Generated artifacts include `manifest.json`, `requirements.txt`, and `wheelhouse.sha256` for auditability and reproducible distribution to upstream runners.
 
 ### Setup
 
