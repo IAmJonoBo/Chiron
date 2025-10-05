@@ -220,3 +220,98 @@ def test_readiness_check_config_invalid(monkeypatch, tmp_path) -> None:
         response = client.get("/health/ready")
         assert response.status_code == 503
         assert "not ready" in response.json()["detail"].lower()
+
+
+def test_process_data_success(service_client: TestClient) -> None:
+    """Test successful data processing."""
+    response = service_client.post(
+        "/api/v1/process",
+        json={"data": {"test": "data"}, "options": {"verbose": True}},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert "result" in data
+    assert "metadata" in data
+
+
+def test_process_data_error_handling(monkeypatch, service_client: TestClient) -> None:
+    """Test data processing error handling."""
+    from chiron.exceptions import ChironError
+    
+    def mock_process_data(*args, **kwargs):
+        raise ChironError("Processing failed", details={"reason": "test"})
+    
+    monkeypatch.setattr(service_client.app.state.core, "process_data", mock_process_data)
+    
+    response = service_client.post(
+        "/api/v1/process",
+        json={"data": {"test": "data"}, "options": {}},
+    )
+    assert response.status_code == 400
+    error_data = response.json()["detail"]
+    assert error_data["error"] == "ProcessingError"
+    assert "Processing failed" in error_data["message"]
+
+
+def test_build_wheelhouse_subprocess_error(monkeypatch, service_client: TestClient) -> None:
+    """Test wheelhouse build with subprocess error."""
+    import subprocess
+    
+    def fake_run(cmd, **kwargs):  # type: ignore[override]
+        raise subprocess.CalledProcessError(1, cmd, stderr="Build failed")
+    
+    # Mock at the service routes api level where run_subprocess is imported
+    import chiron.service.routes.api
+    monkeypatch.setattr(chiron.service.routes.api, "run_subprocess", fake_run)
+    
+    response = service_client.post(
+        "/api/v1/wheelhouse/build",
+        json={"packages": ["requests"], "output_dir": "wheelhouse"},
+    )
+    assert response.status_code == 500
+    assert "Build failed" in response.json()["detail"]
+
+
+def test_list_airgap_bundles_with_bundles(service_client: TestClient, tmp_path) -> None:
+    """Test listing airgap bundles when bundles exist."""
+    # Create some test bundle files
+    (tmp_path / "test-airgap-bundle.tar.gz").touch()
+    (tmp_path / "another-bundle.tar.gz").touch()
+    (tmp_path / "not-a-bundle.txt").touch()  # Should be ignored
+    
+    response = service_client.get("/api/v1/airgap/bundles")
+    assert response.status_code == 200
+    data = response.json()
+    assert "bundles" in data
+    assert len(data["bundles"]) == 2
+    assert "test-airgap-bundle.tar.gz" in data["bundles"]
+    assert "another-bundle.tar.gz" in data["bundles"]
+    assert "not-a-bundle.txt" not in data["bundles"]
+
+
+def test_create_airgap_bundle_subprocess_error(monkeypatch, tmp_path, service_client: TestClient) -> None:
+    """Test airgap bundle creation with subprocess error."""
+    from chiron.subprocess_utils import ExecutableNotFoundError
+    
+    def fake_run(cmd, **kwargs):  # type: ignore[override]
+        raise ExecutableNotFoundError("tar")
+    
+    class FakeTempDir:
+        def __enter__(self):
+            return str(tmp_path)
+        
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            return False
+    
+    # Mock at the service routes api level
+    import chiron.service.routes.api
+    monkeypatch.setattr(chiron.service.routes.api, "run_subprocess", fake_run)
+    monkeypatch.setattr(tempfile, "TemporaryDirectory", lambda: FakeTempDir())
+    
+    response = service_client.post(
+        "/api/v1/airgap/create",
+        json={"bundle_name": "test", "include_security": True},
+    )
+    assert response.status_code == 500
+    assert "failed" in response.json()["detail"].lower()
