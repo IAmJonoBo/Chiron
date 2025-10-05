@@ -34,7 +34,7 @@ dependencies = [
   "opentelemetry-exporter-otlp>=1.37.0",
   "click>=8.1.8,<8.2.0",
   "structlog>=25.4.0",
-  "rich>=13.5.2,<14.0",
+  "rich>=14.1,<14.2",
 ]
 
 [project.optional-dependencies]
