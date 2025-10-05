@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-import pytest
-from packaging.version import Version
 
 from chiron.deps.constraints import ConstraintsConfig, ConstraintsGenerator
 from chiron.deps.policy import (
@@ -98,7 +94,7 @@ class TestPolicyEngine:
         """Test package allowed with default policy."""
         policy = DependencyPolicy(default_allowed=True)
         engine = PolicyEngine(policy)
-        
+
         allowed, reason = engine.check_package_allowed("test-package")
         assert allowed is True
         assert reason is None
@@ -107,7 +103,7 @@ class TestPolicyEngine:
         """Test package denied with default policy."""
         policy = DependencyPolicy(default_allowed=False)
         engine = PolicyEngine(policy)
-        
+
         allowed, reason = engine.check_package_allowed("test-package")
         assert allowed is False
         assert "not in allowlist" in reason.lower()
@@ -122,7 +118,7 @@ class TestPolicyEngine:
         policy = DependencyPolicy()
         policy.denylist["blocked-package"] = blocked_pkg
         engine = PolicyEngine(policy)
-        
+
         allowed, reason = engine.check_package_allowed("blocked-package")
         assert allowed is False
         assert "Security vulnerability" in reason
@@ -146,7 +142,7 @@ class TestPolicyEngine:
         # Version below ceiling should be allowed
         allowed, _ = engine.check_version_allowed("test-package", "1.0.0")
         assert allowed is True
-        
+
         allowed, _ = engine.check_version_allowed("test-package", "2.0.0")
         assert allowed is True
 
@@ -170,7 +166,7 @@ class TestPolicyEngine:
         # Version at or above floor should be allowed
         allowed, _ = engine.check_version_allowed("test-package", "1.0.0")
         assert allowed is True
-        
+
         allowed, _ = engine.check_version_allowed("test-package", "2.0.0")
         assert allowed is True
 
@@ -187,7 +183,7 @@ class TestPolicyEngine:
         # Non-blocked versions should be allowed
         allowed, _ = engine.check_version_allowed("test-package", "1.4.0")
         assert allowed is True
-        
+
         allowed, _ = engine.check_version_allowed("test-package", "1.6.0")
         assert allowed is True
 
@@ -195,7 +191,7 @@ class TestPolicyEngine:
         allowed, reason = engine.check_version_allowed("test-package", "1.5.0")
         assert allowed is False
         assert "blocked" in reason.lower()
-        
+
         allowed, _ = engine.check_version_allowed("test-package", "1.5.1")
         assert allowed is False
 
@@ -367,7 +363,7 @@ class TestConstraintsGenerator:
         """Test constraints generation with pip-tools."""
         # Mock pip-compile being available
         mock_which.return_value = "/usr/bin/pip-compile"
-        
+
         config = ConstraintsConfig(
             project_root=tmp_path,
             pyproject_path=tmp_path / "pyproject.toml",

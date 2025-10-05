@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 from unittest.mock import MagicMock, Mock, patch
 
-import pytest
 from opentelemetry.sdk.trace import TracerProvider
 
 from chiron.observability.tracing import _load_otlp_exporter, configure_tracing

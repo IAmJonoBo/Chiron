@@ -7,7 +7,6 @@ Tests all the newly implemented features from TODOs.
 from __future__ import annotations
 
 import logging
-import shutil
 import subprocess
 import tempfile
 from pathlib import Path

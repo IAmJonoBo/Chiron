@@ -7,8 +7,6 @@ import logging
 import os
 from unittest.mock import patch
 
-import pytest
-
 from chiron.observability.logging import (
     DEFAULT_LOG_LEVEL,
     _JsonFormatter,
