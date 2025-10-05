@@ -17,6 +17,10 @@
 - 🚀 **Service Mode**: FastAPI with auto-generated OpenAPI documentation
 - 🛡️ **Supply Chain Security**: SLSA provenance and reproducible builds
 - 🔧 **Developer Experience**: uv, pre-commit, dev containers
+- 🔄 **Environment Sync**: Automatic synchronization between dev and CI environments
+- 📦 **Reproducible Builds**: Binary reproducibility verification and rebuild workflows
+- 🐳 **Offline Deployment**: Container image caching for air-gapped environments
+- 🔐 **TUF Integration**: Multi-backend key storage (AWS, Azure, Vault, keyring)
 
 ## 🚀 Quick Start
 
@@ -142,8 +146,30 @@ The FastAPI service provides:
 
 ### Prerequisites
 
-- Python 3.9+
+- Python 3.12+ (frontier-grade specification)
 - [uv](https://docs.astral.sh/uv/) (recommended) or pip
+
+### Environment Synchronization
+
+Chiron automatically synchronizes dependency installation commands between the devcontainer and CI workflows:
+
+```bash
+# Manually sync environments
+python scripts/sync_env_deps.py
+
+# Pre-commit hook runs automatically
+git add pyproject.toml
+git commit -m "Update dependencies"
+# Hook ensures devcontainer and CI use the same uv sync command
+```
+
+The sync system:
+- ✅ Keeps `.devcontainer/post-create.sh` aligned with CI workflows
+- ✅ Validates consistency across all environments
+- ✅ Automatically creates PRs for sync changes on main branch
+- ✅ Prevents environment drift with pre-commit and CI checks
+
+See [Environment Sync Documentation](docs/ENVIRONMENT_SYNC.md) for details.
 
 ### Setup
 

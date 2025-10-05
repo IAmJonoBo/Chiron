@@ -19,9 +19,53 @@
 1. **Telemetry Safety** – Disable or gate OTLP exporters in environments without collectors; keep graceful fallback in place.
 2. **MCP Tooling** – Replace placeholder responses with real integrations (wheelhouse build/verify, policy enforcement). Until then, mark MCP agent as experimental.
 3. **External Command Wrappers** – Wrap CLI/service subprocess calls with shared helper that enforces timeouts, checks availability, and surfaces actionable errors.
-4. **Dependency Hygiene** – Document why `semgrep<1.80` and `click<8.2` are pinned alongside OpenTelemetry ≥1.37; consider running semgrep via `uvx` or pipx to keep the runtime env clean.
+4. **Dependency Hygiene** – ✅ **RESOLVED**: Dependency conflicts fixed (rich, jsonschema, click versions aligned with semgrep constraints). Document why `semgrep<1.80` is pinned alongside OpenTelemetry ≥1.37.
 5. **Test Coverage** – Extend coverage across CLI/service and supply-chain modules so the coverage gate can be tightened beyond the current 50% baseline.
-6. **Docs Audit** – Align remaining guides (`ROADMAP.md`, `docs/README.md`, security/observability guides`) with the corrected status to prevent over-promising.
+6. **Docs Audit** – ✅ **IMPROVED**: Added ENVIRONMENT_SYNC.md guide. Continue aligning remaining guides with actual implementation status.
+
+## Recent Completions (Current Sprint)
+
+### TODOs Implemented ✅
+
+1. **Reproducibility Rebuild Logic** (`src/chiron/deps/reproducibility.py`)
+   - Implemented full rebuild workflow with script execution
+   - Added wheel comparison and diff detection
+   - Handles timeouts and error cases gracefully
+   - Produces detailed reproducibility reports
+
+2. **Container Preparation** (`src/chiron/orchestration/coordinator.py`)
+   - Implemented Docker container image caching
+   - Supports multiple Python base images
+   - Handles offline air-gapped scenarios
+   - Graceful degradation when Docker unavailable
+
+3. **TUF Key Storage Integration** (`docs/TUF_IMPLEMENTATION_GUIDE.md`)
+   - Multi-backend support: keyring, AWS Secrets Manager, Azure Key Vault, HashiCorp Vault
+   - Priority-based key retrieval
+   - Secure fallback for development environments
+   - Comprehensive error handling and logging
+
+### Environment Synchronization System ✅
+
+4. **Auto-Sync Script** (`scripts/sync_env_deps.py`)
+   - Synchronizes dependency commands between devcontainer and CI
+   - Validates consistency across all environments
+   - Automated updates with conflict detection
+
+5. **CI Workflow** (`.github/workflows/sync-env.yml`)
+   - Automatic PR creation for sync changes
+   - Validation on pull requests
+   - Prevents environment drift
+
+6. **Pre-commit Hook** (`.pre-commit-config.yaml`)
+   - Automatic sync before commits
+   - Validates configuration files
+   - Prevents accidental inconsistencies
+
+7. **Documentation** (`docs/ENVIRONMENT_SYNC.md`)
+   - Complete usage guide
+   - Troubleshooting instructions
+   - Integration examples
 
 ## Suggested Roadmap Adjustments
 

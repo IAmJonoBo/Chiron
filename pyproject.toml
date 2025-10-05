@@ -32,13 +32,13 @@ dependencies = [
   "opentelemetry-sdk>=1.37.0",
   "opentelemetry-instrumentation-fastapi>=0.42b0",
   "opentelemetry-exporter-otlp>=1.37.0",
-  "click>=8.3.0,<8.4.0",
+  "click>=8.1.8",
   "structlog>=25.4.0",
-  "rich>=14.1,<14.2",
+  "rich>=13.5.2",
 ]
 
 [project.optional-dependencies]
-cli = ["typer>=0.19.2", "jsonschema>=4.25.1"]
+cli = ["typer>=0.19.2", "jsonschema>=4.20.0"]
 service = ["gunicorn>=23.0.0"]
 observability = [
   "opentelemetry-api>=1.37.0",
@@ -76,7 +76,7 @@ llm = [
 ]
 governance = [
   "policyuniverse>=1.5.1.20231109",
-  "jsonschema>=4.25.1",
+  "jsonschema>=4.20.0",
   "pyyaml>=6.0.3",
 ]
 integrations = [
@@ -111,7 +111,7 @@ dev = [
 test = ["pact-python>=2.3.3", "httpx>=0.28.1", "pytest-benchmark>=5.1.0"]
 all = [
   "typer>=0.19.2",
-  "jsonschema>=4.25.1",
+  "jsonschema>=4.20.0",
   "openfeature-sdk>=0.7.0",
   "gunicorn>=23.0.0",
   "opentelemetry-api>=1.37.0",

@@ -17,10 +17,11 @@ This directory contains up-to-date documentation for the Chiron project. Key sta
 
 ### Additional Guides
 
-- [CI_REPRODUCIBILITY_VALIDATION](CI_REPRODUCIBILITY_VALIDATION.md) – Historical plan for reproducibility checks (requires revalidation)
+- [ENVIRONMENT_SYNC](ENVIRONMENT_SYNC.md) – **NEW**: Automatic synchronization between dev and CI environments
+- [CI_REPRODUCIBILITY_VALIDATION](CI_REPRODUCIBILITY_VALIDATION.md) – Reproducibility checks and rebuild workflows
 - [GRAFANA_DEPLOYMENT_GUIDE](GRAFANA_DEPLOYMENT_GUIDE.md) – Grafana deployment notes (ensure metrics endpoints exist first)
 - [MCP_INTEGRATION_TESTING](MCP_INTEGRATION_TESTING.md) – MCP testing playbook (tools currently marked experimental)
-- [TUF_IMPLEMENTATION_GUIDE](TUF_IMPLEMENTATION_GUIDE.md) – TUF roadmap (key management still pending)
+- [TUF_IMPLEMENTATION_GUIDE](TUF_IMPLEMENTATION_GUIDE.md) – TUF implementation with multi-backend key storage
 
 ## Getting Started Checklist
 

@@ -1,0 +1,99 @@
+name: Sync Dev and CI Environments
+
+on:
+  push:
+    paths:
+      - 'pyproject.toml'
+      - '.devcontainer/**'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/wheels.yml'
+      - '.github/workflows/airgap.yml'
+      - 'scripts/sync_env_deps.py'
+  pull_request:
+    paths:
+      - 'pyproject.toml'
+      - '.devcontainer/**'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/wheels.yml'
+      - '.github/workflows/airgap.yml'
+      - 'scripts/sync_env_deps.py'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Run environment sync
+        id: sync
+        run: |
+          python scripts/sync_env_deps.py
+          
+          # Check if any files were modified
+          if git diff --quiet; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "No changes needed"
+          else
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected"
+          fi
+      
+      - name: Show changes
+        if: steps.sync.outputs.changes == 'true'
+        run: |
+          echo "Files modified:"
+          git diff --name-only
+          echo ""
+          echo "Diff:"
+          git diff
+      
+      - name: Create PR for sync changes
+        if: |
+          steps.sync.outputs.changes == 'true' && 
+          github.event_name == 'push' && 
+          github.ref == 'refs/heads/main'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: sync dev and CI environment dependencies'
+          title: 'Sync Dev and CI Environment Dependencies'
+          body: |
+            This PR was automatically generated to sync dependency installation commands 
+            between the devcontainer configuration and GitHub Actions workflows.
+            
+            Changes ensure that:
+            - `.devcontainer/post-create.sh` uses the same `uv sync` command as CI
+            - All GitHub Actions workflows use consistent dependency installation
+            
+            Please review and merge if changes look correct.
+          branch: auto-sync-env-deps
+          delete-branch: true
+      
+      - name: Fail if changes needed on PR
+        if: |
+          steps.sync.outputs.changes == 'true' && 
+          github.event_name == 'pull_request'
+        run: |
+          echo "::error::Environment sync changes needed. Please run 'python scripts/sync_env_deps.py' locally and commit the changes."
+          exit 1
+      
+      - name: Validate consistency
+        run: |
+          python scripts/sync_env_deps.py
+          if [ $? -ne 0 ]; then
+            echo "::error::Environment consistency validation failed"
+            exit 1
+          fi

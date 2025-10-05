@@ -174,10 +174,94 @@ class TUFKeyManager:
         """Get password for key encryption.
 
         In production, use secure key management system.
+        Supports multiple secure key storage backends:
+        - Environment variables (default)
+        - AWS Secrets Manager
+        - Azure Key Vault
+        - HashiCorp Vault
+        - System keyring
         """
-        # TODO: Integrate with secure key storage
         import os
-        return os.environ.get(f"TUF_{role.upper()}_KEY_PASSWORD", "changeme")
+        
+        # Priority 1: Check environment variable
+        env_password = os.environ.get(f"TUF_{role.upper()}_KEY_PASSWORD")
+        if env_password:
+            return env_password
+        
+        # Priority 2: Try system keyring if available
+        try:
+            import keyring
+            keyring_password = keyring.get_password("chiron-tuf", role)
+            if keyring_password:
+                logger.info(f"Retrieved {role} key password from system keyring")
+                return keyring_password
+        except ImportError:
+            pass  # keyring not installed
+        except Exception as e:
+            logger.debug(f"Could not access keyring: {e}")
+        
+        # Priority 3: Try AWS Secrets Manager
+        try:
+            import boto3
+            aws_secret_name = os.environ.get("TUF_AWS_SECRET_NAME")
+            if aws_secret_name:
+                client = boto3.client("secretsmanager")
+                response = client.get_secret_value(SecretId=aws_secret_name)
+                secrets = json.loads(response["SecretString"])
+                password = secrets.get(f"{role}_key_password")
+                if password:
+                    logger.info(f"Retrieved {role} key password from AWS Secrets Manager")
+                    return password
+        except ImportError:
+            pass  # boto3 not installed
+        except Exception as e:
+            logger.debug(f"Could not access AWS Secrets Manager: {e}")
+        
+        # Priority 4: Try Azure Key Vault
+        try:
+            from azure.identity import DefaultAzureCredential
+            from azure.keyvault.secrets import SecretClient
+            
+            vault_url = os.environ.get("TUF_AZURE_VAULT_URL")
+            if vault_url:
+                credential = DefaultAzureCredential()
+                client = SecretClient(vault_url=vault_url, credential=credential)
+                secret = client.get_secret(f"tuf-{role}-key-password")
+                if secret.value:
+                    logger.info(f"Retrieved {role} key password from Azure Key Vault")
+                    return secret.value
+        except ImportError:
+            pass  # azure libraries not installed
+        except Exception as e:
+            logger.debug(f"Could not access Azure Key Vault: {e}")
+        
+        # Priority 5: Try HashiCorp Vault
+        try:
+            import hvac
+            
+            vault_addr = os.environ.get("VAULT_ADDR")
+            vault_token = os.environ.get("VAULT_TOKEN")
+            if vault_addr and vault_token:
+                client = hvac.Client(url=vault_addr, token=vault_token)
+                if client.is_authenticated():
+                    secret_path = f"secret/chiron/tuf/{role}"
+                    secret = client.secrets.kv.v2.read_secret_version(path=secret_path)
+                    password = secret["data"]["data"].get("password")
+                    if password:
+                        logger.info(f"Retrieved {role} key password from HashiCorp Vault")
+                        return password
+        except ImportError:
+            pass  # hvac not installed
+        except Exception as e:
+            logger.debug(f"Could not access HashiCorp Vault: {e}")
+        
+        # Fallback: Use default (insecure, for development only)
+        logger.warning(
+            f"Using default password for {role} key - not secure for production! "
+            "Set TUF_{role.upper()}_KEY_PASSWORD environment variable or configure "
+            "a secure key storage backend."
+        )
+        return "changeme"
 
     def _save_key(
         self,
