@@ -210,7 +210,7 @@ class TestConfigureLogging:
     def test_configure_logging_clears_existing_handlers(self) -> None:
         """Test that existing handlers are cleared."""
         root_logger = logging.getLogger()
-        original_handler_count = len(root_logger.handlers)
+        original_handlers = list(root_logger.handlers)
 
         # Add a dummy handler
         dummy_handler = logging.StreamHandler()
@@ -220,6 +220,8 @@ class TestConfigureLogging:
         configure_logging()
 
         assert len(root_logger.handlers) == 1
+        for handler in original_handlers:
+            assert handler not in root_logger.handlers
         assert dummy_handler not in root_logger.handlers
 
     def test_configure_logging_captures_warnings(self) -> None:
@@ -231,7 +233,7 @@ class TestConfigureLogging:
         import warnings
 
         with warnings.catch_warnings(record=True):
-            warnings.warn("Test warning")
+            warnings.warn("Test warning", stacklevel=2)
 
     def test_configure_logging_invalid_level(self) -> None:
         """Test configuring with invalid level string."""

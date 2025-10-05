@@ -62,8 +62,8 @@ jobs:
 
       - name: Create PR for sync changes
         if: |
-          steps.sync.outputs.changes == 'true' && 
-          github.event_name == 'push' && 
+          steps.sync.outputs.changes == 'true' &&
+          github.event_name == 'push' &&
           github.ref == 'refs/heads/main'
         uses: peter-evans/create-pull-request@v7
         with:
@@ -71,7 +71,7 @@ jobs:
           commit-message: "chore: sync dev and CI environment dependencies"
           title: "Sync Dev and CI Environment Dependencies"
           body: |
-            This PR was automatically generated to sync dependency installation commands 
+            This PR was automatically generated to sync dependency installation commands
             between the devcontainer configuration and GitHub Actions workflows.
 
             Changes ensure that:
@@ -84,7 +84,7 @@ jobs:
 
       - name: Fail if changes needed on PR
         if: |
-          steps.sync.outputs.changes == 'true' && 
+          steps.sync.outputs.changes == 'true' &&
           github.event_name == 'pull_request'
         run: |
           echo "::error::Environment sync changes needed. Please run 'python scripts/sync_env_deps.py' locally and commit the changes."

@@ -15,17 +15,18 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 _VENDOR_WHEELHOUSE = Path(__file__).resolve().parent / "vendor" / "wheelhouse"
 _MANIFEST_FILENAME = "manifest.json"
 _REQUIRED_EXTRAS = {"dev", "test"}
+_DISABLE_ENV_VAR = "CHIRON_DISABLE_VENDOR_WHEELHOUSE"
 
 
 def _iter_existing_values(value: str | None) -> Iterable[str]:
     if not value:
-        return ()
+        return []
     # pip interprets both spaces and newlines as separators in find-links values
     for part in value.replace("\n", " ").split():
         cleaned = part.strip()
@@ -52,6 +53,9 @@ def _should_force_offline(manifest_path: Path) -> bool:
 
 
 def _configure_pip_environment() -> None:
+    if os.environ.get(_DISABLE_ENV_VAR):
+        return
+
     if not _VENDOR_WHEELHOUSE.is_dir():
         return
 

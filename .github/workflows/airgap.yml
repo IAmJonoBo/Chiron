@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       include_extras:
-        description: "Include extra dependencies"
+        description: Include extra dependencies
         required: false
-        default: "true"
+        default: true
         type: boolean
 
 concurrency:

@@ -27,6 +27,7 @@ Moved superseded documentation to `docs/deprecated/` with clear deprecation noti
 **Total Changes**: 14 references updated across 4 files
 
 #### docs/GRAFANA_DEPLOYMENT_GUIDE.md (10 updates)
+
 - Updated prerequisites to mention generic "metrics data source" instead of "Prometheus data source"
 - Changed "Prometheus exporter" to "metrics exporter (Prometheus format compatible)"
 - Updated "Prometheus Scrape Configuration" to "Metrics Scrape Configuration"
@@ -35,18 +36,22 @@ Moved superseded documentation to `docs/deprecated/` with clear deprecation noti
 - **Note**: Kept technical references to "Prometheus format/protocol" as it's a standard
 
 #### docs/CI_REPRODUCIBILITY_VALIDATION.md (1 update)
+
 - Changed "Push to Prometheus Pushgateway" to "Push to metrics backend (e.g., Pushgateway or OTLP endpoint)"
 
 #### ROADMAP.md (2 updates)
+
 - "Default dashboard templates (Grafana, Prometheus)" → "(Grafana with OpenTelemetry metrics)"
 - "Observability dashboard templates provided for Grafana and Prometheus" → "for Grafana with OpenTelemetry metrics"
 
 #### src/chiron/deps/README.md (1 update)
+
 - Example repository name changed from "org/prometheus-wheelhouse" → "org/chiron-wheelhouse"
 
 ### 3. Restructured Documentation Index ✅
 
 #### docs/README.md
+
 - Complete rewrite with improved structure
 - Added clear hierarchy: Core Documentation, Specialized Guides, Deprecated Documentation
 - Highlighted primary references with ⭐ and **bold** markers
@@ -55,24 +60,28 @@ Moved superseded documentation to `docs/deprecated/` with clear deprecation noti
 - Added contribution guidelines for documentation
 
 #### README.md (Main)
+
 - Added link to Testing Progress Summary
 - Added link to Grafana Deployment Guide with note about OpenTelemetry metrics
 
 ### 4. Updated IMPLEMENTATION_SUMMARY.md ✅
 
 Added notes about documentation consolidation:
+
 - Updated Documentation status to note deprecated docs moved
 - Updated "Docs Audit" to mention April 2025 deprecation and Prometheus replacement
 
 ## Impact
 
 ### Before
+
 - 3 redundant summary documents creating confusion
 - Outdated documentation mixed with current docs
 - 14 references to Prometheus as a product (vs. as a format)
 - Unclear documentation hierarchy
 
 ### After
+
 - Clear documentation structure with single source of truth
 - Historical docs preserved but clearly marked as deprecated
 - Consistent terminology: Chiron/OpenTelemetry for the project, Prometheus format for the protocol

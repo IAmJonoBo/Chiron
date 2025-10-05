@@ -360,6 +360,7 @@ class TestConstraintsGenerator:
     def test_generate_with_pip_tools(
         self, mock_run: MagicMock, mock_which: MagicMock, tmp_path: Path
     ) -> None:
+    def test_generate_with_pip_tools(self, mock_run: MagicMock, tmp_path: Path) -> None:
         """Test constraints generation with pip-tools."""
         # Mock pip-compile being available
         mock_which.return_value = "/usr/bin/pip-compile"

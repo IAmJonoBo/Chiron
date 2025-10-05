@@ -6,6 +6,7 @@ preflight checks without depending on the package being installed in the
 current interpreter. It simply delegates to :mod:`chiron.deps.preflight`
 so all of the real logic lives beside the library code.
 """
+
 from __future__ import annotations
 
 import runpy

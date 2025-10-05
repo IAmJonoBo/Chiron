@@ -4,6 +4,8 @@
 
 import hashlib
 import json
+import shutil
+import subprocess
 import sys
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -18,11 +20,6 @@ from chiron import __version__
 from chiron.core import ChironCore
 from chiron.exceptions import ChironError
 from chiron.schema_validator import validate_config
-from chiron.subprocess_utils import (
-    ExecutableNotFoundError,
-    SubprocessTimeoutError,
-    run_subprocess,
-)
 
 console = Console()
 logger = structlog.get_logger(__name__)
@@ -30,29 +27,36 @@ logger = structlog.get_logger(__name__)
 WHEELHOUSE_CHECKSUM_FILENAME = "wheelhouse.sha256"
 
 
+def _resolve_executable(executable: str) -> str:
+    """Return an absolute path to the requested executable or raise a Click error."""
+
+    path = Path(executable)
+    if path.is_absolute():
+        return str(path)
+
+    if path.parent != Path("."):
+        candidate = path.resolve()
+        if candidate.exists():
+            return str(candidate)
+
+    resolved = shutil.which(executable)
+    if resolved is None:
+        raise click.ClickException(
+            f"Required executable '{executable}' was not found on PATH."
+        )
+    return resolved
+
+
 def _run_command(
     command: Sequence[str], **kwargs: object
-) -> "subprocess.CompletedProcess":
-    """Run a command using shared subprocess utilities.
-    
-    This wrapper uses the subprocess_utils module which provides:
-    - Automatic executable path resolution
-    - Default timeouts based on command type
-    - Graceful error handling with actionable messages
-    """
-    import subprocess
+) -> subprocess.CompletedProcess[str]:
+    """Run a command with sanitized executable resolution."""
 
     if not command:
         raise click.ClickException("Command must contain at least one argument.")
 
-    try:
-        return run_subprocess(command, **kwargs)  # type: ignore[arg-type]
-    except ExecutableNotFoundError as e:
-        raise click.ClickException(str(e)) from e
-    except SubprocessTimeoutError as e:
-        raise click.ClickException(str(e)) from e
-    except subprocess.CalledProcessError as e:
-        raise click.ClickException(f"Command failed with exit code {e.returncode}") from e
+    resolved = [_resolve_executable(command[0]), *command[1:]]
+    return subprocess.run(resolved, **kwargs)  # noqa: S603
 
 
 def _current_git_commit() -> str | None:

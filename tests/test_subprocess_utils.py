@@ -153,9 +153,7 @@ class TestRunSubprocess:
 
     @patch("subprocess.run")
     @patch("chiron.subprocess_utils.resolve_executable")
-    def test_custom_timeout(
-        self, mock_resolve: MagicMock, mock_run: MagicMock
-    ) -> None:
+    def test_custom_timeout(self, mock_resolve: MagicMock, mock_run: MagicMock) -> None:
         """Test subprocess execution with custom timeout."""
         mock_resolve.return_value = "/usr/bin/echo"
         mock_run.return_value = subprocess.CompletedProcess(
@@ -202,9 +200,7 @@ class TestRunSubprocess:
 
     @patch("subprocess.run")
     @patch("chiron.subprocess_utils.resolve_executable")
-    def test_capture_output(
-        self, mock_resolve: MagicMock, mock_run: MagicMock
-    ) -> None:
+    def test_capture_output(self, mock_resolve: MagicMock, mock_run: MagicMock) -> None:
         """Test subprocess execution with output capture."""
         mock_resolve.return_value = "/usr/bin/echo"
         mock_run.return_value = subprocess.CompletedProcess(
@@ -298,9 +294,7 @@ class TestBinaryAvailability:
     """Tests for binary availability checking functions."""
 
     @patch("chiron.subprocess_utils.probe_executable")
-    def test_check_binary_availability_all_found(
-        self, mock_probe: MagicMock
-    ) -> None:
+    def test_check_binary_availability_all_found(self, mock_probe: MagicMock) -> None:
         """Test checking binary availability when all binaries are found."""
         mock_probe.return_value = "/usr/bin/mock"
 
@@ -344,7 +338,11 @@ class TestBinaryAvailability:
         """Test getting missing binaries when some are unavailable."""
 
         def probe_side_effect(binary: str) -> str | None:
-            return None if binary in ["syft", "cosign", "semantic-release"] else "/usr/bin/mock"
+            return (
+                None
+                if binary in ["syft", "cosign", "semantic-release"]
+                else "/usr/bin/mock"
+            )
 
         mock_probe.side_effect = probe_side_effect
 
