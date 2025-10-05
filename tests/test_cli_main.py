@@ -77,7 +77,7 @@ class TestResolveExecutable:
 class TestRunCommand:
     """Tests for _run_command helper."""
 
-    @patch("chiron.cli.main.run_subprocess")
+    @patch("subprocess.run")
     def test_run_command_success(self, mock_run: Mock) -> None:
         """Test running a command successfully."""
         mock_result = Mock(spec=subprocess.CompletedProcess)
@@ -96,7 +96,7 @@ class TestRunCommand:
 
         assert "at least one argument" in str(exc_info.value)
 
-    @patch("chiron.cli.main.run_subprocess")
+    @patch("subprocess.run")
     def test_run_command_with_kwargs(self, mock_run: Mock) -> None:
         """Test running a command with additional kwargs."""
         mock_result = Mock(spec=subprocess.CompletedProcess)
@@ -109,12 +109,10 @@ class TestRunCommand:
         assert call_kwargs.get("capture_output") is True
         assert call_kwargs.get("text") is True
 
-    @patch("chiron.cli.main.run_subprocess")
-    def test_run_command_executable_not_found(self, mock_run: Mock) -> None:
+    @patch("chiron.cli.main._resolve_executable")
+    def test_run_command_executable_not_found(self, mock_resolve: Mock) -> None:
         """Test when executable is not found."""
-        from chiron.subprocess_utils import ExecutableNotFoundError
-
-        mock_run.side_effect = ExecutableNotFoundError("nonexistent-command")
+        mock_resolve.side_effect = click.ClickException("nonexistent-command not found")
 
         with pytest.raises(click.ClickException) as exc_info:
             _run_command(["nonexistent-command"])
