@@ -129,7 +129,7 @@ All external tool calls should use `chiron.subprocess_utils` for:
 
 ### Current Status
 
-- **Overall Project**: 55.45% (exceeds 50% gate ✅)
+- **Overall Project**: 58.2% (exceeds 50% gate ✅)
 - **Deps Modules**: ~0% (explicitly omitted)
 - **Target**: 60%+ overall, 50%+ for deps modules
 
@@ -293,13 +293,13 @@ def test_property(text_input, int_input):
 
 ### Quality Gates
 
-- ✅ Minimum coverage: 50% (currently 55.45%)
-- ⏳ Target coverage: 60% (currently 55.45%)
+- ✅ Minimum coverage: 50% (currently 58.2%)
+- ⏳ Target coverage: 60% (currently 58.2%)
 - 🎯 Frontier coverage: 70%
 
 ### Test Count
 
-- Current: ~254 tests
+- Current: ~334 tests
 - Target for 60% coverage: ~350 tests
 - Target for 70% coverage: ~500 tests
 

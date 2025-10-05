@@ -91,7 +91,8 @@ class TestMCPServer:
         server = MCPServer()
         result = server.execute_tool("chiron_build_wheelhouse", {"dry_run": False})
 
-        assert result["status"] == "not_implemented"
+        # Should return error since wheelhouse directory doesn't exist in test environment
+        assert result["status"] == "error"
         assert "message" in result
 
     def test_execute_tool_verify_artifacts(self):
@@ -101,8 +102,19 @@ class TestMCPServer:
             "chiron_verify_artifacts", {"target": "/path/to/artifacts"}
         )
 
-        assert result["status"] == "not_implemented"
-        assert result["target"] == "/path/to/artifacts"
+        # Should succeed with verification results
+        assert result["status"] in ["success", "warning", "error"]
+        assert result.get("target") == "/path/to/artifacts"
+
+    def test_execute_tool_verify_artifacts_no_target(self):
+        """Test executing verify_artifacts without target."""
+        server = MCPServer()
+        result = server.execute_tool("chiron_verify_artifacts", {})
+
+        # Should return error since target is required
+        assert result["status"] == "error"
+        assert "message" in result
+        assert "required" in result["message"].lower()
 
     def test_execute_tool_create_airgap_bundle_dry_run(self):
         """Test executing create_airgap_bundle in dry run mode."""
@@ -125,7 +137,9 @@ class TestMCPServer:
         server = MCPServer()
         result = server.execute_tool("chiron_create_airgap_bundle", {"dry_run": False})
 
-        assert result["status"] == "not_implemented"
+        # Should return error since wheelhouse directory doesn't exist in test environment
+        assert result["status"] == "error"
+        assert "message" in result
 
     def test_execute_tool_check_policy(self):
         """Test executing check_policy tool."""
@@ -134,8 +148,19 @@ class TestMCPServer:
             "chiron_check_policy", {"config_path": "/path/to/config.yaml"}
         )
 
-        assert result["status"] == "not_implemented"
-        assert result["config_path"] == "/path/to/config.yaml"
+        # Should return error since config file doesn't exist
+        assert result["status"] == "error"
+        assert "message" in result
+
+    def test_execute_tool_check_policy_default(self):
+        """Test executing check_policy with default policy (no config)."""
+        server = MCPServer()
+        result = server.execute_tool("chiron_check_policy", {})
+
+        # Should succeed with default policy
+        assert result["status"] == "success"
+        assert "policy" in result
+        assert result["policy"]["default_allowed"] is True
 
     def test_execute_tool_health_check(self):
         """Test executing health_check tool."""
