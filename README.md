@@ -23,7 +23,7 @@
 - 🐳 **Offline Deployment**: Container image caching for air-gapped environments
 - 🔐 **TUF Integration**: Multi-backend key storage (AWS, Azure, Vault, keyring)
 - ✅ **Quality Gates**: 8 comprehensive quality gates enforcing frontier standards
-- 🎯 **55.45% Test Coverage**: Exceeding 50% minimum gate, targeting 60%+
+- 🎯 **63.06% Test Coverage**: Exceeding 50% minimum gate, approaching 65% target
 
 ## 🚀 Quick Start
 
@@ -245,10 +245,10 @@ uv run pytest -m security
 uv run pytest -m contract
 ```
 
-**Test Coverage**: 55.45% (254 tests passing)
+**Test Coverage**: 63.06% (599 tests passing)
 
 - Minimum gate: 50% ✅
-- Target: 60% 🎯
+- Target: 65% 🎯 (approaching)
 - Frontier: 80% 🌟
 
 See [docs/QUALITY_GATES.md](docs/QUALITY_GATES.md) for comprehensive quality standards.
@@ -297,11 +297,11 @@ Chiron is actively developed and maintained. We follow semantic versioning and m
 
 ### Quality Status
 
-- ✅ **Test Coverage**: 58.2% (exceeds 50% minimum gate, approaching 60% target)
+- ✅ **Test Coverage**: 63.06% (exceeds 50% minimum gate, approaching 65% target)
 - ✅ **Security Gate**: Zero critical vulnerabilities
 - ✅ **Type Safety**: Strict MyPy checking passes
 - ✅ **Code Quality**: Ruff linting passes
-- ✅ **All Tests Passing**: 334 tests (0 failures)
+- ✅ **All Tests Passing**: 599 tests (0 failures)
 
 ### Feature Status
 

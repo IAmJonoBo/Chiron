@@ -21,7 +21,7 @@
 2. **MCP Tooling** – ✅ **RESOLVED**: Implemented real integrations for wheelhouse build/verify, policy enforcement, and artifact verification. MCP server now uses actual deps modules (bundler.py, policy.py, verify.py) instead of placeholder responses. All tools tested with proper error handling and graceful degradation.
 3. **External Command Wrappers** – ✅ **RESOLVED**: Created shared `subprocess_utils` module with executable path probing, configurable timeouts, graceful error handling, and comprehensive tests. CLI and service routes updated to use new utilities.
 4. **Dependency Hygiene** – ✅ **RESOLVED**: Dependency conflicts fixed (rich, jsonschema, click versions aligned with semgrep constraints). Document why `semgrep<1.80` is pinned alongside OpenTelemetry ≥1.37.
-5. **Test Coverage** – ✅ **EXCELLENT PROGRESS**: Coverage increased from ~39% to 62.13% (+23.13%). Core, observability, telemetry, CLI, service routes, and **bundler** now well-tested. Service routes at production quality (93-97% coverage). Deps modules have policy, constraints, and bundler tests; systematic testing plan in DEPS_MODULES_STATUS.md. **Target: 65%+ by next milestone.**
+5. **Test Coverage** – ✅ **EXCELLENT PROGRESS**: Coverage increased from ~39% to 63.06% (+24.06%). Core, observability, telemetry, CLI, service routes, and **bundler** now well-tested. Service routes at production quality (93-97% coverage). Deps modules have policy, constraints, and bundler tests; systematic testing plan in DEPS_MODULES_STATUS.md. **Target: 65%+ by next milestone.**
 6. **Docs Audit** – ✅ **RESOLVED**: Added ENVIRONMENT_SYNC.md, QUALITY_GATES.md, and DEPS_MODULES_STATUS.md guides. All documentation aligned with actual implementation status. Quality metrics in README. All status docs accurate. **April 2025**: Deprecated outdated summaries (TODO_IMPLEMENTATION_SUMMARY, TESTING_IMPLEMENTATION_SUMMARY, QUALITY_GATES_IMPLEMENTATION_SUMMARY) moved to `docs/deprecated/`. All Prometheus references replaced with Chiron/OpenTelemetry.
 7. **Quality Gates** – ✅ **RESOLVED**: Implemented frontier-grade quality gates workflow with coverage, security, type safety, SBOM, code quality, test, dependency, and documentation gates. Comprehensive documentation in QUALITY_GATES.md.
 
@@ -46,10 +46,10 @@
    - bundler.py coverage: 0% (omitted) → 98%
 
 4. **Overall Test Metrics**
-   - Coverage: 58.73% → 62.13% (+3.4 percentage points)
-   - Tests passing: 348 → 367 (+19 tests)
+   - Coverage: 58.73% → 63.06% (+4.33 percentage points)
+   - Tests passing: 348 → 599 (+251 tests)
    - Exceeds 50% minimum quality gate ✅
-   - On track for 65%+ coverage milestone
+   - Approaching 65% coverage milestone
 
 ### Test Coverage Improvements (October 2025) ✅
 
@@ -180,12 +180,12 @@
 
 - **Milestone 1** ✅ **COMPLETE**: Stabilise core library – telemetry fallback ✅, feature flag accessor ✅, smoke tests for FastAPI endpoints ✅, subprocess utilities ✅, quality gates ✅.
 - **Milestone 2** (In Progress): Harden tooling – implement MCP actions, add contract/integration coverage for deps modules, increase service/CLI test coverage to 80%+.
-  - **Progress Update (October 2025)**: Service test coverage substantially improved:
+  - **Progress Update (January 2026)**: Coverage substantially improved:
     - Health routes: 48% → 93% ✅
     - API routes: 77% → 97% ✅
-    - CLI: 27% → 31% (in progress)
-    - Overall: 55.8% → 58.2% (+2.4%)
-    - Tests: 321 → 334 (+13 tests)
+    - CLI: 27% → 42% (in progress)
+    - Overall: 55.8% → 63.06% (+7.26%)
+    - Tests: 321 → 599 (+278 tests)
 - **Milestone 3** (Planned): Supply-chain & observability – activate `chiron.deps` workflows with real data, complete remaining module tests (target 60%+ coverage), update docs with verified runbooks.
 - **Milestone 4** (Frontier Grade): Achieve 70%+ coverage across all modules, implement all MCP operations, add authentication to service layer, reach frontier standards on all quality gates.
 
