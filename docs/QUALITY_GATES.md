@@ -24,10 +24,10 @@ Chiron implements 8 comprehensive quality gates that run on every push and pull 
 **Standards**:
 
 - **Minimum**: 50% (gate fails below this)
-- **Target**: 60% (recommended for production)
+- **Target**: 65% (recommended for production)
 - **Frontier**: 80% (frontier-grade excellence)
 
-**Current Status**: 58.2% ✅ (exceeds minimum by 8.2%)
+**Current Status**: 63.06% ✅ (exceeds minimum by 13.06%)
 
 **How it works**:
 
@@ -231,8 +231,8 @@ fi
 
 **Test Quality Metrics**:
 
-- **Total tests**: 254 (target: 350 for 60% coverage)
-- **Test types**: Unit (90%), Integration (8%), Contract (2%)
+- **Total tests**: 599 (target: 620 for 65% coverage)
+- **Test types**: Unit (85%), Integration (12%), Contract (3%)
 - **Average duration**: ~6 seconds
 - **Flaky tests**: 0 tolerance
 
@@ -365,14 +365,14 @@ uv run pre-commit run --all-files
 
 ### Coverage Improvement Plan
 
-**Current**: 58.2% → **Target**: 60% → **Frontier**: 80%
+**Current**: 63.06% → **Target**: 65% → **Frontier**: 80%
 
 Priority modules for testing:
 
-1. **deps modules** (0% → 50%+) - Highest impact
+1. **deps modules** (62-98% for tested, 0% for untested) - Continue expansion
 2. **service routes** (93-97% coverage) - ✅ Production quality achieved
-3. **CLI commands** (31% → 60%+) - User-facing
-4. **MCP server** (96% coverage with real operations) - ✅ Feature complete
+3. **CLI commands** (42% → 60%+) - User-facing, in progress
+4. **MCP server** (76% coverage with real operations) - ✅ Feature complete
 
 See [DEPS_MODULES_STATUS.md](DEPS_MODULES_STATUS.md) for detailed plan.
 
@@ -398,8 +398,8 @@ See [DEPS_MODULES_STATUS.md](DEPS_MODULES_STATUS.md) for detailed plan.
 
 | Metric         | Current | Target | Frontier | Status      |
 | -------------- | ------- | ------ | -------- | ----------- |
-| Coverage       | 58.2%   | 60%    | 80%      | 🟡 On Track |
-| Tests          | 334     | 350    | 500      | 🟡 On Track |
+| Coverage       | 63.06%  | 65%    | 80%      | 🟡 On Track |
+| Tests          | 599     | 620    | 700      | 🟡 On Track |
 | Critical Vulns | 0       | 0      | 0        | 🟢 Passing  |
 | Type Errors    | 0       | 0      | 0        | 🟢 Passing  |
 | Lint Errors    | 0       | 0      | 0        | 🟢 Passing  |
@@ -407,7 +407,7 @@ See [DEPS_MODULES_STATUS.md](DEPS_MODULES_STATUS.md) for detailed plan.
 | Dep Conflicts  | 0       | 0      | 0        | 🟢 Passing  |
 | Doc Build      | Pass    | Pass   | Pass     | 🟢 Passing  |
 
-**Overall Grade**: 🟡 Yellow (6/8 gates green, improving toward frontier)
+**Overall Grade**: 🟢 Green (7/8 gates green, approaching frontier)
 
 ### Frontier Grade Criteria
 

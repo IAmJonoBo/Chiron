@@ -17,23 +17,22 @@ The `chiron.deps` package contains supply-chain management modules for dependenc
 | `preflight_summary.py` | 138   | 🔴     | Omitted       | Medium   | Preflight check summaries                                                     |
 | `drift.py`             | 251   | 🔴     | Omitted       | Medium   | Dependency drift detection                                                    |
 | `graph.py`             | 269   | 🔴     | Omitted       | Low      | Dependency graph analysis                                                     |
-| `bundler.py`           | 277   | 🔴     | Omitted       | Medium   | Dependency bundling for airgap                                                |
 | `supply_chain.py`      | 279   | 🔴     | Omitted       | High     | Core supply chain orchestration                                               |
 | `upgrade_advisor.py`   | 381   | 🔴     | Omitted       | Medium   | Upgrade recommendations                                                       |
 | `conflict_resolver.py` | 395   | 🔴     | Omitted       | Medium   | Dependency conflict resolution                                                |
 | `private_mirror.py`    | 445   | 🔴     | Omitted       | Low      | Private PyPI mirror management                                                |
 | `safe_upgrade.py`      | 457   | 🔴     | Omitted       | Medium   | Safe upgrade workflows                                                        |
 | `security_overlay.py`  | 476   | 🔴     | Omitted       | High     | Security scanning integration                                                 |
-| `guard.py`             | TBD   | 🔴     | Omitted       | High     | Upgrade guard policies                                                        |
-| `mirror_manager.py`    | TBD   | 🔴     | Omitted       | Low      | Mirror management                                                             |
-| `oci_packaging.py`     | TBD   | 🔴     | Omitted       | Medium   | OCI artifact packaging                                                        |
-| `planner.py`           | TBD   | 🔴     | Omitted       | Medium   | Upgrade planning                                                              |
-| `preflight.py`         | TBD   | 🔴     | Omitted       | Medium   | Preflight checks                                                              |
-| `reproducibility.py`   | TBD   | 🔴     | Omitted       | High     | Reproducibility verification                                                  |
-| `status.py`            | TBD   | 🔴     | Omitted       | Low      | Status reporting                                                              |
-| `sync.py`              | TBD   | 🔴     | Omitted       | Medium   | Dependency synchronization                                                    |
+| `guard.py`             | 1650  | 🔴     | Omitted       | High     | Upgrade guard policies                                                        |
+| `mirror_manager.py`    | 565   | 🔴     | Omitted       | Low      | Mirror management                                                             |
+| `oci_packaging.py`     | 498   | 🔴     | Omitted       | Medium   | OCI artifact packaging                                                        |
+| `planner.py`           | 736   | 🔴     | Omitted       | Medium   | Upgrade planning                                                              |
+| `preflight.py`         | 704   | 🔴     | Omitted       | Medium   | Preflight checks                                                              |
+| `reproducibility.py`   | 626   | 🔴     | Omitted       | High     | Reproducibility verification                                                  |
+| `status.py`            | 480   | 🔴     | Omitted       | Low      | Status reporting                                                              |
+| `sync.py`              | 716   | 🔴     | Omitted       | Medium   | Dependency synchronization                                                    |
 
-**Total Lines**: ~10,335 lines across 24 modules (23 tracked after bundler.py completion)
+**Total Lines**: ~10,334 lines across 26 modules
 
 ## Recent Progress
 
@@ -130,15 +129,15 @@ All external tool calls should use `chiron.subprocess_utils` for:
 ### Subprocess Utils Migration Status
 
 - ✅ constraints.py - Migrated to subprocess_utils
+- ✅ bundler.py - Migrated to subprocess_utils
 - 🔴 signing.py - Still uses raw subprocess
-- 🔴 bundler.py - Still uses raw subprocess
 - 🔴 Other modules - Need audit and migration
 
 ## Coverage Goals
 
 ### Current Status
 
-- **Overall Project**: 62.13% (exceeds 50% gate ✅)
+- **Overall Project**: 63.06% (exceeds 50% gate ✅)
 - **Deps Modules**: ~70% average for tested modules (policy 75%, constraints 62%, bundler 98%)
 - **Target**: 65%+ overall, 60%+ for all high-priority deps modules
 
@@ -149,7 +148,7 @@ All external tool calls should use `chiron.subprocess_utils` for:
 - ✅ policy.py: 75% coverage
 - ✅ constraints.py: 62% coverage
 - ✅ bundler.py: 98% coverage
-- Target overall: 62.13% ✅ **ACHIEVED**
+- Target overall: 63.06% ✅ **ACHIEVED**
 
 #### Milestone 2: High Priority Modules (Current)
 
@@ -303,15 +302,15 @@ def test_property(text_input, int_input):
 
 ### Quality Gates
 
-- ✅ Minimum coverage: 50% (currently 58.2%)
-- ⏳ Target coverage: 60% (currently 58.2%)
+- ✅ Minimum coverage: 50% (currently 63.06%)
+- ⏳ Target coverage: 65% (currently 63.06%)
 - 🎯 Frontier coverage: 70%
 
 ### Test Count
 
-- Current: ~334 tests
-- Target for 60% coverage: ~350 tests
-- Target for 70% coverage: ~500 tests
+- Current: ~599 tests
+- Target for 65% coverage: ~620 tests
+- Target for 70% coverage: ~700 tests
 
 ### Module Maturity
 
