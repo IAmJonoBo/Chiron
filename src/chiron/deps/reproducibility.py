@@ -9,12 +9,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
+import subprocess
 import sys
 import tempfile
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -310,6 +314,52 @@ class ReproducibilityChecker:
 
         return True
 
+    def _find_differences(self, wheel1: Path, wheel2: Path) -> list[str]:
+        """Find specific differences between two wheels.
+
+        Args:
+            wheel1: First wheel file
+            wheel2: Second wheel file
+
+        Returns:
+            List of difference descriptions
+        """
+        differences = []
+        
+        try:
+            with zipfile.ZipFile(wheel1, "r") as zf1, zipfile.ZipFile(wheel2, "r") as zf2:
+                files1 = set(zf1.namelist())
+                files2 = set(zf2.namelist())
+                
+                # Check for file list differences
+                only_in_1 = files1 - files2
+                only_in_2 = files2 - files1
+                
+                if only_in_1:
+                    differences.append(f"Files only in original: {', '.join(sorted(only_in_1))}")
+                if only_in_2:
+                    differences.append(f"Files only in rebuilt: {', '.join(sorted(only_in_2))}")
+                
+                # Check common files for content differences
+                common_files = files1 & files2
+                for filename in sorted(common_files):
+                    if filename.endswith("RECORD"):
+                        continue  # Skip RECORD files
+                        
+                    content1 = zf1.read(filename)
+                    content2 = zf2.read(filename)
+                    
+                    if content1 != content2:
+                        size_diff = len(content2) - len(content1)
+                        differences.append(
+                            f"{filename}: content differs (size: {len(content1)} vs {len(content2)}, diff: {size_diff:+d} bytes)"
+                        )
+                        
+        except Exception as e:
+            differences.append(f"Error comparing wheels: {e}")
+        
+        return differences
+
     def verify_wheelhouse(
         self,
         wheelhouse_dir: Path,
@@ -331,21 +381,86 @@ class ReproducibilityChecker:
 
         if rebuild_script:
             print(f"Using rebuild script: {rebuild_script}")
-            # TODO: Implement rebuild logic
-            print("Note: Rebuild not yet implemented, computing digests only")
+            # Execute rebuild script to rebuild wheels
+            rebuild_dir = wheelhouse_dir.parent / "rebuilt-wheels"
+            rebuild_dir.mkdir(exist_ok=True)
+            
+            try:
+                logger.info(f"Executing rebuild script: {rebuild_script}")
+                result = subprocess.run(
+                    [str(rebuild_script), str(wheelhouse_dir), str(rebuild_dir)],
+                    capture_output=True,
+                    text=True,
+                    timeout=600,  # 10 minute timeout
+                    check=True,
+                )
+                logger.debug(f"Rebuild script output: {result.stdout}")
+                
+                # Compare original and rebuilt wheels
+                for wheel in wheels:
+                    rebuilt_wheel = rebuild_dir / wheel.name
+                    if rebuilt_wheel.exists():
+                        original_digest = self.compute_wheel_digest(wheel)
+                        rebuilt_digest = self.compute_wheel_digest(rebuilt_wheel)
+                        
+                        is_reproducible = original_digest.sha256 == rebuilt_digest.sha256
+                        size_match = original_digest.size == rebuilt_digest.size
+                        
+                        # If not reproducible, check normalized comparison
+                        normalized_match = False
+                        differences = []
+                        if not is_reproducible:
+                            normalized_match = self.compare_wheels_normalized(
+                                wheel, rebuilt_wheel
+                            )
+                            if not normalized_match:
+                                differences = self._find_differences(wheel, rebuilt_wheel)
+                        
+                        reports[wheel.name] = ReproducibilityReport(
+                            wheel_name=wheel.name,
+                            is_reproducible=is_reproducible,
+                            original_digest=original_digest.sha256,
+                            rebuilt_digest=rebuilt_digest.sha256,
+                            size_match=size_match,
+                            normalized_match=normalized_match,
+                            differences=differences,
+                        )
+                        
+                        print(f"  {wheel.name}: {'✓ reproducible' if is_reproducible else '✗ differs'}")
+                    else:
+                        logger.warning(f"Rebuilt wheel not found: {wheel.name}")
+                        reports[wheel.name] = ReproducibilityReport(
+                            wheel_name=wheel.name,
+                            is_reproducible=False,
+                            original_digest=self.compute_wheel_digest(wheel).sha256,
+                            rebuilt_digest="",
+                            size_match=False,
+                            differences=["Rebuilt wheel not produced"],
+                        )
+                        
+            except subprocess.TimeoutExpired:
+                logger.error("Rebuild script timed out after 10 minutes")
+                print("Error: Rebuild script timed out")
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Rebuild script failed: {e.stderr}")
+                print(f"Error: Rebuild script failed: {e.stderr}")
+            except Exception as e:
+                logger.error(f"Unexpected error during rebuild: {e}")
+                print(f"Error: {e}")
+        else:
+            # No rebuild script, just compute digests
+            for wheel in wheels:
+                digest = self.compute_wheel_digest(wheel)
+                print(f"  {wheel.name}: {digest.sha256[:12]}...")
 
-        for wheel in wheels:
-            digest = self.compute_wheel_digest(wheel)
-            print(f"  {wheel.name}: {digest.sha256[:12]}...")
-
-            # Store digest for future comparison
-            reports[wheel.name] = ReproducibilityReport(
-                wheel_name=wheel.name,
-                is_reproducible=True,  # Placeholder
-                original_digest=digest.sha256,
-                rebuilt_digest=digest.sha256,
-                size_match=True,
-            )
+                # Store digest for future comparison
+                reports[wheel.name] = ReproducibilityReport(
+                    wheel_name=wheel.name,
+                    is_reproducible=True,  # Placeholder
+                    original_digest=digest.sha256,
+                    rebuilt_digest=digest.sha256,
+                    size_match=True,
+                )
 
         return reports
 

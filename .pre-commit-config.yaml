@@ -101,3 +101,11 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-push]
+
+      - id: sync-env-deps
+        name: Sync dev and CI environment dependencies
+        entry: python3 scripts/sync_env_deps.py
+        language: system
+        files: pyproject.toml|\.devcontainer/.*|\.github/workflows/(ci|wheels|airgap)\.yml
+        pass_filenames: false
+        stages: [pre-commit]

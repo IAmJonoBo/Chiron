@@ -15,7 +15,7 @@ echo 'export PATH="$HOME/.cargo/bin:$PATH"' >>~/.bashrc
 
 # Install dependencies
 echo "📦 Installing Python dependencies..."
-uv sync --all-extras --dev
+uv sync
 
 # Install pre-commit hooks
 echo "🔧 Setting up pre-commit hooks..."

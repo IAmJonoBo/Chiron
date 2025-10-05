@@ -563,9 +563,94 @@ class OrchestrationCoordinator:
         # Step 4: Containers (optional)
         if include_containers:
             logger.info("Step 4/6: Preparing containers...")
-            # TODO: Add container preparation logic
-            results["containers"] = False
-            logger.warning("Container preparation not yet implemented")
+            try:
+                # Check if Docker is available
+                docker_check = subprocess.run(
+                    ["docker", "--version"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                
+                if docker_check.returncode == 0:
+                    logger.info("Docker detected, preparing container images...")
+                    
+                    # Create container images directory
+                    container_dir = VENDOR_ROOT / "containers"
+                    container_dir.mkdir(parents=True, exist_ok=True)
+                    
+                    # Define core images to save for offline use
+                    images_to_save = [
+                        "python:3.12-slim",
+                        "python:3.13-slim",
+                        "mcr.microsoft.com/devcontainers/python:3.13",
+                    ]
+                    
+                    saved_images = []
+                    for image in images_to_save:
+                        try:
+                            # Pull image
+                            logger.info(f"Pulling container image: {image}")
+                            pull_result = subprocess.run(
+                                ["docker", "pull", image],
+                                capture_output=True,
+                                text=True,
+                                timeout=600,
+                            )
+                            
+                            if pull_result.returncode == 0:
+                                # Save image to tar
+                                safe_name = image.replace(":", "_").replace("/", "_")
+                                tar_file = container_dir / f"{safe_name}.tar"
+                                
+                                logger.info(f"Saving container image to {tar_file}")
+                                save_result = subprocess.run(
+                                    ["docker", "save", "-o", str(tar_file), image],
+                                    capture_output=True,
+                                    text=True,
+                                    timeout=300,
+                                )
+                                
+                                if save_result.returncode == 0:
+                                    saved_images.append(image)
+                                    logger.info(f"Saved {image} to {tar_file}")
+                                else:
+                                    logger.warning(f"Failed to save {image}: {save_result.stderr}")
+                            else:
+                                logger.warning(f"Failed to pull {image}: {pull_result.stderr}")
+                                
+                        except subprocess.TimeoutExpired:
+                            logger.warning(f"Timeout while processing {image}")
+                        except Exception as e:
+                            logger.warning(f"Error processing {image}: {e}")
+                    
+                    results["containers"] = {
+                        "success": len(saved_images) > 0,
+                        "images_saved": saved_images,
+                        "total_images": len(images_to_save),
+                        "container_dir": str(container_dir),
+                    }
+                    
+                    logger.info(f"Saved {len(saved_images)}/{len(images_to_save)} container images")
+                else:
+                    logger.warning("Docker not available, skipping container preparation")
+                    results["containers"] = {
+                        "success": False,
+                        "reason": "Docker not available",
+                    }
+                    
+            except FileNotFoundError:
+                logger.warning("Docker command not found, skipping container preparation")
+                results["containers"] = {
+                    "success": False,
+                    "reason": "Docker not installed",
+                }
+            except Exception as e:
+                logger.error(f"Container preparation failed: {e}")
+                results["containers"] = {
+                    "success": False,
+                    "error": str(e),
+                }
         else:
             logger.info("Step 4/6: Skipping containers (not requested)")
             results["containers"] = None
