@@ -206,11 +206,12 @@ class TestPolicyEngine:
 
         # Single major version jump should be allowed
         violations = engine.check_upgrade_allowed("test-package", "1.0.0", "2.0.0")
-        assert len([v for v in violations if v.violation_type == "major_jump"]) == 0
+        major_jump_violations = [v for v in violations if v.violation_type == "major_version_jump"]
+        assert len(major_jump_violations) == 0
 
         # Multiple major version jumps should create violations
         violations = engine.check_upgrade_allowed("test-package", "1.0.0", "3.0.0")
-        major_jump_violations = [v for v in violations if v.violation_type == "major_jump"]
+        major_jump_violations = [v for v in violations if v.violation_type == "major_version_jump"]
         assert len(major_jump_violations) > 0
 
     def test_check_upgrade_allowed_with_denied_package(self) -> None:
@@ -331,9 +332,9 @@ class TestConstraintsGenerator:
 
         assert result is True
         mock_run.assert_called_once()
-        # Check that uv command was used
+        # Check that uv command was used (path should contain 'uv')
         call_args = mock_run.call_args[0][0]
-        assert call_args[0] == "uv"
+        assert "uv" in call_args[0]
 
     @patch("chiron.deps.constraints.run_subprocess")
     def test_generate_with_uv_failure(
@@ -358,11 +359,15 @@ class TestConstraintsGenerator:
 
         assert result is False
 
+    @patch("chiron.deps.constraints.shutil.which")
     @patch("chiron.deps.constraints.run_subprocess")
     def test_generate_with_pip_tools(
-        self, mock_run: MagicMock, tmp_path: Path
+        self, mock_run: MagicMock, mock_which: MagicMock, tmp_path: Path
     ) -> None:
         """Test constraints generation with pip-tools."""
+        # Mock pip-compile being available
+        mock_which.return_value = "/usr/bin/pip-compile"
+        
         config = ConstraintsConfig(
             project_root=tmp_path,
             pyproject_path=tmp_path / "pyproject.toml",
@@ -382,7 +387,7 @@ class TestConstraintsGenerator:
         mock_run.assert_called_once()
         # Check that pip-compile command was used
         call_args = mock_run.call_args[0][0]
-        assert call_args[0] == "pip-compile"
+        assert "pip-compile" in call_args[0]
 
     @patch("chiron.deps.constraints.run_subprocess")
     def test_generate_with_hashes(self, mock_run: MagicMock, tmp_path: Path) -> None:

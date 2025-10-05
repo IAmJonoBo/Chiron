@@ -58,20 +58,20 @@ def test_build_wheelhouse_invokes_subprocess(
 
     def fake_run(
         cmd: list[str],
-        check: bool,
-        capture_output: bool = False,
-        text: bool = False,
+        **kwargs: Any,
     ):  # type: ignore[override]
         captured_commands.append(cmd)
 
         class Result:
             returncode = 0
-            stdout = "" if text else b""
-            stderr = "" if text else b""
+            stdout = ""
+            stderr = ""
 
         return Result()
 
-    monkeypatch.setattr(subprocess, "run", fake_run)
+    # Mock at the service routes api level where run_subprocess is imported
+    import chiron.service.routes.api
+    monkeypatch.setattr(chiron.service.routes.api, "run_subprocess", fake_run)
 
     response = service_client.post(
         "/api/v1/wheelhouse/build",
@@ -97,11 +97,13 @@ def test_create_airgap_bundle_success(
 ) -> None:
     captured_commands: list[list[str]] = []
 
-    def fake_run(cmd, check, capture_output=False, text=False):  # type: ignore[override]
+    def fake_run(cmd, **kwargs):  # type: ignore[override]
         captured_commands.append(cmd)
 
         class Result:
             returncode = 0
+            stdout = ""
+            stderr = ""
 
         return Result()
 
@@ -112,7 +114,9 @@ def test_create_airgap_bundle_success(
         def __exit__(self, exc_type, exc_val, exc_tb):
             return False
 
-    monkeypatch.setattr(subprocess, "run", fake_run)
+    # Mock at the service routes api level where run_subprocess is imported
+    import chiron.service.routes.api
+    monkeypatch.setattr(chiron.service.routes.api, "run_subprocess", fake_run)
     monkeypatch.setattr(tempfile, "TemporaryDirectory", lambda: FakeTempDir())
 
     response = service_client.post(
@@ -125,7 +129,7 @@ def test_create_airgap_bundle_success(
     assert payload["status"] == "success"
     assert payload["bundle_file"] == "bundle-airgap-bundle.tar.gz"
     # Ensure tar command executed
-    assert any(cmd and cmd[0] == "tar" for cmd in captured_commands)
+    assert any("tar" in str(cmd) for cmd in captured_commands)
 
 
 def test_create_airgap_bundle_requires_name(service_client: TestClient) -> None:

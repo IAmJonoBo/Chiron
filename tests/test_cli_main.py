@@ -78,7 +78,7 @@ class TestResolveExecutable:
 class TestRunCommand:
     """Tests for _run_command helper."""
 
-    @patch("chiron.subprocess_utils.run_subprocess")
+    @patch("chiron.cli.main.run_subprocess")
     def test_run_command_success(self, mock_run: Mock) -> None:
         """Test running a command successfully."""
         mock_result = Mock(spec=subprocess.CompletedProcess)
@@ -97,7 +97,7 @@ class TestRunCommand:
 
         assert "at least one argument" in str(exc_info.value)
 
-    @patch("chiron.subprocess_utils.run_subprocess")
+    @patch("chiron.cli.main.run_subprocess")
     def test_run_command_with_kwargs(self, mock_run: Mock) -> None:
         """Test running a command with additional kwargs."""
         mock_result = Mock(spec=subprocess.CompletedProcess)
@@ -110,7 +110,7 @@ class TestRunCommand:
         assert call_kwargs.get("capture_output") is True
         assert call_kwargs.get("text") is True
 
-    @patch("chiron.subprocess_utils.run_subprocess")
+    @patch("chiron.cli.main.run_subprocess")
     def test_run_command_executable_not_found(self, mock_run: Mock) -> None:
         """Test when executable is not found."""
         from chiron.subprocess_utils import ExecutableNotFoundError
