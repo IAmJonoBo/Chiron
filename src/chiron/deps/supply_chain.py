@@ -45,14 +45,11 @@ class VulnerabilitySummary:
         severity_order = {"critical": 3, "high": 2, "medium": 1, "low": 0}
         threshold = severity_order.get(max_severity, 2)
 
-        if threshold >= 3 and self.critical > 0:
-            return True
-        if threshold >= 2 and self.high > 0:
-            return True
-        if threshold >= 1 and self.medium > 0:
-            return True
-
-        return False
+        return bool(
+            (threshold >= 3 and self.critical > 0)
+            or (threshold >= 2 and self.high > 0)
+            or (threshold >= 1 and self.medium > 0)
+        )
 
 
 class SBOMGenerator:

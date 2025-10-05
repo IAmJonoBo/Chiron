@@ -175,9 +175,10 @@ class ReproducibilityChecker:
         differences = []
 
         try:
-            with zipfile.ZipFile(wheel1, "r") as zf1, zipfile.ZipFile(
-                wheel2, "r"
-            ) as zf2:
+            with (
+                zipfile.ZipFile(wheel1, "r") as zf1,
+                zipfile.ZipFile(wheel2, "r") as zf2,
+            ):
                 files1 = set(zf1.namelist())
                 files2 = set(zf2.namelist())
 

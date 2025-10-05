@@ -211,7 +211,10 @@ def _download_file(url: str, destination: Path, token: str | None) -> None:
         request.add_header("Authorization", f"Bearer {token}")
     opener = urllib.request.build_opener(urllib.request.HTTPSHandler())
     try:
-        with contextlib.closing(opener.open(request)) as response, destination.open("wb") as handle:  # type: ignore[arg-type]
+        with (
+            contextlib.closing(opener.open(request)) as response,
+            destination.open("wb") as handle,
+        ):  # type: ignore[arg-type]
             shutil.copyfileobj(response, handle)
     except urllib.error.HTTPError as exc:  # pragma: no cover - network failure
         raise RuntimeError(

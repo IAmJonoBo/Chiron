@@ -1,7 +1,8 @@
 """FastAPI application factory and configuration."""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Optional
+from typing import Any
 
 import structlog
 from fastapi import FastAPI, Request
@@ -59,7 +60,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Shutting down Chiron service")
 
 
-def create_app(config: Optional[dict[str, Any]] = None) -> FastAPI:
+def create_app(config: dict[str, Any] | None = None) -> FastAPI:
     """Create and configure the FastAPI application.
 
     Args:

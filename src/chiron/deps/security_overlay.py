@@ -278,7 +278,7 @@ class SecurityOverlayManager:
         parts1 = [int(x) for x in re.findall(r"\d+", v1)]
         parts2 = [int(x) for x in re.findall(r"\d+", v2)]
 
-        for p1, p2 in zip(parts1, parts2):
+        for p1, p2 in zip(parts1, parts2, strict=False):
             if p1 < p2:
                 return -1
             elif p1 > p2:

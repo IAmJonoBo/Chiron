@@ -135,9 +135,10 @@ class UpgradeAdvisor:
                 # Categorize based on recommendation
                 if recommendation.auto_apply_safe:
                     safe_to_auto_apply.append(recommendation.package)
-                elif recommendation.priority in ("critical", "high"):
-                    requires_review.append(recommendation.package)
-                elif recommendation.priority == "medium":
+                elif (
+                    recommendation.priority in ("critical", "high")
+                    or recommendation.priority == "medium"
+                ):
                     requires_review.append(recommendation.package)
                 else:
                     # Low priority can be deferred

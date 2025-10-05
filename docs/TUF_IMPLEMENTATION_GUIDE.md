@@ -6,7 +6,7 @@ This guide provides a roadmap for completing The Update Framework (TUF) implemen
 
 Chiron currently has a foundation for TUF metadata generation. This guide outlines the remaining work needed for a production-ready TUF implementation.
 
-**Current Status**: Foundation complete (metadata structure, hash generation)  
+**Current Status**: Foundation complete (metadata structure, hash generation)
 **Target**: Full TUF 1.0.0 implementation with key management
 
 ---

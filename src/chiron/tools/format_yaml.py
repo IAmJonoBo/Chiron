@@ -102,11 +102,7 @@ def _has_warnings(issues: Sequence[ValidationIssue]) -> bool:
 
 
 def _should_fail(issues: Sequence[ValidationIssue], *, fail_on_warnings: bool) -> bool:
-    if _has_errors(issues):
-        return True
-    if fail_on_warnings and _has_warnings(issues):
-        return True
-    return False
+    return _has_errors(issues) or (fail_on_warnings and _has_warnings(issues))
 
 
 def _issues_exit_code(

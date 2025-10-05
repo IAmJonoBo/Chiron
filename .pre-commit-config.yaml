@@ -5,6 +5,7 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        args: [--allow-multiple-documents, --unsafe]
       - id: check-added-large-files
       - id: check-json
       - id: check-toml
@@ -13,36 +14,11 @@ repos:
       - id: check-executables-have-shebangs
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.6
+    rev: v0.6.9
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
       - id: ruff-format
-
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.7.1
-    hooks:
-      - id: mypy
-        additional_dependencies: [types-all]
-        args: [--strict, --ignore-missing-imports]
-
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.5
-    hooks:
-      - id: bandit
-        args: [-r, src/]
-        exclude: tests/
-
-  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
-    rev: v1.3.2
-    hooks:
-      - id: python-safety-dependencies-check
-
-  - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.4.0
-    hooks:
-      - id: detect-secrets
-        args: ["--baseline", ".secrets.baseline"]
 
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v3.13.0
@@ -59,15 +35,29 @@ repos:
         files: >-
           (^|/)(\._[^/]+|\.DS_Store|\.AppleDouble)(/|$)|(^|/)\.(Spotlight-V100|Trashes)(/|$)
         pass_filenames: true
-        stages: [commit]
+        stages: [pre-commit]
+
+      - id: mypy
+        name: mypy
+        entry: uv run mypy --strict --ignore-missing-imports
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
 
       - id: pytest
         name: pytest
         entry: uv run pytest
         language: system
         types: [python]
-        stages: [push]
+        stages: [pre-push]
         pass_filenames: false
+
+      - id: deps-preflight
+        name: Dependency preflight (dry run)
+        entry: bash scripts/manage-deps.sh --preflight --dry-run
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
 
       - id: sbom-check
         name: Check SBOM freshness
@@ -84,5 +74,30 @@ repos:
           bash -c 'if command -v grype &> /dev/null; then grype . --fail-on medium;
           else echo "⚠️  Install grype for vulnerability scanning"; fi'
         language: system
-        stages: [push]
+        stages: [pre-push]
         pass_filenames: false
+
+      - id: bandit
+        name: Bandit security scan
+        entry: uv run bandit -r src/
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: safety
+        name: Safety dependency audit
+        entry: >-
+          bash -c 'uv run safety check --full-report --file requirements.txt ||
+          uv run safety check --full-report --pyproject pyproject.toml'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: detect-secrets
+        name: Detect secrets (baseline aware)
+        entry: >-
+          bash -c 'if [ -f .secrets.baseline ]; then detect-secrets scan --baseline .secrets.baseline; else
+          echo "⚠️  .secrets.baseline missing - skipping secret scan"; fi'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

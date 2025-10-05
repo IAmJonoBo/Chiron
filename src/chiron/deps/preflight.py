@@ -19,6 +19,7 @@ Example usage:
 The script exits with code ``1`` if any package breaches the guardrails unless
 ``--exit-zero`` is supplied.
 """
+
 from __future__ import annotations
 
 import argparse

@@ -118,7 +118,7 @@ chiron_dependency_age_days_count{package="example"} 145
 
 # Alert Rules Suggestions
 # ------------------------
-# 
+#
 # groups:
 #   - name: chiron_alerts
 #     interval: 30s
@@ -131,7 +131,7 @@ chiron_dependency_age_days_count{package="example"} 145
 #         annotations:
 #           summary: "High build failure rate"
 #           description: "Build failure rate is {{ $value | humanizePercentage }}"
-#       
+#
 #       - alert: ChironCriticalVulnerability
 #         expr: chiron_vulnerabilities_total{severity="critical"} > 0
 #         for: 1m
@@ -140,7 +140,7 @@ chiron_dependency_age_days_count{package="example"} 145
 #         annotations:
 #           summary: "Critical vulnerability detected"
 #           description: "Critical vulnerability in {{ $labels.package }}: {{ $labels.cve }}"
-#       
+#
 #       - alert: ChironSBOMGenerationFailure
 #         expr: rate(chiron_sbom_generation_total{status="failure"}[5m]) / rate(chiron_sbom_generation_total[5m]) > 0.05
 #         for: 5m

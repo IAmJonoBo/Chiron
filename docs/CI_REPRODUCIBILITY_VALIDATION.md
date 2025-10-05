@@ -89,12 +89,12 @@ jobs:
             exit 0
           else
             echo "❌ Builds are NOT reproducible"
-            
+
             # Show differences
             python -m zipfile -l "$WHEEL1" > files1.txt
             python -m zipfile -l "$WHEEL2" > files2.txt
             diff files1.txt files2.txt || true
-            
+
             exit 1
           fi
 
@@ -244,12 +244,12 @@ jobs:
           # For each wheel type, compare across platforms
           for wheel in wheels/wheels-ubuntu-latest/*.whl; do
             basename=$(basename "$wheel")
-            
+
             echo "Comparing $basename across platforms..."
-            
+
             # Get checksums
             ubuntu_sum=$(sha256sum "wheels/wheels-ubuntu-latest/$basename" | cut -d' ' -f1)
-            
+
             # Note: Cross-platform reproducibility is challenging
             # This is mainly for documentation/analysis
             echo "Ubuntu:  $ubuntu_sum"
@@ -301,11 +301,11 @@ jobs:
             if [ -f "$original" ]; then
               basename=$(basename "$original")
               rebuilt="rebuilt-wheels/$basename"
-              
+
               if [ -f "$rebuilt" ]; then
                 original_sum=$(sha256sum "$original" | cut -d' ' -f1)
                 rebuilt_sum=$(sha256sum "$rebuilt" | cut -d' ' -f1)
-                
+
                 if [ "$original_sum" = "$rebuilt_sum" ]; then
                   echo "✅ $basename is reproducible"
                 else

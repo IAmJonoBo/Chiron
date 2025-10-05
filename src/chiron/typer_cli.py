@@ -1666,7 +1666,7 @@ def plugin_discover(
         "chiron.plugins",
         "--entry-point",
         help="Entry point group to discover plugins from",
-    )
+    ),
 ) -> None:
     """Discover and register plugins from entry points."""
     from chiron.plugins import discover_plugins, register_plugin
@@ -1721,7 +1721,7 @@ def telemetry_metrics(
         False,
         "--json",
         help="Output as JSON",
-    )
+    ),
 ) -> None:
     """Display detailed metrics for all operations."""
     from chiron.telemetry import get_telemetry

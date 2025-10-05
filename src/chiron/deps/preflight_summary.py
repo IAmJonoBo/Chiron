@@ -5,6 +5,7 @@ The script expects a JSON payload produced by ``preflight_deps.py --json`` and
 prints a condensed summary grouped by severity. It exits with code ``1`` when
 any entry reports ``status == "error"`` so shell wrappers can gate builds.
 """
+
 from __future__ import annotations
 
 import argparse
