@@ -264,7 +264,7 @@ jobs:
 
       - name: Generate attestations
         if: github.event_name == 'release'
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v3
         with:
           subject-path: "airgap-bundles/*.tar.gz"
 
