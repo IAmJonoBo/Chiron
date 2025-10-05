@@ -358,7 +358,7 @@ Package wheelhouse as OCI artifacts.
 ```bash
 chiron deps oci push \
   --bundle wheelhouse-bundle.tar.gz \
-  --repository org/prometheus-wheelhouse \
+  --repository org/chiron-wheelhouse \
   --tag v1.0.0
 ```
 

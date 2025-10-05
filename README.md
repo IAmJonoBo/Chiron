@@ -237,11 +237,13 @@ See [docs/QUALITY_GATES.md](docs/QUALITY_GATES.md) for comprehensive quality sta
 ## 📚 Documentation
 
 - [Quality Gates](docs/QUALITY_GATES.md) - **NEW**: Frontier-grade quality standards
+- [Testing Progress](TESTING_PROGRESS_SUMMARY.md) - **Current testing status and metrics**
 - [Deps Modules Status](docs/DEPS_MODULES_STATUS.md) - **NEW**: Supply-chain testing roadmap
 - [Environment Sync](docs/ENVIRONMENT_SYNC.md) - Dev/CI synchronization guide
 - [Implementation Summary](IMPLEMENTATION_SUMMARY.md) - Current status and gaps
 - [TUF Implementation](docs/TUF_IMPLEMENTATION_GUIDE.md) - TUF key management
 - [CI Reproducibility](docs/CI_REPRODUCIBILITY_VALIDATION.md) - Build verification
+- [Grafana Deployment](docs/GRAFANA_DEPLOYMENT_GUIDE.md) - Monitoring with OpenTelemetry metrics
 
 ## 🤝 Contributing
 

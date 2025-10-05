@@ -386,7 +386,7 @@ jobs:
 
       - name: Push metrics
         run: |
-          # Push to Prometheus Pushgateway or similar
+          # Push to metrics backend (e.g., Pushgateway or OTLP endpoint)
           cat << EOF | curl --data-binary @- http://pushgateway:9091/metrics/job/chiron
           # TYPE chiron_reproducibility_check gauge
           # HELP chiron_reproducibility_check Result of reproducibility check (1=reproducible, 0=not)

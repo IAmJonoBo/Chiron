@@ -20,7 +20,7 @@ Chiron includes a pre-configured Grafana dashboard for monitoring:
 ## Prerequisites
 
 - Grafana instance (v9.0+)
-- Prometheus data source configured
+- Metrics data source configured (e.g., Prometheus, Tempo, or other compatible source)
 - Chiron metrics being exported (see Metrics Setup below)
 - Admin access to Grafana
 
@@ -41,7 +41,7 @@ from opentelemetry.sdk.resources import Resource
 # Create resource
 resource = Resource.create({"service.name": "chiron"})
 
-# Create Prometheus exporter
+# Create metrics exporter (Prometheus format compatible)
 reader = PrometheusMetricReader()
 
 # Create meter provider
@@ -59,9 +59,9 @@ export OTEL_EXPORTER_PROMETHEUS_HOST=0.0.0.0
 export OTEL_SERVICE_NAME=chiron
 ```
 
-### Add Prometheus Scrape Configuration
+### Add Metrics Scrape Configuration
 
-**In `prometheus.yml`**:
+**For Prometheus-compatible backends, configure scraping in `prometheus.yml`**:
 
 ```yaml
 global:
@@ -92,11 +92,11 @@ scrape_configs:
 ### Verify Metrics Collection
 
 ```bash
-# Check Prometheus targets
-curl http://prometheus:9090/api/v1/targets
+# Check metrics scraping targets
+curl http://metrics-backend:9090/api/v1/targets
 
 # Query a Chiron metric
-curl http://prometheus:9090/api/v1/query?query=chiron_build_total
+curl http://metrics-backend:9090/api/v1/query?query=chiron_build_total
 ```
 
 ---
@@ -116,7 +116,7 @@ curl http://prometheus:9090/api/v1/query?query=chiron_build_total
    - Or paste JSON content directly
 
 3. **Configure Data Source**
-   - Select your Prometheus data source
+   - Select your metrics data source (Prometheus-compatible)
    - Click "Import"
 
 4. **Verify Dashboard**
@@ -177,7 +177,7 @@ data:
 
 ### Update Data Source
 
-If your Prometheus data source has a different name:
+If your metrics data source has a different name:
 
 1. Open dashboard settings (gear icon)
 2. Click "JSON Model" tab
@@ -186,7 +186,7 @@ If your Prometheus data source has a different name:
    {
      "datasource": {
        "type": "prometheus",
-       "uid": "YOUR_PROMETHEUS_UID"
+       "uid": "YOUR_DATASOURCE_UID"
      }
    }
    ```
@@ -366,9 +366,9 @@ Example Slack notification:
 
 ### Pre-Deployment
 
-- [ ] Prometheus is scraping Chiron metrics
-- [ ] Verify metrics in Prometheus: `/graph`
-- [ ] Test queries in Prometheus
+- [ ] Metrics backend is scraping Chiron metrics
+- [ ] Verify metrics in metrics backend: `/graph` or equivalent
+- [ ] Test queries in metrics backend
 - [ ] Grafana data source configured
 - [ ] Dashboard JSON file validated
 
@@ -407,7 +407,7 @@ Example Slack notification:
 
 **Check**:
 
-1. Prometheus is scraping Chiron: `http://prometheus:9090/targets`
+1. Metrics backend is scraping Chiron: `http://metrics-backend:9090/targets`
 2. Metrics exist: `curl http://localhost:8000/metrics | grep chiron`
 3. Time range includes data
 4. Data source is correct
@@ -419,8 +419,8 @@ Example Slack notification:
 # Verify metrics endpoint
 curl http://localhost:8000/metrics
 
-# Test Prometheus query
-curl "http://prometheus:9090/api/v1/query?query=chiron_build_total"
+# Test metrics query
+curl "http://metrics-backend:9090/api/v1/query?query=chiron_build_total"
 ```
 
 ### Incorrect Data Source
@@ -432,7 +432,7 @@ curl "http://prometheus:9090/api/v1/query?query=chiron_build_total"
 1. Go to dashboard settings → JSON Model
 2. Replace data source UID:
    ```bash
-   # Get your Prometheus UID
+   # Get your data source UID
    curl -H "Authorization: Bearer ${API_KEY}" \
      http://grafana:3000/api/datasources | jq '.[] | select(.type=="prometheus") | .uid'
    ```
@@ -446,7 +446,7 @@ curl "http://prometheus:9090/api/v1/query?query=chiron_build_total"
 - Time range is appropriate
 
 **Solution**:
-Test query in Prometheus first, then update Grafana panel.
+Test query in your metrics backend first, then update Grafana panel.
 
 ### High Cardinality Issues
 
@@ -585,7 +585,7 @@ After deployment:
 For issues or questions:
 
 - Check Grafana docs: https://grafana.com/docs/
-- Check Prometheus docs: https://prometheus.io/docs/
+- Check OpenTelemetry docs: https://opentelemetry.io/docs/
 - Open issue: https://github.com/IAmJonoBo/Chiron/issues
 - Review `GAP_ANALYSIS.md` for known limitations
 
