@@ -296,7 +296,6 @@ omit = [
   "src/chiron/doctor/*",
   "src/chiron/remediation/*",
   "src/chiron/tools/*",
-  "src/chiron/observability/*",
   "src/chiron/typer_cli.py",
 ]
 
