@@ -75,11 +75,11 @@ Successfully implemented comprehensive test coverage across Chiron's core module
 
 ### 4. Historical Coverage Progress
 
-| Date         | Coverage   | Change     | Tests   | Milestone                   |
-| ------------ | ---------- | ---------- | ------- | --------------------------- |
-| April 2025   | 38.78%     | -          | 142     | Baseline                    |
-| April 2025   | 55.45%     | +16.67pp   | 254     | Observability complete      |
-| October 2025 | 58.73%     | +3.28pp    | 348     | Service routes complete     |
+| Date         | Coverage   | Change      | Tests   | Milestone                   |
+| ------------ | ---------- | ----------- | ------- | --------------------------- |
+| April 2025   | 38.78%     | -           | 142     | Baseline                    |
+| April 2025   | 55.45%     | +16.67pp    | 254     | Observability complete      |
+| October 2025 | 58.73%     | +3.28pp     | 348     | Service routes complete     |
 | **Jan 2026** | **63.06%** | **+4.33pp** | **599** | **Milestone 1 complete ✅** |
 
 ## Technical Improvements

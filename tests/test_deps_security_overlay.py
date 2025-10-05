@@ -325,9 +325,9 @@ class TestSecurityOverlayManager:
 
         test_cases = [
             (9.5, Severity.CRITICAL),  # >= 9.0
-            (7.5, Severity.HIGH),      # >= 7.0
-            (5.0, Severity.MEDIUM),    # >= 4.0
-            (2.0, Severity.LOW),       # < 4.0
+            (7.5, Severity.HIGH),  # >= 7.0
+            (5.0, Severity.MEDIUM),  # >= 4.0
+            (2.0, Severity.LOW),  # < 4.0
         ]
 
         for score, expected_severity in test_cases:
@@ -390,11 +390,7 @@ class TestSecurityOverlayManager:
                                     "affected": [
                                         {
                                             "ranges": [
-                                                {
-                                                    "events": [
-                                                        {"introduced": "1.0.0"}
-                                                    ]
-                                                }
+                                                {"events": [{"introduced": "1.0.0"}]}
                                             ]
                                         }
                                     ],
@@ -464,7 +460,7 @@ class TestSecurityOverlayManager:
             severity=Severity.HIGH,
         )
 
-        with patch.object(manager, '_compare_versions', return_value=1):
+        with patch.object(manager, "_compare_versions", return_value=1):
             manager._create_constraint_for_cve(cve2)
 
         constraint = manager.constraints["example-pkg"]

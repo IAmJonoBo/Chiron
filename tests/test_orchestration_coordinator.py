@@ -135,9 +135,7 @@ class TestOrchestrationCoordinator:
             assert saved_data["metadata"]["test"] == "data"
 
     @patch("chiron.orchestration.coordinator.subprocess.run")
-    def test_run_command_success(
-        self, mock_run: Mock, tmp_path: Path
-    ) -> None:
+    def test_run_command_success(self, mock_run: Mock, tmp_path: Path) -> None:
         """Test running a command successfully."""
         mock_run.return_value = subprocess.CompletedProcess(
             args=["test"], returncode=0, stdout=b"output", stderr=b""
@@ -145,33 +143,25 @@ class TestOrchestrationCoordinator:
 
         with patch("chiron.orchestration.coordinator.VAR_ROOT", tmp_path):
             coordinator = OrchestrationCoordinator()
-            result = coordinator._run_command(
-                ["test", "command"], "Test command"
-            )
+            result = coordinator._run_command(["test", "command"], "Test command")
 
             assert result.returncode == 0
             assert result.stdout == b"output"
             mock_run.assert_called_once()
 
     @patch("chiron.orchestration.coordinator.subprocess.run")
-    def test_run_command_dry_run(
-        self, mock_run: Mock, tmp_path: Path
-    ) -> None:
+    def test_run_command_dry_run(self, mock_run: Mock, tmp_path: Path) -> None:
         """Test running a command in dry-run mode."""
         with patch("chiron.orchestration.coordinator.VAR_ROOT", tmp_path):
             context = OrchestrationContext(dry_run=True)
             coordinator = OrchestrationCoordinator(context)
-            result = coordinator._run_command(
-                ["test", "command"], "Test command"
-            )
+            result = coordinator._run_command(["test", "command"], "Test command")
 
             assert result.returncode == 0
             mock_run.assert_not_called()
 
     @patch("chiron.orchestration.coordinator.subprocess.run")
-    def test_run_command_verbose(
-        self, mock_run: Mock, tmp_path: Path
-    ) -> None:
+    def test_run_command_verbose(self, mock_run: Mock, tmp_path: Path) -> None:
         """Test running a command in verbose mode."""
         mock_run.return_value = subprocess.CompletedProcess(
             args=["test"], returncode=0, stdout=b"", stderr=b""
@@ -185,9 +175,7 @@ class TestOrchestrationCoordinator:
             mock_run.assert_called_once()
 
     @patch("chiron.orchestration.coordinator.subprocess.run")
-    def test_run_command_with_check_false(
-        self, mock_run: Mock, tmp_path: Path
-    ) -> None:
+    def test_run_command_with_check_false(self, mock_run: Mock, tmp_path: Path) -> None:
         """Test running a command with check=False."""
         mock_run.return_value = subprocess.CompletedProcess(
             args=["test"], returncode=1, stdout=b"", stderr=b"error"
@@ -223,9 +211,7 @@ class TestOrchestrationCoordinator:
             assert output_file.exists()
 
     @patch("chiron.orchestration.coordinator.subprocess.run")
-    def test_deps_preflight_empty_output(
-        self, mock_run: Mock, tmp_path: Path
-    ) -> None:
+    def test_deps_preflight_empty_output(self, mock_run: Mock, tmp_path: Path) -> None:
         """Test dependency preflight with empty output."""
         mock_run.return_value = subprocess.CompletedProcess(
             args=["poetry", "run", "chiron", "deps", "preflight", "--json"],
@@ -304,9 +290,7 @@ class TestOrchestrationWorkflows:
     """Tests for orchestration workflow combinations."""
 
     @patch("chiron.orchestration.coordinator.subprocess.run")
-    def test_full_dependency_workflow(
-        self, mock_run: Mock, tmp_path: Path
-    ) -> None:
+    def test_full_dependency_workflow(self, mock_run: Mock, tmp_path: Path) -> None:
         """Test running a full dependency management workflow."""
 
         def mock_subprocess(args, **kwargs):
@@ -338,14 +322,12 @@ class TestOrchestrationWorkflows:
             # After preflight runs, it would have written the file
             # But since we're mocking, we update it
             preflight_file.write_text(json.dumps(preflight_data))
-            
+
             # Run guard
             guard_result = coordinator.deps_guard()
             assert guard_result["risk"] == "safe"
 
-    def test_state_persistence_across_operations(
-        self, tmp_path: Path
-    ) -> None:
+    def test_state_persistence_across_operations(self, tmp_path: Path) -> None:
         """Test that state persists across multiple operations."""
         with patch("chiron.orchestration.coordinator.VAR_ROOT", tmp_path):
             # First coordinator instance

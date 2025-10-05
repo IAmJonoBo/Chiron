@@ -59,36 +59,36 @@ class TestDoctorModuleBoundaries:
         """Test that models module defines expected constants."""
         models_path = Path("src/chiron/doctor/models.py")
         content = models_path.read_text()
-        
+
         # Check for the constants
-        assert 'DEFAULT_SENTENCE_TRANSFORMERS = [' in content
-        assert 'DEFAULT_CROSS_ENCODERS = [' in content
-        assert 'DEFAULT_SPACY_MODELS = [' in content
+        assert "DEFAULT_SENTENCE_TRANSFORMERS = [" in content
+        assert "DEFAULT_CROSS_ENCODERS = [" in content
+        assert "DEFAULT_SPACY_MODELS = [" in content
 
     def test_offline_functions_defined(self) -> None:
         """Test that offline/models module defines expected functions."""
         # Check models.py which has the actual download functions
         models_path = Path("src/chiron/doctor/models.py")
         content = models_path.read_text()
-        
+
         # Check for function definitions
-        assert 'def _ensure_env_path(' in content
-        assert 'def _download_hf_snapshots(' in content
-        assert 'def _warm_sentence_transformers(' in content
+        assert "def _ensure_env_path(" in content
+        assert "def _download_hf_snapshots(" in content
+        assert "def _warm_sentence_transformers(" in content
 
     def test_bootstrap_structure(self) -> None:
         """Test bootstrap module structure."""
         bootstrap_path = Path("src/chiron/doctor/bootstrap.py")
         content = bootstrap_path.read_text()
-        
+
         # Check for expected patterns
-        assert 'def ' in content  # Has functions
-        assert 'import' in content  # Has imports
-        
+        assert "def " in content  # Has functions
+        assert "import" in content  # Has imports
+
     def test_package_cli_has_parser(self) -> None:
         """Test package_cli has parser builder."""
         package_cli_path = Path("src/chiron/doctor/package_cli.py")
         content = package_cli_path.read_text()
-        
-        assert 'def build_parser(' in content
-        assert 'ArgumentParser' in content
+
+        assert "def build_parser(" in content
+        assert "ArgumentParser" in content

@@ -133,7 +133,8 @@ class TestCliWheelhouseCommandErrors:
         runner = CliRunner()
         with patch("chiron.cli.main._run_command") as mock_run:
             result = runner.invoke(
-                cli, ["--dry-run", "wheelhouse", "create", "--output-dir", str(tmp_path)]
+                cli,
+                ["--dry-run", "wheelhouse", "create", "--output-dir", str(tmp_path)],
             )
             # Just check that it doesn't crash unexpectedly
             # Exit code might vary depending on validation
@@ -257,9 +258,7 @@ class TestCliExceptionHandling:
     """Tests for general exception handling."""
 
     @patch("chiron.cli.main.validate_config")
-    def test_config_validation_error(
-        self, mock_validate: Mock, tmp_path: Path
-    ) -> None:
+    def test_config_validation_error(self, mock_validate: Mock, tmp_path: Path) -> None:
         """Test handling of config validation errors."""
         runner = CliRunner()
         config_file = tmp_path / "config.json"

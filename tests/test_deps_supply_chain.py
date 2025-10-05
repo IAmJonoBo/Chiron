@@ -83,20 +83,20 @@ class TestSBOMGenerator:
     ) -> None:
         """Test successful SBOM generation."""
         mock_which.return_value = "/usr/bin/cyclonedx-py"
-        
+
         # Create the output file to simulate success
         output_path = tmp_path / "sbom.json"
-        
+
         def create_file(*args, **kwargs):
             output_path.write_text('{"components": []}')
             return Mock(returncode=0, stdout="", stderr="")
-        
+
         mock_run.side_effect = create_file
 
         generator = SBOMGenerator(tmp_path)
-        
+
         result = generator.generate(output_path)
-        
+
         assert result is True
         mock_run.assert_called_once()
 
@@ -107,9 +107,9 @@ class TestSBOMGenerator:
 
         generator = SBOMGenerator(tmp_path)
         output_path = tmp_path / "sbom.json"
-        
+
         result = generator.generate(output_path)
-        
+
         assert result is False
 
     @patch("chiron.deps.supply_chain.shutil.which")
@@ -123,9 +123,9 @@ class TestSBOMGenerator:
 
         generator = SBOMGenerator(tmp_path)
         output_path = tmp_path / "sbom.json"
-        
+
         result = generator.generate(output_path)
-        
+
         assert result is False
 
 
@@ -144,15 +144,13 @@ class TestOSVScanner:
     ) -> None:
         """Test successful vulnerability scan."""
         mock_which.return_value = "/usr/bin/osv-scanner"
-        
+
         # Mock OSV scanner output
         osv_output = {
             "results": [
                 {
                     "packages": [{"package": {"name": "test-pkg"}}],
-                    "vulnerabilities": [
-                        {"severity": "HIGH"}
-                    ],
+                    "vulnerabilities": [{"severity": "HIGH"}],
                 }
             ]
         }
@@ -164,10 +162,10 @@ class TestOSVScanner:
 
         lockfile_path = tmp_path / "requirements.txt"
         lockfile_path.write_text("test-pkg==1.0.0")
-        
+
         scanner = OSVScanner(tmp_path)
         summary = scanner.scan_lockfile(lockfile_path)
-        
+
         assert summary is not None
         assert summary.total_vulnerabilities >= 0
 
@@ -179,7 +177,7 @@ class TestOSVScanner:
         lockfile_path = tmp_path / "requirements.txt"
         scanner = OSVScanner(tmp_path)
         summary = scanner.scan_lockfile(lockfile_path)
-        
+
         assert summary is None
 
     @patch("chiron.deps.supply_chain.shutil.which")
@@ -194,7 +192,7 @@ class TestOSVScanner:
         lockfile_path = tmp_path / "requirements.txt"
         scanner = OSVScanner(tmp_path)
         summary = scanner.scan_lockfile(lockfile_path)
-        
+
         assert summary is None
 
 
@@ -211,22 +209,22 @@ class TestGenerateSBOMAndScan:
         mock_gen_instance = Mock()
         mock_gen_instance.generate.return_value = True
         mock_sbom_gen.return_value = mock_gen_instance
-        
+
         # Mock OSV scanner
         mock_scanner_instance = Mock()
         mock_summary = VulnerabilitySummary()
         mock_scanner_instance.scan_lockfile.return_value = mock_summary
         mock_scanner.return_value = mock_scanner_instance
-        
+
         sbom_output = tmp_path / "sbom.json"
         osv_output = tmp_path / "osv.json"
         lockfile = tmp_path / "requirements.txt"
         lockfile.write_text("test==1.0.0")
-        
+
         success, summary = generate_sbom_and_scan(
             tmp_path, sbom_output, osv_output, lockfile
         )
-        
+
         assert success is True
         assert summary is not None
 
@@ -238,14 +236,14 @@ class TestGenerateSBOMAndScan:
         mock_gen_instance = Mock()
         mock_gen_instance.generate.return_value = False
         mock_sbom_gen.return_value = mock_gen_instance
-        
+
         sbom_output = tmp_path / "sbom.json"
         osv_output = tmp_path / "osv.json"
         lockfile = tmp_path / "requirements.txt"
-        
+
         success, summary = generate_sbom_and_scan(
             tmp_path, sbom_output, osv_output, lockfile
         )
-        
+
         assert success is False
         assert summary is None

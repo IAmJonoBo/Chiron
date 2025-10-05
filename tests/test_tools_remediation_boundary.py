@@ -24,7 +24,7 @@ class TestToolsModules:
         """Test ensure_uv.py has expected structure."""
         ensure_uv_path = Path("src/chiron/tools/ensure_uv.py")
         content = ensure_uv_path.read_text()
-        
+
         assert "def _default_install_dir(" in content
         assert "def _vendor_binary_path(" in content
         assert "def _install_from_vendor(" in content
@@ -34,7 +34,7 @@ class TestToolsModules:
         """Test uv_installer.py has expected structure."""
         uv_installer_path = Path("src/chiron/tools/uv_installer.py")
         content = uv_installer_path.read_text()
-        
+
         assert "def ensure_uv_binary(" in content or "def get_uv_version(" in content
         assert "INSTALL_SCRIPT_URL" in content or "install" in content.lower()
 
@@ -62,7 +62,7 @@ class TestRemediationModules:
         """Test autoremediate.py has expected dataclasses."""
         autoremediate_path = Path("src/chiron/remediation/autoremediate.py")
         content = autoremediate_path.read_text()
-        
+
         assert "@dataclass" in content
         assert "class RemediationAction" in content
         assert "class RemediationResult" in content
@@ -72,7 +72,7 @@ class TestRemediationModules:
         """Test autoremediate has remediation methods."""
         autoremediate_path = Path("src/chiron/remediation/autoremediate.py")
         content = autoremediate_path.read_text()
-        
+
         assert "def remediate_dependency_sync_failure(" in content
         assert "remediate" in content.lower()
 
@@ -94,7 +94,7 @@ class TestModuleBoundaryContracts:
         """Test default install dir contract exists."""
         ensure_uv_path = Path("src/chiron/tools/ensure_uv.py")
         content = ensure_uv_path.read_text()
-        
+
         # Contract: Returns platform-specific path
         assert "_default_install_dir" in content
         assert "sys.platform" in content
@@ -104,7 +104,7 @@ class TestModuleBoundaryContracts:
         """Test run function has expected signature."""
         ensure_uv_path = Path("src/chiron/tools/ensure_uv.py")
         content = ensure_uv_path.read_text()
-        
+
         # Check function signature elements
         assert "def run(" in content
         assert "install_dir" in content
@@ -115,7 +115,7 @@ class TestModuleBoundaryContracts:
         """Test RemediationAction has required fields."""
         autoremediate_path = Path("src/chiron/remediation/autoremediate.py")
         content = autoremediate_path.read_text()
-        
+
         # Check for required fields in dataclass
         assert "action_type:" in content
         assert "description:" in content
@@ -125,7 +125,7 @@ class TestModuleBoundaryContracts:
         """Test RemediationResult has expected structure."""
         autoremediate_path = Path("src/chiron/remediation/autoremediate.py")
         content = autoremediate_path.read_text()
-        
+
         # Check for result fields
         assert "class RemediationResult" in content
         assert "success:" in content
@@ -151,14 +151,14 @@ class TestModuleImportBoundaries:
         """Test ensure_uv imports from uv_installer."""
         ensure_uv_path = Path("src/chiron/tools/ensure_uv.py")
         content = ensure_uv_path.read_text()
-        
+
         assert "from chiron.tools import uv_installer" in content
 
     def test_autoremediate_has_logging(self) -> None:
         """Test autoremediate has logging configured."""
         autoremediate_path = Path("src/chiron/remediation/autoremediate.py")
         content = autoremediate_path.read_text()
-        
+
         assert "import logging" in content
         assert "logger = logging.getLogger" in content
 
@@ -170,7 +170,7 @@ class TestModuleErrorHandling:
         """Test ensure_uv handles missing vendor binary."""
         ensure_uv_path = Path("src/chiron/tools/ensure_uv.py")
         content = ensure_uv_path.read_text()
-        
+
         assert "FileNotFoundError" in content
         assert "not source.exists()" in content or "exists()" in content
 
@@ -178,6 +178,6 @@ class TestModuleErrorHandling:
         """Test autoremediate has error handling."""
         autoremediate_path = Path("src/chiron/remediation/autoremediate.py")
         content = autoremediate_path.read_text()
-        
+
         # Should have error handling or result tracking
         assert "errors:" in content or "try:" in content or "except" in content.lower()

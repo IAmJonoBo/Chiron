@@ -12,6 +12,7 @@ This document tracks the comprehensive gap analysis and module boundary testing 
 ## Module Boundaries Analysis
 
 ### Core Modules (✅ Well-Tested)
+
 - `chiron.core` - 100% coverage
 - `chiron.api` - 100% coverage
 - `chiron.observability.logging` - 100% coverage
@@ -24,11 +25,13 @@ This document tracks the comprehensive gap analysis and module boundary testing 
 ### Deps Modules (⚠️ Partially Tested)
 
 #### Well-Tested (>70% coverage)
+
 - `chiron.deps.bundler` - 98% coverage ✅
 - `chiron.deps.policy` - 75% coverage ✅
 - `chiron.deps.constraints` - 62% coverage ⚠️
 
 #### Recently Added Tests
+
 - `chiron.deps.supply_chain` - NEW TESTS ADDED
   - VulnerabilitySummary dataclass
   - SBOMGenerator class
@@ -36,7 +39,7 @@ This document tracks the comprehensive gap analysis and module boundary testing 
   - Integration function tests
 - `chiron.deps.drift` - NEW TESTS ADDED
   - PackageDrift dataclass
-  - DriftPolicy dataclass  
+  - DriftPolicy dataclass
   - DependencyDriftReport dataclass
   - Utility functions (load_sbom, load_metadata, parse_policy)
 - `chiron.deps.status` - NEW TESTS ADDED
@@ -45,6 +48,7 @@ This document tracks the comprehensive gap analysis and module boundary testing 
   - DependencyStatus dataclass
 
 #### Needs Testing (0% coverage)
+
 - `chiron.deps.graph` - Dependency graph generation
 - `chiron.deps.guard` - Policy enforcement (55k LOC)
 - `chiron.deps.mirror_manager` - Private mirror management
@@ -63,6 +67,7 @@ This document tracks the comprehensive gap analysis and module boundary testing 
 ### Doctor Modules (⚠️ Boundary Tests Only)
 
 #### Boundary Tests Added
+
 - `chiron.doctor.models` - File structure validated
 - `chiron.doctor.offline` - File structure validated
 - `chiron.doctor.bootstrap` - File structure validated
@@ -71,25 +76,30 @@ This document tracks the comprehensive gap analysis and module boundary testing 
 **Note**: Full import testing blocked by missing `chiron.packaging` dependency. Boundary tests verify module structure and expected patterns without requiring full imports.
 
 ### Service & API Modules (✅ Well-Tested)
+
 - `chiron.service.routes.api` - 97% coverage
 - `chiron.service.routes.health` - 93% coverage
 - `chiron.service.app` - 78% coverage
 
 ### CLI Modules (⚠️ Low Coverage)
+
 - `chiron.cli.main` - 40% coverage
 - `chiron.wizard` - 18% coverage
 
 ### Orchestration Modules (⚠️ Low Coverage)
+
 - `chiron.orchestration.auto_sync` - 86% coverage
 - `chiron.orchestration.governance` - 30% coverage
 - `chiron.orchestration.coordinator` - 16% coverage
 
 ### MCP & GitHub Modules (⚠️ Mixed)
+
 - `chiron.mcp.server` - 76% coverage
 - `chiron.github.copilot` - 93% coverage
 - `chiron.github.sync` - 22% coverage
 
 ### Untested Modules (❌ 0% Coverage)
+
 - `chiron.plugins` - Plugin system
 - `chiron.__main__` - Entry point
 - All remediation modules
@@ -98,13 +108,16 @@ This document tracks the comprehensive gap analysis and module boundary testing 
 ## Testing Strategy
 
 ### Phase 1: Core Boundary Tests (✅ COMPLETE)
+
 - Added tests for supply_chain module (SBOM, OSV scanning)
 - Added tests for drift module (policy, detection)
 - Added tests for status module (reporting, orchestration)
 - Added boundary tests for doctor modules
 
 ### Phase 2: High-Priority Modules (🔄 IN PROGRESS)
+
 Target modules with significant code and security implications:
+
 1. `chiron.deps.guard` (55k LOC) - Policy enforcement
 2. `chiron.deps.planner` (25k LOC) - Upgrade planning
 3. `chiron.deps.sync` (24k LOC) - Sync operations
@@ -113,12 +126,14 @@ Target modules with significant code and security implications:
 6. `chiron.deps.verify` - Artifact verification (security-critical)
 
 ### Phase 3: Medium-Priority Modules (⏳ PLANNED)
+
 1. CLI modules (user-facing, need error path testing)
 2. Orchestration modules (complex workflows)
 3. Remediation modules (auto-fix capabilities)
 4. Tools modules (utilities)
 
 ### Phase 4: Contract Tests (⏳ PLANNED)
+
 - Module boundary contract tests
 - Integration contract tests
 - API contract tests (replace/supplement Pact)
@@ -126,23 +141,27 @@ Target modules with significant code and security implications:
 ## Coverage Improvement Plan
 
 ### Current State
+
 - **Total Coverage**: 62%
 - **Total Tests**: 413
 - **Passing Tests**: 413 (100%)
 - **Failed Tests**: 0
 
 ### Target State (Frontier Grade)
+
 - **Total Coverage**: 70%+
 - **Total Tests**: 500+
 - **Critical Modules**: 80%+ coverage
 - **All Modules**: At least boundary tests
 
 ### Gap to Close
+
 - **Coverage Gap**: 8 percentage points (62% → 70%)
 - **Test Gap**: ~87 additional tests
 - **Module Gap**: 20+ modules with 0% coverage
 
 ### Priority Actions
+
 1. ✅ Add boundary tests for supply_chain, drift, status
 2. ✅ Add boundary tests for doctor modules
 3. ⏳ Add comprehensive tests for guard module
@@ -155,6 +174,7 @@ Target modules with significant code and security implications:
 ## Module Boundary Contract Examples
 
 ### Example: Supply Chain Module
+
 ```python
 # Input boundary
 sbom_path: Path  # Must exist, valid JSON/XML
@@ -174,6 +194,7 @@ VulnerabilitySummary:
 ```
 
 ### Example: Drift Module
+
 ```python
 # Input boundary
 sbom_components: List[Dict]  # Valid SBOM components
@@ -196,12 +217,14 @@ DependencyDriftReport:
 ## Recommendations
 
 ### Immediate (This Sprint)
+
 1. ✅ Complete boundary tests for deps core modules
 2. ⏳ Add comprehensive tests for guard, planner, sync modules
 3. ⏳ Add security-critical module tests (signing, verify)
 4. ⏳ Document all module boundaries and contracts
 
 ### Short Term (Next Sprint)
+
 1. Add CLI error path testing
 2. Add orchestration workflow tests
 3. Add remediation module tests
@@ -209,12 +232,14 @@ DependencyDriftReport:
 5. Target 65%+ coverage
 
 ### Medium Term (2-3 Sprints)
+
 1. Replace Pact with HTTP-level contract tests
 2. Add property-based tests for complex logic
 3. Add integration tests for end-to-end workflows
 4. Target 70%+ coverage (frontier grade)
 
 ### Long Term (Frontier Grade)
+
 1. Achieve 80%+ coverage on critical modules
 2. Add performance benchmarks
 3. Add load tests for service endpoints
@@ -223,16 +248,16 @@ DependencyDriftReport:
 
 ## Metrics Dashboard
 
-| Metric | Current | Target | Frontier | Status |
-|--------|---------|--------|----------|--------|
-| Coverage | 62% | 65% | 70% | 🟡 On Track |
-| Tests | 413 | 450 | 500 | 🟡 On Track |
-| Critical Vulns | 0 | 0 | 0 | 🟢 Passing |
-| Type Errors | 0 | 0 | 0 | 🟢 Passing |
-| Lint Errors | 0 | 0 | 0 | 🟢 Passing |
-| Failed Tests | 0 | 0 | 0 | 🟢 Passing |
-| Modules w/ Tests | 35 | 45 | 55 | 🟡 On Track |
-| Modules w/ 0% | 20+ | 10 | 0 | 🔴 Needs Work |
+| Metric           | Current | Target | Frontier | Status        |
+| ---------------- | ------- | ------ | -------- | ------------- |
+| Coverage         | 62%     | 65%    | 70%      | 🟡 On Track   |
+| Tests            | 413     | 450    | 500      | 🟡 On Track   |
+| Critical Vulns   | 0       | 0      | 0        | 🟢 Passing    |
+| Type Errors      | 0       | 0      | 0        | 🟢 Passing    |
+| Lint Errors      | 0       | 0      | 0        | 🟢 Passing    |
+| Failed Tests     | 0       | 0      | 0        | 🟢 Passing    |
+| Modules w/ Tests | 35      | 45     | 55       | 🟡 On Track   |
+| Modules w/ 0%    | 20+     | 10     | 0        | 🔴 Needs Work |
 
 ## References
 

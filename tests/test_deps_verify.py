@@ -37,11 +37,11 @@ class TestCheckScriptImports:
 
         # Create a valid standalone script
         upgrade_guard = scripts_dir / "upgrade_guard.py"
-        upgrade_guard.write_text('def main():\n    pass\n')
+        upgrade_guard.write_text("def main():\n    pass\n")
 
         # Create a valid library module
         deps_status = scripts_dir / "deps_status.py"
-        deps_status.write_text('def generate_status():\n    pass\n')
+        deps_status.write_text("def generate_status():\n    pass\n")
 
         with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
             results = check_script_imports()
@@ -57,7 +57,7 @@ class TestCheckScriptImports:
 
         # Create script without main() function
         upgrade_guard = scripts_dir / "upgrade_guard.py"
-        upgrade_guard.write_text('def other_function():\n    pass\n')
+        upgrade_guard.write_text("def other_function():\n    pass\n")
 
         with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
             results = check_script_imports()
@@ -88,7 +88,7 @@ class TestCheckCliCommands:
         cli_file = chiron_dir / "cli.py"
 
         # Create CLI file with command decorators
-        cli_content = '''
+        cli_content = """
 @deps_app.command("status")
 def status_command():
     pass
@@ -100,7 +100,7 @@ def upgrade_command():
 @deps_app.command("guard")
 def guard_command():
     pass
-'''
+"""
         cli_file.write_text(cli_content)
 
         with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
@@ -165,20 +165,22 @@ class TestCheckWorkflowIntegration:
 
         # Create preflight workflow
         preflight = workflows_dir / "dependency-preflight.yml"
-        preflight.write_text('''
+        preflight.write_text(
+            """
 steps:
   - run: chiron deps preflight
   - run: chiron deps guard
   - run: chiron deps snapshot ensure
-''')
+"""
+        )
 
         # Create contract check workflow
         contract = workflows_dir / "dependency-contract-check.yml"
-        contract.write_text('steps:\n  - run: chiron deps sync\n')
+        contract.write_text("steps:\n  - run: chiron deps sync\n")
 
         # Create offline packaging workflow
         packaging = workflows_dir / "offline-packaging-optimized.yml"
-        packaging.write_text('steps:\n  - run: chiron offline-package\n')
+        packaging.write_text("steps:\n  - run: chiron offline-package\n")
 
         with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
             results = check_workflow_integration()
@@ -199,7 +201,7 @@ steps:
 
         # Create preflight workflow missing some commands
         preflight = workflows_dir / "dependency-preflight.yml"
-        preflight.write_text('steps:\n  - run: chiron deps preflight\n')
+        preflight.write_text("steps:\n  - run: chiron deps preflight\n")
 
         with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
             results = check_workflow_integration()
@@ -238,12 +240,14 @@ class TestCheckDocumentation:
         docs_dir.mkdir()
 
         governance_doc = docs_dir / "dependency-governance.md"
-        governance_doc.write_text('''
+        governance_doc.write_text(
+            """
 # Dependency Governance
 
 See [packaging-workflow-integration.md](packaging-workflow-integration.md)
 for details.
-''')
+"""
+        )
 
         with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
             results = check_documentation()
@@ -262,7 +266,7 @@ for details.
         docs_dir.mkdir()
 
         governance_doc = docs_dir / "dependency-governance.md"
-        governance_doc.write_text('# Dependency Governance\n\nSome content.\n')
+        governance_doc.write_text("# Dependency Governance\n\nSome content.\n")
 
         with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
             results = check_documentation()
