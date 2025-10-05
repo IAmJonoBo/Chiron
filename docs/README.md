@@ -1,39 +1,64 @@
 # Chiron Documentation
 
-This directory contains up-to-date documentation for the Chiron project. Key status documents were refreshed in April 2025 to reflect the current implementation and testing gaps.
+Welcome to Chiron's documentation! This directory contains comprehensive guides for using and contributing to Chiron.
 
-## Quick Links
+## Quick Start
 
-### High-level Status
+- [Main README](../README.md) - Project overview and quick start
+- [Installation Guide](../README.md#installation) - How to install Chiron
+- [Contributing Guide](../CONTRIBUTING.md) - How to contribute
 
-- [GAP_ANALYSIS](GAP_ANALYSIS.md) – Current gaps, failing tests, and remediation plan
-- [IMPLEMENTATION_SUMMARY](../IMPLEMENTATION_SUMMARY.md) – Reality check of feature maturity
-- [TESTING_IMPLEMENTATION_SUMMARY](../TESTING_IMPLEMENTATION_SUMMARY.md) – Latest pytest outcomes and coverage
-- [DEPS_MODULES_STATUS](DEPS_MODULES_STATUS.md) – **NEW**: Supply-chain modules testing roadmap and status tracking
+## Core Documentation
 
-### For New Users
+### Implementation & Status
+- [Implementation Summary](../IMPLEMENTATION_SUMMARY.md) - **Current implementation status** (⭐ Primary reference)
+- [Testing Progress Summary](../TESTING_PROGRESS_SUMMARY.md) - **Current testing status and metrics**
+- [Gap Analysis](GAP_ANALYSIS.md) - Known gaps and future work
+- [Roadmap](../ROADMAP.md) - Feature roadmap and completion status
 
-- [README](../README.md) – Project overview and quickstart (review alongside the status docs above)
-- [CONTRIBUTING](../CONTRIBUTING.md) – How to contribute
+### Quality & Standards
+- [Quality Gates](QUALITY_GATES.md) - **Frontier-grade quality standards and enforcement**
+- [Environment Sync](ENVIRONMENT_SYNC.md) - Dev/CI environment synchronization
 
-### Additional Guides
+### Supply Chain & Dependencies
+- [Deps Modules Status](DEPS_MODULES_STATUS.md) - **Supply-chain testing roadmap**
+- [CI Reproducibility Validation](CI_REPRODUCIBILITY_VALIDATION.md) - Reproducible builds guide
+- [TUF Implementation Guide](TUF_IMPLEMENTATION_GUIDE.md) - TUF key management
 
-- [QUALITY_GATES](QUALITY_GATES.md) – **NEW**: Comprehensive quality gates documentation with frontier standards
-- [DEPS_MODULES_STATUS](DEPS_MODULES_STATUS.md) – **NEW**: Supply-chain modules testing roadmap
-- [ENVIRONMENT_SYNC](ENVIRONMENT_SYNC.md) – Automatic synchronization between dev and CI environments
-- [CI_REPRODUCIBILITY_VALIDATION](CI_REPRODUCIBILITY_VALIDATION.md) – Reproducibility checks and rebuild workflows
-- [GRAFANA_DEPLOYMENT_GUIDE](GRAFANA_DEPLOYMENT_GUIDE.md) – Grafana deployment notes (ensure metrics endpoints exist first)
-- [MCP_INTEGRATION_TESTING](MCP_INTEGRATION_TESTING.md) – MCP testing playbook (tools currently marked experimental)
-- [TUF_IMPLEMENTATION_GUIDE](TUF_IMPLEMENTATION_GUIDE.md) – TUF implementation with multi-backend key storage
+### Monitoring & Operations
+- [Grafana Deployment Guide](GRAFANA_DEPLOYMENT_GUIDE.md) - Dashboard deployment with OpenTelemetry metrics
+- [MCP Integration Testing](MCP_INTEGRATION_TESTING.md) - MCP server testing guide
 
-## Getting Started Checklist
+## Specialized Guides
 
-1. Read the refreshed [GAP_ANALYSIS](GAP_ANALYSIS.md) to understand open issues.
-2. Refresh the vendored dependency wheelhouse with `uv run chiron wheelhouse` (defaults to the dev+test extras), then run tests via `python -m venv .venv && .venv/bin/pip install -e ".[dev,test]" && .venv/bin/pytest`. The install step will automatically consume the pre-populated `vendor/wheelhouse` via `sitecustomize`, keeping offline and CI parity.
-3. If working on the FastAPI service, prefer exercising endpoints via `TestClient` rather than shelling out to `uv`/`tar`.
-4. For MCP or feature-flag work, implement `get_feature_flags()` and convert dry-run responses into real operations before updating guides.
+### Offline & Air-Gapped Deployments
+- [Offline Deployment](../OFFLINE.md) - Air-gapped installation guide
 
-## Maintenance Notes
+### Architecture & Planning
+- [Chiron Upgrade Plan](../CHIRON_UPGRADE_PLAN.md) - Detailed architecture and design
 
-- Treat the status documents as the source of truth; older success narratives were archived but do not reflect the current codebase.
-- Update documentation in lockstep with code changes, especially when enabling telemetry, MCP tooling, or supply-chain workflows.
+## Deprecated Documentation
+
+Historical documentation that has been superseded is available in [`deprecated/`](deprecated/README.md).
+
+**Note**: Always use the current documentation linked above. Deprecated docs are kept for reference only.
+
+## Documentation Structure
+
+Following the [Diátaxis](https://diataxis.fr/) framework:
+
+- **Tutorials**: Learning-oriented guides (coming soon)
+- **How-to Guides**: Task-oriented instructions (Quality Gates, Environment Sync, etc.)
+- **Reference**: Technical descriptions (API docs, module references)
+- **Explanation**: Understanding-oriented discussions (Gap Analysis, Architecture)
+
+## Contributing to Documentation
+
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines on improving documentation.
+
+When adding documentation:
+1. Follow existing structure and style
+2. Update this index when adding new guides
+3. Keep examples current and tested
+4. Cross-reference related documents
+5. Mark outdated docs as deprecated rather than deleting them

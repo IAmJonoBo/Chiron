@@ -219,7 +219,7 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 
 - ✅ OpenTelemetry spans for critical stages
 - ✅ Log-trace correlation
-- ✅ Default dashboard templates (Grafana, Prometheus)
+- ✅ Default dashboard templates (Grafana with OpenTelemetry metrics)
 
 #### 14.7 API Contracts ✅
 
@@ -311,6 +311,6 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 - MCP agent mode, TUF metadata, and reproducibility checking infrastructure in place
 - Interactive wizard mode available for user-friendly configuration
 - Feature flags via OpenFeature enable safe operational toggles
-- Observability dashboard templates provided for Grafana and Prometheus
+- Observability dashboard templates provided for Grafana with OpenTelemetry metrics
 
 Last Updated: 2025-01-25
