@@ -9,7 +9,7 @@ This ensures deterministic, verifiable dependency installations.
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal

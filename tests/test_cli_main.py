@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import shutil
 import subprocess
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -12,16 +11,17 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from chiron.cli.main import _resolve_executable, _run_command, cli
+from chiron.cli.main import _run_command, cli
+from chiron.subprocess_utils import resolve_executable
 
 
 class TestResolveExecutable:
-    """Tests for _resolve_executable helper."""
+    """Tests for resolve_executable helper from subprocess_utils."""
 
     def test_resolve_absolute_path(self) -> None:
         """Test resolving an absolute path."""
         # Use a known absolute path
-        result = _resolve_executable("/usr/bin/python3")
+        result = resolve_executable("/usr/bin/python3")
         assert result == "/usr/bin/python3"
 
     def test_resolve_relative_path_that_exists(self, tmp_path: Path) -> None:
@@ -37,7 +37,7 @@ class TestResolveExecutable:
         original_cwd = os.getcwd()
         try:
             os.chdir(tmp_path)
-            result = _resolve_executable("./test_script.sh")
+            result = resolve_executable("./test_script.sh")
             assert Path(result).exists()
             assert "test_script.sh" in result
         finally:
@@ -46,45 +46,46 @@ class TestResolveExecutable:
     def test_resolve_executable_in_path(self) -> None:
         """Test resolving an executable that exists in PATH."""
         # python3 should be in PATH
-        result = _resolve_executable("python3")
+        result = resolve_executable("python3")
         assert result is not None
         assert Path(result).exists()
         assert "python3" in result.lower()
 
     def test_resolve_executable_not_found(self) -> None:
-        """Test that missing executable raises ClickException."""
-        with pytest.raises(click.ClickException) as exc_info:
-            _resolve_executable("this-executable-does-not-exist-12345")
+        """Test that missing executable raises ExecutableNotFoundError."""
+        from chiron.subprocess_utils import ExecutableNotFoundError
 
-        assert "not found on PATH" in str(exc_info.value)
+        with pytest.raises(ExecutableNotFoundError) as exc_info:
+            resolve_executable("this-executable-does-not-exist-12345")
+
+        assert "not found" in str(exc_info.value).lower()
         assert "this-executable-does-not-exist-12345" in str(exc_info.value)
 
-    @patch("chiron.cli.main.shutil.which")
+    @patch("chiron.subprocess_utils.shutil.which")
     def test_resolve_executable_which_returns_none(self, mock_which: Mock) -> None:
         """Test when shutil.which returns None."""
+        from chiron.subprocess_utils import ExecutableNotFoundError
+
         mock_which.return_value = None
 
-        with pytest.raises(click.ClickException) as exc_info:
-            _resolve_executable("missing-tool")
+        with pytest.raises(ExecutableNotFoundError) as exc_info:
+            resolve_executable("missing-tool")
 
-        assert "not found on PATH" in str(exc_info.value)
+        assert "not found" in str(exc_info.value).lower()
 
 
 class TestRunCommand:
     """Tests for _run_command helper."""
 
-    @patch("chiron.cli.main._resolve_executable")
-    @patch("chiron.cli.main.subprocess.run")
-    def test_run_command_success(self, mock_run: Mock, mock_resolve: Mock) -> None:
+    @patch("chiron.cli.main.run_subprocess")
+    def test_run_command_success(self, mock_run: Mock) -> None:
         """Test running a command successfully."""
-        mock_resolve.return_value = "/usr/bin/echo"
         mock_result = Mock(spec=subprocess.CompletedProcess)
         mock_result.returncode = 0
         mock_run.return_value = mock_result
 
         result = _run_command(["echo", "hello"])
 
-        mock_resolve.assert_called_once_with("echo")
         mock_run.assert_called_once()
         assert result is mock_result
 
@@ -95,11 +96,9 @@ class TestRunCommand:
 
         assert "at least one argument" in str(exc_info.value)
 
-    @patch("chiron.cli.main._resolve_executable")
-    @patch("chiron.cli.main.subprocess.run")
-    def test_run_command_with_kwargs(self, mock_run: Mock, mock_resolve: Mock) -> None:
+    @patch("chiron.cli.main.run_subprocess")
+    def test_run_command_with_kwargs(self, mock_run: Mock) -> None:
         """Test running a command with additional kwargs."""
-        mock_resolve.return_value = "/usr/bin/ls"
         mock_result = Mock(spec=subprocess.CompletedProcess)
         mock_run.return_value = mock_result
 
@@ -107,16 +106,20 @@ class TestRunCommand:
 
         mock_run.assert_called_once()
         call_kwargs = mock_run.call_args[1]
-        assert call_kwargs["capture_output"] is True
-        assert call_kwargs["text"] is True
+        assert call_kwargs.get("capture_output") is True
+        assert call_kwargs.get("text") is True
 
-    @patch("chiron.cli.main._resolve_executable")
-    def test_run_command_resolve_failure(self, mock_resolve: Mock) -> None:
-        """Test when executable resolution fails."""
-        mock_resolve.side_effect = click.ClickException("Not found")
+    @patch("chiron.cli.main.run_subprocess")
+    def test_run_command_executable_not_found(self, mock_run: Mock) -> None:
+        """Test when executable is not found."""
+        from chiron.subprocess_utils import ExecutableNotFoundError
 
-        with pytest.raises(click.ClickException):
+        mock_run.side_effect = ExecutableNotFoundError("nonexistent-command")
+
+        with pytest.raises(click.ClickException) as exc_info:
             _run_command(["nonexistent-command"])
+
+        assert "not found" in str(exc_info.value).lower()
 
 
 class TestCliGroup:
