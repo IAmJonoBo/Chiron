@@ -11,10 +11,10 @@ from packaging.version import Version
 
 from chiron.deps.constraints import ConstraintsConfig, ConstraintsGenerator
 from chiron.deps.policy import (
+    DependencyPolicy,
     PackagePolicy,
     PolicyEngine,
     PolicyViolation,
-    UpgradePolicy,
 )
 
 
@@ -84,150 +84,168 @@ class TestPolicyViolation:
         assert violation.severity == "error"
 
 
-class TestUpgradePolicy:
-    """Tests for UpgradePolicy dataclass."""
-
-    def test_default_policy(self) -> None:
-        """Test creating an upgrade policy with defaults."""
-        policy = UpgradePolicy()
-        assert policy.allow_major is False
-        assert policy.allow_minor is True
-        assert policy.allow_patch is True
-        assert policy.min_age_days == 0
-        assert policy.require_changelog is False
-
-    def test_conservative_policy(self) -> None:
-        """Test creating a conservative upgrade policy."""
-        policy = UpgradePolicy(
-            allow_major=False,
-            allow_minor=False,
-            allow_patch=True,
-            min_age_days=7,
-            require_changelog=True,
-        )
-        assert policy.allow_major is False
-        assert policy.allow_minor is False
-        assert policy.allow_patch is True
-        assert policy.min_age_days == 7
-        assert policy.require_changelog is True
-
-
 class TestPolicyEngine:
     """Tests for PolicyEngine."""
 
     def test_initialization(self) -> None:
         """Test PolicyEngine initialization."""
-        engine = PolicyEngine()
-        assert isinstance(engine.policies, dict)
-        assert isinstance(engine.global_policy, UpgradePolicy)
+        policy = DependencyPolicy()
+        engine = PolicyEngine(policy)
+        assert engine.policy is policy
+        assert isinstance(engine._last_upgrade_timestamps, dict)
 
-    def test_add_policy(self) -> None:
-        """Test adding a package policy."""
-        engine = PolicyEngine()
-        policy = PackagePolicy(name="test-package", allowed=True)
-        engine.add_policy(policy)
-        assert "test-package" in engine.policies
-        assert engine.policies["test-package"] == policy
+    def test_check_package_allowed_default(self) -> None:
+        """Test package allowed with default policy."""
+        policy = DependencyPolicy(default_allowed=True)
+        engine = PolicyEngine(policy)
+        
+        allowed, reason = engine.check_package_allowed("test-package")
+        assert allowed is True
+        assert reason is None
 
-    def test_check_package_allowed(self) -> None:
-        """Test checking if a package is allowed."""
-        engine = PolicyEngine()
-        # No policy = allowed by default
-        assert engine.check_package_allowed("unknown-package") is True
+    def test_check_package_denied_default(self) -> None:
+        """Test package denied with default policy."""
+        policy = DependencyPolicy(default_allowed=False)
+        engine = PolicyEngine(policy)
+        
+        allowed, reason = engine.check_package_allowed("test-package")
+        assert allowed is False
+        assert "not in allowlist" in reason.lower()
 
-        # Add blocked package
-        engine.add_policy(PackagePolicy(name="blocked-package", allowed=False))
-        assert engine.check_package_allowed("blocked-package") is False
-
-        # Add allowed package
-        engine.add_policy(PackagePolicy(name="allowed-package", allowed=True))
-        assert engine.check_package_allowed("allowed-package") is True
+    def test_check_package_in_denylist(self) -> None:
+        """Test package in denylist is blocked."""
+        blocked_pkg = PackagePolicy(
+            name="blocked-package",
+            allowed=False,
+            reason="Security vulnerability"
+        )
+        policy = DependencyPolicy()
+        policy.denylist["blocked-package"] = blocked_pkg
+        engine = PolicyEngine(policy)
+        
+        allowed, reason = engine.check_package_allowed("blocked-package")
+        assert allowed is False
+        assert "Security vulnerability" in reason
 
     def test_check_version_allowed_no_constraints(self) -> None:
         """Test version checking without constraints."""
-        engine = PolicyEngine()
+        policy = DependencyPolicy()
+        engine = PolicyEngine(policy)
         # No constraints = any version allowed
-        assert engine.check_version_allowed("test-package", "1.0.0") is True
+        allowed, reason = engine.check_version_allowed("test-package", "1.0.0")
+        assert allowed is True
+        assert reason is None
 
     def test_check_version_allowed_with_ceiling(self) -> None:
         """Test version checking with ceiling constraint."""
-        engine = PolicyEngine()
-        engine.add_policy(
-            PackagePolicy(name="test-package", version_ceiling="2.0.0")
-        )
+        pkg_policy = PackagePolicy(name="test-package", version_ceiling="2.0.0")
+        policy = DependencyPolicy()
+        policy.allowlist["test-package"] = pkg_policy
+        engine = PolicyEngine(policy)
 
         # Version below ceiling should be allowed
-        assert engine.check_version_allowed("test-package", "1.0.0") is True
-        assert engine.check_version_allowed("test-package", "2.0.0") is True
+        allowed, _ = engine.check_version_allowed("test-package", "1.0.0")
+        assert allowed is True
+        
+        allowed, _ = engine.check_version_allowed("test-package", "2.0.0")
+        assert allowed is True
 
         # Version above ceiling should be blocked
-        assert engine.check_version_allowed("test-package", "3.0.0") is False
+        allowed, reason = engine.check_version_allowed("test-package", "3.0.0")
+        assert allowed is False
+        assert "ceiling" in reason.lower()
 
     def test_check_version_allowed_with_floor(self) -> None:
         """Test version checking with floor constraint."""
-        engine = PolicyEngine()
-        engine.add_policy(PackagePolicy(name="test-package", version_floor="1.0.0"))
+        pkg_policy = PackagePolicy(name="test-package", version_floor="1.0.0")
+        policy = DependencyPolicy()
+        policy.allowlist["test-package"] = pkg_policy
+        engine = PolicyEngine(policy)
 
         # Version below floor should be blocked
-        assert engine.check_version_allowed("test-package", "0.9.0") is False
+        allowed, reason = engine.check_version_allowed("test-package", "0.9.0")
+        assert allowed is False
+        assert "floor" in reason.lower()
 
         # Version at or above floor should be allowed
-        assert engine.check_version_allowed("test-package", "1.0.0") is True
-        assert engine.check_version_allowed("test-package", "2.0.0") is True
+        allowed, _ = engine.check_version_allowed("test-package", "1.0.0")
+        assert allowed is True
+        
+        allowed, _ = engine.check_version_allowed("test-package", "2.0.0")
+        assert allowed is True
 
     def test_check_version_blocked_versions(self) -> None:
         """Test version checking with blocked versions."""
-        engine = PolicyEngine()
-        engine.add_policy(
-            PackagePolicy(
-                name="test-package",
-                blocked_versions=["1.5.0", "1.5.1"],
-            )
+        pkg_policy = PackagePolicy(
+            name="test-package",
+            blocked_versions=["1.5.0", "1.5.1"],
         )
+        policy = DependencyPolicy()
+        policy.allowlist["test-package"] = pkg_policy
+        engine = PolicyEngine(policy)
 
         # Non-blocked versions should be allowed
-        assert engine.check_version_allowed("test-package", "1.4.0") is True
-        assert engine.check_version_allowed("test-package", "1.6.0") is True
+        allowed, _ = engine.check_version_allowed("test-package", "1.4.0")
+        assert allowed is True
+        
+        allowed, _ = engine.check_version_allowed("test-package", "1.6.0")
+        assert allowed is True
 
         # Blocked versions should not be allowed
-        assert engine.check_version_allowed("test-package", "1.5.0") is False
-        assert engine.check_version_allowed("test-package", "1.5.1") is False
+        allowed, reason = engine.check_version_allowed("test-package", "1.5.0")
+        assert allowed is False
+        assert "blocked" in reason.lower()
+        
+        allowed, _ = engine.check_version_allowed("test-package", "1.5.1")
+        assert allowed is False
 
-    def test_validate_upgrade_major(self) -> None:
-        """Test upgrade validation for major version change."""
-        engine = PolicyEngine()
-        engine.global_policy.allow_major = False
+    def test_check_upgrade_allowed_major_jump(self) -> None:
+        """Test upgrade checking with major version jump limit."""
+        policy = DependencyPolicy(max_major_version_jump=1)
+        engine = PolicyEngine(policy)
 
-        violations = engine.validate_upgrade("test-package", "1.0.0", "2.0.0")
+        # Single major version jump should be allowed
+        violations = engine.check_upgrade_allowed("test-package", "1.0.0", "2.0.0")
+        assert len([v for v in violations if v.violation_type == "major_jump"]) == 0
+
+        # Multiple major version jumps should create violations
+        violations = engine.check_upgrade_allowed("test-package", "1.0.0", "3.0.0")
+        major_jump_violations = [v for v in violations if v.violation_type == "major_jump"]
+        assert len(major_jump_violations) > 0
+
+    def test_check_upgrade_allowed_with_denied_package(self) -> None:
+        """Test upgrade checking for denied package."""
+        blocked_pkg = PackagePolicy(
+            name="blocked-package",
+            allowed=False,
+            reason="Security vulnerability"
+        )
+        policy = DependencyPolicy()
+        policy.denylist["blocked-package"] = blocked_pkg
+        engine = PolicyEngine(policy)
+
+        violations = engine.check_upgrade_allowed("blocked-package", "1.0.0", "1.1.0")
         assert len(violations) > 0
-        assert violations[0].violation_type == "major_upgrade_blocked"
+        assert any(v.violation_type == "package_denied" for v in violations)
 
-    def test_validate_upgrade_minor(self) -> None:
-        """Test upgrade validation for minor version change."""
-        engine = PolicyEngine()
-        engine.global_policy.allow_minor = False
 
-        violations = engine.validate_upgrade("test-package", "1.0.0", "1.1.0")
-        assert len(violations) > 0
-        assert violations[0].violation_type == "minor_upgrade_blocked"
+class TestDependencyPolicy:
+    """Tests for DependencyPolicy dataclass."""
 
-    def test_validate_upgrade_patch_allowed(self) -> None:
-        """Test upgrade validation for patch version change."""
-        engine = PolicyEngine()
-        engine.global_policy.allow_patch = True
+    def test_default_policy(self) -> None:
+        """Test creating a policy with defaults."""
+        policy = DependencyPolicy()
+        assert policy.default_allowed is True
+        assert policy.max_major_version_jump == 1
+        assert policy.require_security_review is True
+        assert policy.allow_pre_releases is False
 
-        violations = engine.validate_upgrade("test-package", "1.0.0", "1.0.1")
-        # Patch upgrades allowed, so no violations
-        assert len(violations) == 0
-
-    def test_validate_upgrade_blocked_package(self) -> None:
-        """Test upgrade validation for blocked package."""
-        engine = PolicyEngine()
-        engine.add_policy(PackagePolicy(name="blocked-package", allowed=False))
-
-        violations = engine.validate_upgrade("blocked-package", "1.0.0", "1.1.0")
-        assert len(violations) > 0
-        assert violations[0].violation_type == "blocked_package"
+    def test_load_from_toml_missing_file(self, tmp_path: Path) -> None:
+        """Test loading policy from non-existent TOML file."""
+        config_path = tmp_path / "nonexistent.toml"
+        policy = DependencyPolicy.from_toml(config_path)
+        # Should return default policy
+        assert policy.default_allowed is True
 
 
 class TestConstraintsConfig:
