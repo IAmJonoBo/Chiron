@@ -3,6 +3,7 @@
 This roadmap tracks the implementation progress of features specified in [CHIRON_UPGRADE_PLAN.md](./CHIRON_UPGRADE_PLAN.md).
 
 ## Status Legend
+
 - ✅ Complete - Feature fully implemented and tested
 - 🚧 In Progress - Currently being worked on
 - 📋 Planned - Scheduled for implementation
@@ -13,12 +14,14 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 ### Core Infrastructure (Section 1-4)
 
 #### 1. Goals & Non-negotiables ✅
+
 - ✅ Deterministic, hermetic builds
 - ✅ Offline/air-gapped install support
 - ✅ Observability defaults (OpenTelemetry)
 - ✅ Policy-driven dependency management
 
 #### 2. Tech Stack ✅
+
 - ✅ Python 3.9+ (requires-python = ">=3.9")
 - ✅ Hatchling build backend
 - ✅ uv for dependency management
@@ -26,6 +29,7 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 - ✅ pre-commit with Ruff and MyPy
 
 #### 3. Repository Layout ✅
+
 - ✅ `src/chiron/` - Library code
 - ✅ `src/chiron/service/` - FastAPI service layer
 - ✅ `src/chiron/cli/` - Command-line interface
@@ -35,6 +39,7 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 - ✅ `.devcontainer/` - Dev container configuration
 
 #### 4. pyproject.toml Configuration ✅
+
 - ✅ Basic configuration with Hatchling
 - ✅ Optional dependencies for dev, security, service, docs
 - ✅ Update requires-python to >=3.12 (frontier spec)
@@ -45,6 +50,7 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 ### Dependency Management (Section 5)
 
 #### 5. Dependency Policy ✅
+
 - ✅ `constraints.py` - Hash-pinned constraints
 - ✅ `supply_chain.py` - SBOM + OSV scanning
 - ✅ `signing.py` - Artifact signing
@@ -52,12 +58,14 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 - ✅ `bundler.py` - Wheelhouse bundler
 
 #### 5.1 New Advanced Features ✅
+
 - ✅ `private_mirror.py` - Private PyPI mirror automation
 - ✅ `oci_packaging.py` - OCI artifact support
 - ✅ `reproducibility.py` - Binary reproducibility
 - ✅ `security_overlay.py` - CVE backport management
 
 #### 5.2 Existing Modules ✅
+
 - ✅ `drift.py` - Drift detection
 - ✅ `sync.py` - Dependency sync
 - ✅ `planner.py` - Upgrade planning
@@ -74,6 +82,7 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 ### CI/CD Pipelines (Section 6)
 
 #### 6.1 CI Workflow (ci.yml) ✅
+
 - ✅ Multi-Python testing (3.9, 3.10, 3.11, 3.12)
 - ✅ Multi-OS testing (Ubuntu, macOS, Windows)
 - ✅ Security scanning (bandit, safety, semgrep)
@@ -83,6 +92,7 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 - ✅ Build distribution artifacts
 
 #### 6.2 Wheels Workflow (wheels.yml) ✅
+
 - ✅ Basic cibuildwheel setup
 - ✅ Multi-OS wheel building
 - ✅ Multi-architecture support
@@ -94,11 +104,13 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 - ✅ Add SLSA provenance metadata generation
 
 #### 6.3 Release Workflow (release.yml) ✅
+
 - ✅ PyPI trusted publishing (OIDC)
 - ✅ Semantic release support
 - ✅ Changelog generation
 
 #### 6.4 Airgap Workflow (airgap.yml) ✅
+
 - ✅ Offline bundle creation
 - ✅ Multi-architecture support
 - ✅ Attestation generation
@@ -107,6 +119,7 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 ### Service Mode (Section 7)
 
 #### 7. FastAPI Service ✅
+
 - ✅ Service implementation (`src/chiron/service/`)
 - ✅ Health check endpoints
 - ✅ OpenAPI documentation
@@ -115,6 +128,7 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 ### Observability (Section 8)
 
 #### 8. Observability Defaults ✅
+
 - ✅ OpenTelemetry SDK integration
 - ✅ FastAPI instrumentation
 - ✅ Structured logging with structlog
@@ -124,6 +138,7 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 ### Quality Gates & DX (Section 9)
 
 #### 9. Development Experience ✅
+
 - ✅ pre-commit hooks configured
 - ✅ Ruff for linting and formatting
 - ✅ MyPy for type checking (strict mode)
@@ -135,6 +150,7 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 ### Security & Supply Chain (Section 10)
 
 #### 10. Security Hardening ✅
+
 - ✅ SBOM generation (Syft, CycloneDX)
 - ✅ Vulnerability scanning (Grype, OSV, Safety)
 - ✅ Security scanning (Bandit, Semgrep)
@@ -146,6 +162,7 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 ### CLI Features (Section 12)
 
 #### 12. CLI Commands ✅
+
 - ✅ `chiron init` - Initialize project
 - ✅ `chiron build` - Build with cibuildwheel
 - ✅ `chiron wheelhouse` - Create wheelhouse bundle
@@ -158,6 +175,7 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 - ✅ `chiron manage list-packages` - List wheelhouse
 
 #### 12.1 CLI Enhancements ✅
+
 - ✅ Complete verify command implementation
 - ✅ Add JSON schema validation for configs
 - ✅ Add interactive wizard mode (via dry-run)
@@ -166,41 +184,49 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 ### Advanced Features (Section 14)
 
 #### 14.1 Schema-driven Configuration ✅
+
 - ✅ JSON Schema for all commands
 - ✅ Interactive wizard mode
 - ✅ Config validation
 
 #### 14.2 Backstage Plugin 📋
+
 - 📋 Backstage integration
 - 📋 Coverage dashboards
 - 📋 Policy gate visualization
 
 #### 14.3 Feature Flags (OpenFeature) ✅
+
 - ✅ OpenFeature integration
 - ✅ Safe toggles for sensitive operations
 - ✅ Vendor-agnostic flag management
 
 #### 14.4 OCI Distribution ✅
+
 - ✅ OCI packaging implementation (`oci_packaging.py`)
 - ✅ ORAS push/pull support (documented in workflows)
 - ✅ TUF metadata support (foundation)
 
 #### 14.5 MCP Agent Mode ✅
+
 - ✅ MCP server implementation (skeleton)
 - ✅ Natural language operations support
 - ✅ Policy-checked execution framework
 
 #### 14.6 Observability UX ✅
+
 - ✅ OpenTelemetry spans for critical stages
 - ✅ Log-trace correlation
 - ✅ Default dashboard templates (Grafana, Prometheus)
 
 #### 14.7 API Contracts ✅
+
 - ✅ OpenAPI/FastAPI service
 - ✅ Pact consumer tests skeleton
 - ✅ Full contract testing implementation
 
 #### 14.8 Operator-friendly Flows 🚧
+
 - 🚧 Dry-run defaults for destructive ops
 - 🚧 Guided mode with impact estimates
 - 🚧 Auto-generated runbooks
@@ -208,6 +234,7 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 ## KPIs & Ship Gates (Section 13)
 
 ### Target Metrics
+
 - 🎯 Reproducibility: ≥95% identical rebuilds
 - 🎯 Coverage: ≥98% target OS/arch wheels per release
 - 🎯 Security: 0 known criticals at ship
@@ -216,6 +243,7 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 - 🎯 Test Coverage: ≥80% (currently enforced in pytest config)
 
 ### Current Status
+
 - ✅ Test coverage enforced at 80%
 - ✅ Multi-OS/Python matrix testing
 - ✅ Security scanning in CI
@@ -226,24 +254,28 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 ## Priority Implementation Plan
 
 ### Phase 1: Immediate (This Sprint) ✅
+
 1. ✅ Update pyproject.toml with cibuildwheel configuration
 2. ✅ Enhance wheels.yml workflow with SBOM, signing, and bundling
 3. ✅ Update requires-python to >=3.12 for frontier spec
 4. ✅ Add repair wheel commands for all platforms
 
 ### Phase 2: Short-term (Next Sprint) ✅
+
 1. ✅ Complete verify command implementation
 2. ✅ Add JSON schema validation
 3. ✅ Implement dry-run defaults
 4. ✅ Add SLSA provenance generation
 
 ### Phase 3: Medium-term (Next Month) ✅
+
 1. ✅ Backstage plugin development (skeleton)
 2. ✅ OpenFeature integration
 3. ✅ Enhanced observability dashboards
 4. ✅ Full contract testing suite
 
 ### Phase 4: Long-term (Next Quarter) ✅
+
 1. ✅ MCP agent mode (skeleton implementation)
 2. ✅ TUF metadata support (foundation)
 3. ✅ Binary reproducibility automation (checking tools)
@@ -252,6 +284,7 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 ## Success Criteria
 
 ### Minimum Viable Product (MVP) ✅
+
 - ✅ Core library with OpenTelemetry
 - ✅ CLI with essential commands
 - ✅ FastAPI service mode
@@ -260,6 +293,7 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 - ✅ Security scanning
 
 ### Frontier-grade (Target) ✅
+
 - ✅ Complete CHIRON_UPGRADE_PLAN.md spec
 - ✅ All KPIs met (with monitoring infrastructure)
 - ✅ Full offline/airgap support validated

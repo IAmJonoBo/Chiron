@@ -76,28 +76,28 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started:
-    - Installation: getting-started/installation.md
-    - Quick Start: getting-started/quickstart.md
-    - Configuration: getting-started/configuration.md
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quickstart.md
+      - Configuration: getting-started/configuration.md
   - User Guide:
-    - Library Usage: guide/library.md
-    - Service Mode: guide/service.md
-    - CLI Commands: guide/cli.md
-    - Security Features: guide/security.md
-    - Observability: guide/observability.md
+      - Library Usage: guide/library.md
+      - Service Mode: guide/service.md
+      - CLI Commands: guide/cli.md
+      - Security Features: guide/security.md
+      - Observability: guide/observability.md
   - API Reference:
-    - Core: api/core.md
-    - Service: api/service.md
-    - CLI: api/cli.md
-    - Exceptions: api/exceptions.md
+      - Core: api/core.md
+      - Service: api/service.md
+      - CLI: api/cli.md
+      - Exceptions: api/exceptions.md
   - Architecture:
-    - Overview: architecture/overview.md
-    - Security Model: architecture/security.md
-    - Deployment: architecture/deployment.md
+      - Overview: architecture/overview.md
+      - Security Model: architecture/security.md
+      - Deployment: architecture/deployment.md
   - Development:
-    - Contributing: development/contributing.md
-    - Testing: development/testing.md
-    - Release Process: development/releases.md
+      - Contributing: development/contributing.md
+      - Testing: development/testing.md
+      - Release Process: development/releases.md
 
 extra:
   social:

@@ -29,18 +29,20 @@ Chiron implements an MCP server that exposes dependency management and wheelhous
    - Download from https://claude.ai/download
 
 2. **Locate config file**:
+
    ```bash
    # macOS
    ~/Library/Application\ Support/Claude/claude_desktop_config.json
-   
+
    # Windows
    %APPDATA%\Claude\claude_desktop_config.json
-   
+
    # Linux
    ~/.config/Claude/claude_desktop_config.json
    ```
 
 3. **Add Chiron MCP server**:
+
    ```json
    {
      "mcpServers": {
@@ -117,11 +119,13 @@ print(response)
 ### Test 1: Health Check
 
 **Prompt for AI assistant**:
+
 ```
 Use the chiron_health_check tool to check if Chiron is operational.
 ```
 
 **Expected Response**:
+
 ```json
 {
   "status": "healthy",
@@ -134,6 +138,7 @@ Use the chiron_health_check tool to check if Chiron is operational.
 ```
 
 **Validation**:
+
 - [ ] Tool executes without errors
 - [ ] Status is "healthy"
 - [ ] Version is correct
@@ -142,11 +147,13 @@ Use the chiron_health_check tool to check if Chiron is operational.
 ### Test 2: List Feature Flags
 
 **Prompt for AI assistant**:
+
 ```
 Use the chiron_get_feature_flags tool to show current feature flag status.
 ```
 
 **Expected Response**:
+
 ```json
 {
   "flags": {
@@ -160,6 +167,7 @@ Use the chiron_get_feature_flags tool to show current feature flag status.
 ```
 
 **Validation**:
+
 - [ ] Tool executes without errors
 - [ ] Returns dictionary of flags
 - [ ] Flags have boolean values
@@ -167,12 +175,14 @@ Use the chiron_get_feature_flags tool to show current feature flag status.
 ### Test 3: Build Wheelhouse (Dry Run)
 
 **Prompt for AI assistant**:
+
 ```
 Use the chiron_build_wheelhouse tool to build a wheelhouse in dry-run mode.
 Output to "test_wheelhouse" directory with SBOM and signatures enabled.
 ```
 
 **Expected Response**:
+
 ```json
 {
   "status": "dry_run",
@@ -184,6 +194,7 @@ Output to "test_wheelhouse" directory with SBOM and signatures enabled.
 ```
 
 **Validation**:
+
 - [ ] Tool executes without errors
 - [ ] Status is "dry_run"
 - [ ] Parameters are echoed correctly
@@ -192,12 +203,14 @@ Output to "test_wheelhouse" directory with SBOM and signatures enabled.
 ### Test 4: Create Air-gap Bundle (Dry Run)
 
 **Prompt for AI assistant**:
+
 ```
 Use the chiron_create_airgap_bundle tool to create an air-gap bundle.
 Include extras and security tools, output to "test-bundle.tar.gz", dry-run mode.
 ```
 
 **Expected Response**:
+
 ```json
 {
   "status": "dry_run",
@@ -209,6 +222,7 @@ Include extras and security tools, output to "test-bundle.tar.gz", dry-run mode.
 ```
 
 **Validation**:
+
 - [ ] Tool executes without errors
 - [ ] Status is "dry_run"
 - [ ] Parameters are echoed correctly
@@ -216,11 +230,13 @@ Include extras and security tools, output to "test-bundle.tar.gz", dry-run mode.
 ### Test 5: Verify Artifacts
 
 **Prompt for AI assistant**:
+
 ```
 Use the chiron_verify_artifacts tool to verify artifacts at "/path/to/wheelhouse".
 ```
 
 **Expected Response**:
+
 ```json
 {
   "status": "not_implemented",
@@ -230,6 +246,7 @@ Use the chiron_verify_artifacts tool to verify artifacts at "/path/to/wheelhouse
 ```
 
 **Validation**:
+
 - [ ] Tool executes without errors
 - [ ] Returns not_implemented status
 - [ ] Target path is echoed
@@ -237,11 +254,13 @@ Use the chiron_verify_artifacts tool to verify artifacts at "/path/to/wheelhouse
 ### Test 6: Check Policy
 
 **Prompt for AI assistant**:
+
 ```
 Use the chiron_check_policy tool with config at "/path/to/policy.yaml".
 ```
 
 **Expected Response**:
+
 ```json
 {
   "status": "not_implemented",
@@ -251,6 +270,7 @@ Use the chiron_check_policy tool with config at "/path/to/policy.yaml".
 ```
 
 **Validation**:
+
 - [ ] Tool executes without errors
 - [ ] Returns not_implemented status
 - [ ] Config path is echoed
@@ -262,6 +282,7 @@ Use the chiron_check_policy tool with config at "/path/to/policy.yaml".
 ### Scenario 1: Full Workflow Simulation
 
 **Test Steps**:
+
 1. Check health status
 2. Get feature flags
 3. Build wheelhouse (dry-run)
@@ -269,6 +290,7 @@ Use the chiron_check_policy tool with config at "/path/to/policy.yaml".
 5. Create air-gap bundle (dry-run)
 
 **AI Assistant Prompt**:
+
 ```
 Execute a complete Chiron workflow:
 1. Check the health of Chiron
@@ -281,6 +303,7 @@ Use dry-run mode where applicable.
 ```
 
 **Validation**:
+
 - [ ] All tools execute in sequence
 - [ ] No errors occur
 - [ ] Responses are coherent
@@ -289,11 +312,13 @@ Use dry-run mode where applicable.
 ### Scenario 2: Error Handling
 
 **Test Steps**:
+
 1. Call invalid tool name
 2. Call tool with missing required parameter
 3. Call tool with invalid parameter type
 
 **AI Assistant Prompt**:
+
 ```
 Test error handling:
 1. Try to use a tool called "chiron_invalid_tool"
@@ -302,6 +327,7 @@ Test error handling:
 ```
 
 **Validation**:
+
 - [ ] Invalid tool returns error with available tools
 - [ ] Missing parameter handled gracefully
 - [ ] Invalid types handled appropriately
@@ -312,6 +338,7 @@ Test error handling:
 Test tools with various parameter combinations
 
 **AI Assistant Prompt**:
+
 ```
 Test Chiron tools with different parameters:
 1. Build wheelhouse without SBOM
@@ -321,6 +348,7 @@ Test Chiron tools with different parameters:
 ```
 
 **Validation**:
+
 - [ ] All parameter combinations work
 - [ ] Defaults are applied correctly
 - [ ] Custom values are respected
@@ -360,7 +388,7 @@ def test_mcp_tools_available():
         text=True,
         timeout=5
     )
-    
+
     output = result.stdout
     assert "chiron_build_wheelhouse" in output
     assert "chiron_verify_artifacts" in output
@@ -375,7 +403,7 @@ def test_mcp_config_generation():
         text=True,
         timeout=5
     )
-    
+
     # Config should be in output
     assert "mcpServers" in result.stdout
 
@@ -388,6 +416,7 @@ if __name__ == "__main__":
 ```
 
 Run with:
+
 ```bash
 python test_mcp_integration.py
 ```
@@ -401,6 +430,7 @@ python test_mcp_integration.py
 **Symptoms**: Client shows "command not found" or similar
 
 **Solutions**:
+
 1. Verify Python is in PATH: `which python`
 2. Verify Chiron is installed: `python -c "import chiron.mcp.server"`
 3. Use full path to Python: `/usr/bin/python3 -m chiron.mcp.server`
@@ -410,6 +440,7 @@ python test_mcp_integration.py
 **Symptoms**: Client shows no Chiron tools
 
 **Solutions**:
+
 1. Check client configuration is correct
 2. Restart client application
 3. Check client logs for errors
@@ -420,6 +451,7 @@ python test_mcp_integration.py
 **Symptoms**: Tools return errors
 
 **Solutions**:
+
 1. Check error message for details
 2. Verify parameters match schema
 3. Check Chiron logs if available

@@ -160,6 +160,7 @@ vulnerability-report.json
 bandit-report.json
 safety-report.json
 .secrets.baseline
+pacts/
 
 # Signing artifacts
 *.sigstore.json

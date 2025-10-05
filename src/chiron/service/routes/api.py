@@ -117,9 +117,9 @@ async def list_wheelhouse() -> dict[str, list[str]]:
     if not wheelhouse_path.exists():
         return {"packages": []}
 
-    packages = []
+    packages: list[str] = []
     for file in wheelhouse_path.iterdir():
-        if file.suffix in [".whl", ".tar.gz"]:
+        if file.suffix == ".whl" or file.name.endswith(".tar.gz"):
             packages.append(file.name)
 
     return {"packages": sorted(packages)}

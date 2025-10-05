@@ -1,21 +1,9 @@
 """Core functionality for Chiron."""
 
-from typing import Any, cast
+import os
+from typing import Any
 
 import structlog
-
-try:  # pragma: no cover - optional dependency
-    from opentelemetry import trace  # type: ignore
-    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # type: ignore
-        OTLPSpanExporter,
-    )
-    from opentelemetry.sdk.trace import TracerProvider  # type: ignore
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor  # type: ignore
-except ImportError:  # pragma: no cover - telemetry optional
-    trace = None  # type: ignore[assignment]
-    OTLPSpanExporter = None  # type: ignore[assignment]
-    TracerProvider = None  # type: ignore[assignment]
-    BatchSpanProcessor = None  # type: ignore[assignment]
 
 from chiron.exceptions import ChironConfigurationError, ChironError
 
@@ -68,17 +56,46 @@ class ChironCore:
         if self.security_mode:
             self._setup_security()
 
+    def _resolve_opentelemetry(
+        self,
+    ) -> tuple[Any | None, ...]:  # pragma: no cover - import helper
+        """Resolve OpenTelemetry modules at runtime."""
+        try:
+            from opentelemetry import trace as ot_trace  # type: ignore
+            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
+                OTLPSpanExporter as exporter_cls,  # type: ignore
+            )
+            from opentelemetry.sdk.trace import (
+                TracerProvider as provider_cls,  # type: ignore
+            )
+            from opentelemetry.sdk.trace.export import (
+                BatchSpanProcessor as processor_cls,  # type: ignore
+            )
+        except ImportError:
+            return (None, None, None, None)
+
+        return (ot_trace, exporter_cls, provider_cls, processor_cls)
+
     def _setup_telemetry(self) -> None:
         """Set up OpenTelemetry instrumentation."""
-        if not all(
-            dependency is not None
-            for dependency in (
-                trace,
-                OTLPSpanExporter,
-                TracerProvider,
-                BatchSpanProcessor,
-            )
+        if os.getenv("CHIRON_DISABLE_TELEMETRY", "false").lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
         ):
+            self.logger.info("Telemetry disabled via environment toggle")
+            self.tracer = None
+            return
+
+        (
+            ot_trace,
+            exporter_cls,
+            provider_cls,
+            processor_cls,
+        ) = self._resolve_opentelemetry()
+
+        if not all((ot_trace, exporter_cls, provider_cls, processor_cls)):
             self.logger.warning(
                 "OpenTelemetry not available, telemetry disabled",
                 error="missing dependency",
@@ -86,25 +103,41 @@ class ChironCore:
             self.tracer = None
             return
 
-        assert trace is not None  # for type checkers
-        assert OTLPSpanExporter is not None
-        assert TracerProvider is not None
-        assert BatchSpanProcessor is not None
+        assert ot_trace is not None
+        assert exporter_cls is not None
+        assert provider_cls is not None
+        assert processor_cls is not None
 
-        # Set up tracing
-        trace.set_tracer_provider(TracerProvider())
-        tracer = trace.get_tracer(__name__)
+        try:
+            telemetry_config = self.config.get("telemetry", {})
+            endpoint = telemetry_config.get("otlp_endpoint") or self.config.get(
+                "otlp_endpoint"
+            )
+            exporter_enabled = telemetry_config.get("exporter_enabled", True)
 
-        # Configure OTLP exporter
-        otlp_exporter = OTLPSpanExporter(
-            endpoint=self.config.get("otlp_endpoint", "http://localhost:4317")
-        )
-        span_processor = BatchSpanProcessor(otlp_exporter)
-        provider = cast(Any, trace.get_tracer_provider())
-        provider.add_span_processor(span_processor)
+            provider = provider_cls()
+            ot_trace.set_tracer_provider(provider)
+            tracer = ot_trace.get_tracer(__name__)
 
-        self.tracer = tracer
-        self.logger.info("OpenTelemetry instrumentation enabled")
+            if exporter_enabled and endpoint:
+                otlp_exporter = exporter_cls(endpoint=endpoint)
+                span_processor = processor_cls(otlp_exporter)
+                provider.add_span_processor(span_processor)
+                self.logger.info(
+                    "OpenTelemetry instrumentation enabled", exporter="otlp"
+                )
+            else:
+                self.logger.info(
+                    "OpenTelemetry instrumentation enabled", exporter="disabled"
+                )
+
+            self.tracer = tracer
+        except Exception as exc:  # pragma: no cover - defensive guard
+            self.logger.warning(
+                "Failed to initialize OpenTelemetry, telemetry disabled",
+                error=str(exc),
+            )
+            self.tracer = None
 
     def _setup_security(self) -> None:
         """Set up security features."""

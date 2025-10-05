@@ -11,6 +11,7 @@ Reproducible builds ensure that building the same source code produces identical
 ## Why Reproducibility Matters
 
 **Benefits**:
+
 - Verify supply chain integrity
 - Detect tampering or compromised build environments
 - Enable independent verification
@@ -34,55 +35,55 @@ on:
     branches: [main]
   schedule:
     # Run daily at 2 AM UTC
-    - cron: '0 2 * * *'
+    - cron: "0 2 * * *"
 
 jobs:
   check-reproducibility:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.12']
-    
+        python-version: ["3.12"]
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install build
-      
+
       - name: First build
         run: |
           python -m build --wheel --outdir dist1/
           ls -lah dist1/
-      
+
       - name: Clean build artifacts
         run: |
           rm -rf build/ src/*.egg-info/
-      
+
       - name: Second build
         run: |
           python -m build --wheel --outdir dist2/
           ls -lah dist2/
-      
+
       - name: Compare builds
         run: |
           # Get wheel names
           WHEEL1=$(ls dist1/*.whl)
           WHEEL2=$(ls dist2/*.whl)
-          
+
           # Compare checksums
           SHA1=$(sha256sum "$WHEEL1" | cut -d' ' -f1)
           SHA2=$(sha256sum "$WHEEL2" | cut -d' ' -f1)
-          
+
           echo "First build:  $SHA1"
           echo "Second build: $SHA2"
-          
+
           if [ "$SHA1" = "$SHA2" ]; then
             echo "✅ Builds are reproducible!"
             exit 0
@@ -96,7 +97,7 @@ jobs:
             
             exit 1
           fi
-      
+
       - name: Report results
         if: always()
         run: |
@@ -124,54 +125,54 @@ on:
 jobs:
   reproducibility:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      
+          python-version: "3.12"
+
       - name: Install Chiron
         run: |
           pip install -e .
-      
+
       - name: Build first wheel
         run: |
           python -m build --wheel --outdir build1/
-      
+
       - name: Clean artifacts
         run: |
           rm -rf build/ src/*.egg-info/
-      
+
       - name: Build second wheel
         run: |
           python -m build --wheel --outdir build2/
-      
+
       - name: Check reproducibility with Chiron
         run: |
           python -c "
           from pathlib import Path
           from chiron.reproducibility import check_reproducibility
-          
+
           wheel1 = next(Path('build1').glob('*.whl'))
           wheel2 = next(Path('build2').glob('*.whl'))
-          
+
           report = check_reproducibility(wheel1, wheel2)
-          
+
           print(f'Reproducible: {report.identical}')
           print(f'Wheel 1 SHA256: {report.wheel1.sha256}')
           print(f'Wheel 2 SHA256: {report.wheel2.sha256}')
-          
+
           if report.differences:
               print('\\nDifferences:')
               for diff in report.differences:
                   print(f'  - {diff}')
-          
+
           exit(0 if report.identical else 1)
           "
-      
+
       - name: Upload report
         if: failure()
         uses: actions/upload-artifact@v4
@@ -194,50 +195,50 @@ name: Multi-Platform Reproducibility
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * 0'  # Weekly
+    - cron: "0 0 * * 0" # Weekly
 
 jobs:
   build-matrix:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ['3.12']
-    
+        python-version: ["3.12"]
+
     runs-on: ${{ matrix.os }}
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      
+
       - name: Build wheels
         run: |
           pip install cibuildwheel
           python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBUILDWHEEL_BUILD: cp312-*
-      
+
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.os }}
           path: wheelhouse/*.whl
-  
+
   compare:
     needs: build-matrix
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Download all wheels
         uses: actions/download-artifact@v4
         with:
           path: wheels/
-      
+
       - name: Compare builds
         run: |
           # For each wheel type, compare across platforms
@@ -266,33 +267,33 @@ jobs:
 
 jobs:
   # ... existing build job ...
-  
+
   verify-reproducibility:
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'schedule'
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: wheels
           path: original-wheels/
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      
+          python-version: "3.12"
+
       - name: Rebuild wheels
         run: |
           pip install cibuildwheel
           python -m cibuildwheel --output-dir rebuilt-wheels
         env:
           CIBUILDWHEEL_BUILD: cp312-manylinux_x86_64
-      
+
       - name: Compare wheels
         run: |
           # Compare pure Python wheels (these should be identical)
@@ -315,23 +316,23 @@ jobs:
               fi
             fi
           done
-      
+
       - name: Create reproducibility report
         run: |
           cat > reproducibility-report.md << 'EOF'
           # Reproducibility Report
-          
+
           ## Summary
-          
+
           - Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
           - Commit: ${{ github.sha }}
           - Branch: ${{ github.ref_name }}
-          
+
           ## Results
-          
+
           See job logs for detailed comparison.
           EOF
-          
+
           cat reproducibility-report.md >> $GITHUB_STEP_SUMMARY
 ```
 
@@ -348,20 +349,20 @@ name: Reproducibility Metrics
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # Daily at 3 AM UTC
+    - cron: "0 3 * * *" # Daily at 3 AM UTC
 
 jobs:
   collect-metrics:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      
+          python-version: "3.12"
+
       - name: Build and compare
         id: check
         run: |
@@ -370,19 +371,19 @@ jobs:
           python -m build --wheel --outdir dist1/
           rm -rf build/ src/*.egg-info/
           python -m build --wheel --outdir dist2/
-          
+
           # Compare
           WHEEL1=$(ls dist1/*.whl)
           WHEEL2=$(ls dist2/*.whl)
           SHA1=$(sha256sum "$WHEEL1" | cut -d' ' -f1)
           SHA2=$(sha256sum "$WHEEL2" | cut -d' ' -f1)
-          
+
           if [ "$SHA1" = "$SHA2" ]; then
             echo "reproducible=1" >> $GITHUB_OUTPUT
           else
             echo "reproducible=0" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Push metrics
         run: |
           # Push to Prometheus Pushgateway or similar
@@ -412,7 +413,7 @@ from pathlib import Path
 
 def compare_wheels(wheel1_path: Path, wheel2_path: Path) -> dict:
     """Compare two wheels and return detailed differences."""
-    
+
     results = {
         "identical": False,
         "sha256_match": False,
@@ -420,35 +421,35 @@ def compare_wheels(wheel1_path: Path, wheel2_path: Path) -> dict:
         "file_list_match": False,
         "content_differences": []
     }
-    
+
     # Compare sizes
     size1 = wheel1_path.stat().st_size
     size2 = wheel2_path.stat().st_size
     results["size_match"] = (size1 == size2)
-    
+
     # Compare checksums
     with open(wheel1_path, "rb") as f:
         sha1 = hashlib.sha256(f.read()).hexdigest()
     with open(wheel2_path, "rb") as f:
         sha2 = hashlib.sha256(f.read()).hexdigest()
-    
+
     results["sha256_match"] = (sha1 == sha2)
-    
+
     if results["sha256_match"]:
         results["identical"] = True
         return results
-    
+
     # Compare contents
     with zipfile.ZipFile(wheel1_path) as zf1, zipfile.ZipFile(wheel2_path) as zf2:
         files1 = set(zf1.namelist())
         files2 = set(zf2.namelist())
-        
+
         results["file_list_match"] = (files1 == files2)
-        
+
         # Find files only in one wheel
         only_in_1 = files1 - files2
         only_in_2 = files2 - files1
-        
+
         if only_in_1:
             results["content_differences"].append(
                 f"Files only in wheel1: {list(only_in_1)}"
@@ -457,21 +458,21 @@ def compare_wheels(wheel1_path: Path, wheel2_path: Path) -> dict:
             results["content_differences"].append(
                 f"Files only in wheel2: {list(only_in_2)}"
             )
-        
+
         # Compare common files
         common_files = files1 & files2
         for filename in common_files:
             if filename.endswith(".pyc") or "RECORD" in filename:
                 continue  # Skip bytecode and RECORD files
-            
+
             content1 = zf1.read(filename)
             content2 = zf2.read(filename)
-            
+
             if content1 != content2:
                 results["content_differences"].append(
                     f"Different content: {filename}"
                 )
-    
+
     return results
 
 
@@ -479,37 +480,37 @@ if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("Usage: python compare_wheels.py <wheel1> <wheel2>")
         sys.exit(1)
-    
+
     wheel1 = Path(sys.argv[1])
     wheel2 = Path(sys.argv[2])
-    
+
     if not wheel1.exists() or not wheel2.exists():
         print("Error: One or both wheel files not found")
         sys.exit(1)
-    
+
     results = compare_wheels(wheel1, wheel2)
-    
+
     print(f"\n{'='*60}")
     print("Reproducibility Check Results")
     print(f"{'='*60}\n")
-    
+
     print(f"Wheel 1: {wheel1.name}")
     print(f"Wheel 2: {wheel2.name}\n")
-    
+
     print(f"✅ Identical:         {results['identical']}")
     print(f"{'✅' if results['sha256_match'] else '❌'} SHA256 Match:     {results['sha256_match']}")
     print(f"{'✅' if results['size_match'] else '❌'} Size Match:       {results['size_match']}")
     print(f"{'✅' if results['file_list_match'] else '❌'} File List Match:  {results['file_list_match']}")
-    
+
     if results['content_differences']:
         print(f"\n⚠️  Content Differences:")
         for diff in results['content_differences'][:10]:
             print(f"  - {diff}")
         if len(results['content_differences']) > 10:
             print(f"  ... and {len(results['content_differences']) - 10} more")
-    
+
     print(f"\n{'='*60}\n")
-    
+
     sys.exit(0 if results['identical'] else 1)
 ```
 
@@ -538,19 +539,22 @@ Use in workflow:
 ### Solutions
 
 **Set SOURCE_DATE_EPOCH**:
+
 ```bash
 export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
 python -m build
 ```
 
 **Use consistent Python version**:
+
 ```yaml
 - uses: actions/setup-python@v5
   with:
-    python-version: '3.12.3'  # Exact version
+    python-version: "3.12.3" # Exact version
 ```
 
 **Sort file listings**:
+
 ```python
 # In setup.py or build script
 import os

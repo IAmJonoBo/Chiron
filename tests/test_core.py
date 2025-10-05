@@ -1,6 +1,6 @@
 """Tests for ChironCore functionality."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
@@ -80,29 +80,102 @@ class TestChironCore:
         result = core.process_data(sample_data)
         assert result["processed"] is True
 
-    @patch("chiron.core.trace")
-    def test_process_data_with_telemetry(self, mock_trace, basic_config, sample_data):
+    @patch.object(ChironCore, "_resolve_opentelemetry")
+    def test_process_data_with_telemetry(
+        self, mock_resolve, basic_config, sample_data
+    ) -> None:
         """Test data processing with telemetry enabled."""
-        # Mock the tracer and span
-        mock_tracer = mock_trace.get_tracer.return_value
-        mock_span = (
-            mock_tracer.start_as_current_span.return_value.__enter__.return_value
+        mock_trace = MagicMock()
+        mock_tracer = MagicMock()
+        mock_trace.get_tracer.return_value = mock_tracer
+
+        mock_exporter_cls = Mock()
+        mock_processor_cls = Mock()
+        mock_provider_cls = Mock()
+
+        mock_provider = Mock()
+        mock_provider_cls.return_value = mock_provider
+
+        mock_exporter = Mock()
+        mock_exporter_cls.return_value = mock_exporter
+
+        mock_processor = Mock()
+        mock_processor_cls.return_value = mock_processor
+
+        mock_resolve.return_value = (
+            mock_trace,
+            mock_exporter_cls,
+            mock_provider_cls,
+            mock_processor_cls,
         )
 
-        core = ChironCore(config=basic_config, enable_telemetry=True)
-        core.tracer = mock_tracer
+        config = basic_config.copy()
+        config["telemetry"] = {
+            "enabled": True,
+            "exporter_enabled": True,
+            "otlp_endpoint": "http://collector:4317",
+        }
+        core = ChironCore(config=config, enable_telemetry=True)
 
         result = core.process_data(sample_data)
 
         assert result["processed"] is True
         mock_tracer.start_as_current_span.assert_called_once_with("process_data")
+        mock_span = (
+            mock_tracer.start_as_current_span.return_value.__enter__.return_value
+        )
         mock_span.set_attribute.assert_called_once_with("data.type", "dict")
 
     def test_setup_telemetry_import_error(self, basic_config):
         """Test telemetry setup with missing OpenTelemetry."""
-        with patch("chiron.core.trace", side_effect=ImportError("No module")):
+        with patch.object(
+            ChironCore, "_resolve_opentelemetry", return_value=(None, None, None, None)
+        ):
             core = ChironCore(config=basic_config, enable_telemetry=True)
             assert core.tracer is None
+
+    @patch.object(ChironCore, "_resolve_opentelemetry")
+    def test_setup_telemetry_without_endpoint_skips_exporter(
+        self, mock_resolve, basic_config
+    ) -> None:
+        mock_trace = MagicMock()
+        mock_tracer = MagicMock()
+        mock_trace.get_tracer.return_value = mock_tracer
+
+        mock_exporter_cls = Mock()
+        mock_processor_cls = Mock()
+        mock_provider_cls = Mock()
+
+        mock_provider = Mock()
+        mock_provider_cls.return_value = mock_provider
+
+        mock_resolve.return_value = (
+            mock_trace,
+            mock_exporter_cls,
+            mock_provider_cls,
+            mock_processor_cls,
+        )
+
+        config = basic_config.copy()
+        config["telemetry"] = {"enabled": True}
+
+        core = ChironCore(config=config, enable_telemetry=True)
+
+        assert core.tracer is mock_trace.get_tracer.return_value
+        mock_exporter_cls.assert_not_called()
+        mock_processor_cls.assert_not_called()
+
+    @patch.object(ChironCore, "_resolve_opentelemetry")
+    def test_setup_telemetry_disabled_via_environment(
+        self, mock_resolve, basic_config, monkeypatch
+    ) -> None:
+        monkeypatch.setenv("CHIRON_DISABLE_TELEMETRY", "true")
+
+        core = ChironCore(config=basic_config, enable_telemetry=True)
+
+        assert core.tracer is None
+        mock_resolve.assert_not_called()
+        monkeypatch.delenv("CHIRON_DISABLE_TELEMETRY")
 
     def test_process_data_internal_exception(self, core_instance):
         """Test data processing with internal exception."""

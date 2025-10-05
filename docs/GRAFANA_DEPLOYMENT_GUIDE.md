@@ -5,6 +5,7 @@ This guide provides step-by-step instructions for deploying Chiron's Grafana das
 ## Overview
 
 Chiron includes a pre-configured Grafana dashboard for monitoring:
+
 - Build success rates and durations
 - Security scan results
 - SBOM generation status
@@ -68,20 +69,20 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: 'chiron'
+  - job_name: "chiron"
     static_configs:
-      - targets: ['localhost:8000']
+      - targets: ["localhost:8000"]
         labels:
-          environment: 'production'
-          service: 'chiron'
-    
+          environment: "production"
+          service: "chiron"
+
     # Or use service discovery
     kubernetes_sd_configs:
       - role: pod
         namespaces:
           names:
             - chiron
-    
+
     relabel_configs:
       - source_labels: [__meta_kubernetes_pod_label_app]
         action: keep
@@ -143,7 +144,7 @@ curl -X POST \
 ```hcl
 resource "grafana_dashboard" "chiron" {
   config_json = file("${path.module}/src/chiron/dashboards/grafana-dashboard.json")
-  
+
   folder      = grafana_folder.chiron.id
   overwrite   = true
 }
@@ -195,11 +196,13 @@ If your Prometheus data source has a different name:
 The dashboard includes several variables:
 
 **Environment**:
+
 ```promql
 label_values(chiron_build_total, environment)
 ```
 
 **Platform**:
+
 ```promql
 label_values(chiron_build_total{environment="$environment"}, platform)
 ```
@@ -211,11 +214,13 @@ label_values(chiron_build_total{environment="$environment"}, platform)
 Adjust alert thresholds for your environment:
 
 **Build Success Rate Panel**:
+
 - Green: ≥98%
 - Yellow: 95-98%
 - Red: <95%
 
 **To modify**:
+
 1. Edit panel
 2. Go to "Thresholds" section
 3. Adjust values
@@ -226,46 +231,55 @@ Adjust alert thresholds for your environment:
 ## 4. Panel Descriptions
 
 ### 1. Build Success Rate
+
 **Query**: `rate(chiron_build_success_total[5m]) / rate(chiron_build_total[5m])`
 **Description**: Percentage of successful builds
 **Alert If**: <95%
 
 ### 2. Build Duration (p95)
+
 **Query**: `histogram_quantile(0.95, rate(chiron_build_duration_bucket[5m]))`
 **Description**: 95th percentile build time
 **Alert If**: >600s (10 minutes)
 
 ### 3. Vulnerability Scan Results
+
 **Query**: `sum by (severity) (chiron_vulnerabilities_total)`
 **Description**: Security vulnerabilities by severity
 **Alert If**: critical > 0
 
 ### 4. SBOM Generation Status
+
 **Query**: `rate(chiron_sbom_generated_total[5m]) / rate(chiron_build_total[5m])`
 **Description**: SBOM generation success rate
 **Alert If**: <99%
 
 ### 5. Signature Verification Status
+
 **Query**: `rate(chiron_signatures_verified_total[5m]) / rate(chiron_signatures_total[5m])`
 **Description**: Signature verification success rate
 **Alert If**: <99%
 
 ### 6. Wheelhouse Bundle Size
+
 **Query**: `chiron_wheelhouse_size_bytes`
 **Description**: Size of wheelhouse bundles over time
 **Alert If**: Sudden large increases
 
 ### 7. Release Pipeline Stages
+
 **Query**: `sum by (stage) (chiron_pipeline_stage_duration_sum)`
 **Description**: Time spent in each pipeline stage
 **Alert If**: Any stage >30 minutes
 
 ### 8. Active Feature Flags
+
 **Query**: `chiron_feature_flag_enabled`
 **Description**: Current feature flag status
 **Alert If**: Unexpected changes
 
 ### 9. Policy Gate Violations
+
 **Query**: `rate(chiron_policy_violations_total[5m])`
 **Description**: Policy violations by type
 **Alert If**: critical_policy > 0
@@ -279,6 +293,7 @@ Adjust alert thresholds for your environment:
 **In Grafana**:
 
 1. **High Build Failure Rate**
+
 ```yaml
 alert: HighBuildFailureRate
 expr: |
@@ -292,6 +307,7 @@ annotations:
 ```
 
 2. **Critical Vulnerabilities**
+
 ```yaml
 alert: CriticalVulnerabilities
 expr: |
@@ -305,6 +321,7 @@ annotations:
 ```
 
 3. **SBOM Generation Failure**
+
 ```yaml
 alert: SBOMGenerationFailure
 expr: |
@@ -321,21 +338,25 @@ annotations:
 **In Grafana → Alerting → Contact Points**:
 
 Add notification channels:
+
 - Email
 - Slack
 - PagerDuty
 - Webhook
 
 Example Slack notification:
+
 ```json
 {
   "channel": "#chiron-alerts",
   "text": "Alert: {{ .CommonAnnotations.summary }}",
-  "attachments": [{
-    "title": "{{ .GroupLabels.alertname }}",
-    "text": "{{ .CommonAnnotations.description }}",
-    "color": "{{ if eq .Status \"firing\" }}danger{{ else }}good{{ end }}"
-  }]
+  "attachments": [
+    {
+      "title": "{{ .GroupLabels.alertname }}",
+      "text": "{{ .CommonAnnotations.description }}",
+      "color": "{{ if eq .Status \"firing\" }}danger{{ else }}good{{ end }}"
+    }
+  ]
 }
 ```
 
@@ -385,6 +406,7 @@ Example Slack notification:
 ### No Data in Panels
 
 **Check**:
+
 1. Prometheus is scraping Chiron: `http://prometheus:9090/targets`
 2. Metrics exist: `curl http://localhost:8000/metrics | grep chiron`
 3. Time range includes data
@@ -392,6 +414,7 @@ Example Slack notification:
 5. Queries are valid
 
 **Solution**:
+
 ```bash
 # Verify metrics endpoint
 curl http://localhost:8000/metrics
@@ -405,6 +428,7 @@ curl "http://prometheus:9090/api/v1/query?query=chiron_build_total"
 **Symptoms**: "Data source not found" error
 
 **Solution**:
+
 1. Go to dashboard settings → JSON Model
 2. Replace data source UID:
    ```bash
@@ -416,6 +440,7 @@ curl "http://prometheus:9090/api/v1/query?query=chiron_build_total"
 ### Panels Show "N/A"
 
 **Check**:
+
 - Query returns no results
 - Labels don't match
 - Time range is appropriate
@@ -428,6 +453,7 @@ Test query in Prometheus first, then update Grafana panel.
 **Symptoms**: Slow queries, high memory usage
 
 **Solution**:
+
 1. Review label usage
 2. Add recording rules:
    ```yaml
@@ -446,22 +472,26 @@ Test query in Prometheus first, then update Grafana panel.
 ### Multi-Environment Setup
 
 Create separate dashboard folders:
+
 - Production
 - Staging
 - Development
 
 Use variables to switch between environments:
+
 ```json
 {
   "templating": {
-    "list": [{
-      "name": "environment",
-      "type": "query",
-      "query": "label_values(chiron_build_total, environment)",
-      "current": {
-        "value": "production"
+    "list": [
+      {
+        "name": "environment",
+        "type": "query",
+        "query": "label_values(chiron_build_total, environment)",
+        "current": {
+          "value": "production"
+        }
       }
-    }]
+    ]
   }
 }
 ```
@@ -472,12 +502,16 @@ Add organization-specific metrics:
 
 ```json
 {
-  "panels": [{
-    "title": "Custom Metric",
-    "targets": [{
-      "expr": "your_custom_metric{environment=\"$environment\"}"
-    }]
-  }]
+  "panels": [
+    {
+      "title": "Custom Metric",
+      "targets": [
+        {
+          "expr": "your_custom_metric{environment=\"$environment\"}"
+        }
+      ]
+    }
+  ]
 }
 ```
 
@@ -549,6 +583,7 @@ After deployment:
 ## Support
 
 For issues or questions:
+
 - Check Grafana docs: https://grafana.com/docs/
 - Check Prometheus docs: https://prometheus.io/docs/
 - Open issue: https://github.com/IAmJonoBo/Chiron/issues

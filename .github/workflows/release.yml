@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       hashes: ${{ steps.hash.outputs.hashes }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -101,7 +101,7 @@ jobs:
       actions: read
       id-token: write
       contents: write
-    
+
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.10.0
     with:
       base64-subjects: "${{ needs.build.outputs.hashes }}"
@@ -112,7 +112,7 @@ jobs:
     needs: [build, build-wheels]
     permissions:
       id-token: write
-    
+
     steps:
       - name: Download distributions
         uses: actions/download-artifact@v4
@@ -143,7 +143,7 @@ jobs:
       url: https://pypi.org/p/chiron
     permissions:
       id-token: write
-    
+
     steps:
       - name: Download distributions
         uses: actions/download-artifact@v4
@@ -169,7 +169,7 @@ jobs:
     needs: [build, build-wheels, provenance, sign]
     permissions:
       contents: write
-    
+
     steps:
       - name: Download distributions
         uses: actions/download-artifact@v4
@@ -191,29 +191,29 @@ jobs:
           generate_release_notes: true
           body: |
             ## What's Changed
-            
+
             This release includes signed artifacts with SLSA provenance and SBOM.
-            
+
             ### Verification
-            
+
             You can verify the integrity of the artifacts using:
             ```bash
             # Install cosign
             go install github.com/sigstore/cosign/v2/cmd/cosign@latest
-            
+
             # Verify signatures
             cosign verify-blob --bundle <artifact>.sigstore.json <artifact>
             ```
-            
+
             ### SBOM
-            
+
             Software Bill of Materials (SBOM) is included in both CycloneDX and SPDX formats.
 
   create-wheelhouse:
     name: Create wheelhouse bundle
     runs-on: ubuntu-latest
     needs: [build, build-wheels, sign]
-    
+
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -230,7 +230,7 @@ jobs:
           python -c "
           import os
           from pathlib import Path
-          
+
           # Generate simple index.html for offline pip installs
           wheels = list(Path('.').glob('*.whl'))
           with open('index.html', 'w') as f:
@@ -240,7 +240,7 @@ jobs:
               f.write('</body></html>')
           "
           tar czf ../chiron-wheelhouse-$(date +%Y%m%d).tar.gz .
-          
+
       - name: Upload wheelhouse
         uses: actions/upload-artifact@v4
         with:

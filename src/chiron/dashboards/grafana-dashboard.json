@@ -21,12 +21,12 @@
         "options": {
           "unit": "percent",
           "thresholds": [
-            {"value": 0, "color": "red"},
-            {"value": 90, "color": "yellow"},
-            {"value": 95, "color": "green"}
+            { "value": 0, "color": "red" },
+            { "value": 90, "color": "yellow" },
+            { "value": 95, "color": "green" }
           ]
         },
-        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
+        "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 }
       },
       {
         "id": 2,
@@ -45,7 +45,7 @@
         "options": {
           "unit": "seconds"
         },
-        "gridPos": {"h": 8, "w": 12, "x": 6, "y": 0}
+        "gridPos": { "h": 8, "w": 12, "x": 6, "y": 0 }
       },
       {
         "id": 3,
@@ -61,7 +61,7 @@
         "options": {
           "columns": ["severity", "package", "count"]
         },
-        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}
+        "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 }
       },
       {
         "id": 4,
@@ -76,12 +76,12 @@
         "options": {
           "unit": "percent",
           "thresholds": [
-            {"value": 0, "color": "red"},
-            {"value": 95, "color": "yellow"},
-            {"value": 99, "color": "green"}
+            { "value": 0, "color": "red" },
+            { "value": 95, "color": "yellow" },
+            { "value": 99, "color": "green" }
           ]
         },
-        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 8}
+        "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 }
       },
       {
         "id": 5,
@@ -96,12 +96,12 @@
         "options": {
           "unit": "percent",
           "thresholds": [
-            {"value": 0, "color": "red"},
-            {"value": 95, "color": "yellow"},
-            {"value": 99, "color": "green"}
+            { "value": 0, "color": "red" },
+            { "value": 95, "color": "yellow" },
+            { "value": 99, "color": "green" }
           ]
         },
-        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 8}
+        "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 }
       },
       {
         "id": 6,
@@ -116,7 +116,7 @@
         "options": {
           "unit": "bytes"
         },
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 }
       },
       {
         "id": 7,
@@ -132,7 +132,7 @@
           "unit": "seconds",
           "stacking": "normal"
         },
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12}
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 }
       },
       {
         "id": 8,
@@ -148,7 +148,7 @@
         "options": {
           "columns": ["flag_name", "enabled", "description"]
         },
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20}
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 }
       },
       {
         "id": 9,
@@ -163,7 +163,7 @@
         "options": {
           "unit": "short"
         },
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20}
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 }
       }
     ]
   }

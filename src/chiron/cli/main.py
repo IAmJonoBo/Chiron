@@ -28,7 +28,9 @@ logger = structlog.get_logger(__name__)
 )
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.option("--json-output", is_flag=True, help="Output in JSON format")
-@click.option("--dry-run", is_flag=True, help="Show what would be done without making changes")
+@click.option(
+    "--dry-run", is_flag=True, help="Show what would be done without making changes"
+)
 @click.pass_context
 def cli(
     ctx: click.Context,
@@ -48,7 +50,7 @@ def cli(
         try:
             with open(config) as f:
                 ctx.obj["config"] = json.load(f)
-            
+
             # Validate configuration against schema
             errors = validate_config(ctx.obj["config"])
             if errors:
@@ -71,7 +73,7 @@ def init(ctx: click.Context, wizard: bool) -> None:
     """Initialize a new Chiron project."""
     if wizard:
         from chiron.wizard import run_init_wizard
-        
+
         try:
             config = run_init_wizard()
             # Config is already saved by wizard
@@ -79,7 +81,7 @@ def init(ctx: click.Context, wizard: bool) -> None:
         except KeyboardInterrupt:
             console.print("\n[yellow]Wizard cancelled[/yellow]")
             return
-    
+
     config_path = Path("chiron.json")
 
     if config_path.exists():
@@ -110,13 +112,13 @@ def init(ctx: click.Context, wizard: bool) -> None:
 def build(ctx: click.Context) -> None:
     """Build the project with cibuildwheel."""
     dry_run = ctx.obj.get("dry_run", False)
-    
+
     if dry_run:
         console.print("[yellow]DRY RUN - No changes will be made[/yellow]")
         console.print("[blue]Would execute: uv run cibuildwheel --platform auto[/blue]")
         console.print("[dim]Run without --dry-run to actually build[/dim]")
         return
-    
+
     console.print("[blue]Building project with cibuildwheel...[/blue]")
 
     import subprocess
@@ -175,7 +177,7 @@ def wheelhouse(
 ) -> None:
     """Create wheelhouse bundle with SBOM and signatures."""
     dry_run = ctx.obj.get("dry_run", False)
-    
+
     if dry_run:
         console.print("[yellow]DRY RUN - No changes will be made[/yellow]")
         console.print(f"[blue]Would create wheelhouse in: {output_dir}[/blue]")
@@ -183,7 +185,7 @@ def wheelhouse(
         console.print(f"[blue]Sign artifacts: {with_signatures}[/blue]")
         console.print("[dim]Run without --dry-run to actually create wheelhouse[/dim]")
         return
-    
+
     console.print(f"[blue]Creating wheelhouse in {output_dir}...[/blue]")
 
     import subprocess
@@ -258,7 +260,7 @@ def airgap(
 ) -> None:
     """Create an offline bundle for air-gapped environments."""
     dry_run = ctx.obj.get("dry_run", False)
-    
+
     if dry_run:
         console.print("[yellow]DRY RUN - No changes will be made[/yellow]")
         console.print(f"[blue]Would create air-gapped bundle: {output}[/blue]")
@@ -266,7 +268,7 @@ def airgap(
         console.print(f"[blue]Include security tools: {include_security}[/blue]")
         console.print("[dim]Run without --dry-run to actually create bundle[/dim]")
         return
-    
+
     console.print(f"[blue]Creating air-gapped bundle: {output}...[/blue]")
 
     import subprocess
@@ -352,8 +354,12 @@ def verify(
     # Verify hashes
     if verify_hashes:
         console.print("[blue]Verifying checksums...[/blue]")
-        sha256_file = target_path / "wheelhouse.sha256" if target_path.is_dir() else target_path.parent / "wheelhouse.sha256"
-        
+        sha256_file = (
+            target_path / "wheelhouse.sha256"
+            if target_path.is_dir()
+            else target_path.parent / "wheelhouse.sha256"
+        )
+
         if sha256_file.exists():
             try:
                 result = subprocess.run(
@@ -383,35 +389,53 @@ def verify(
     # Verify signatures
     if verify_signatures:
         console.print("[blue]Verifying Sigstore signatures...[/blue]")
-        sig_files = list(target_path.glob("*.sigstore.json")) if target_path.is_dir() else list(target_path.parent.glob("*.sigstore.json"))
-        
+        sig_files = (
+            list(target_path.glob("*.sigstore.json"))
+            if target_path.is_dir()
+            else list(target_path.parent.glob("*.sigstore.json"))
+        )
+
         if sig_files:
             try:
                 # Check if cosign is available
                 subprocess.run(["cosign", "version"], capture_output=True, check=True)
-                
+
                 verified_count = 0
                 for sig_file in sig_files:
-                    artifact = sig_file.with_suffix("").with_suffix("")  # Remove .sigstore.json
+                    artifact = sig_file.with_suffix("").with_suffix(
+                        ""
+                    )  # Remove .sigstore.json
                     if artifact.exists():
                         result = subprocess.run(
-                            ["cosign", "verify-blob", "--bundle", str(sig_file), str(artifact)],
+                            [
+                                "cosign",
+                                "verify-blob",
+                                "--bundle",
+                                str(sig_file),
+                                str(artifact),
+                            ],
                             capture_output=True,
                             text=True,
                             check=False,
                         )
                         if result.returncode == 0:
                             verified_count += 1
-                
+
                 if verified_count == len(sig_files):
-                    console.print(f"[green]✓ All {verified_count} signatures verified[/green]")
+                    console.print(
+                        f"[green]✓ All {verified_count} signatures verified[/green]"
+                    )
                     results.append(("Signatures", True))
                 else:
-                    console.print(f"[yellow]⚠ Only {verified_count}/{len(sig_files)} signatures verified[/yellow]")
+                    console.print(
+                        f"[yellow]⚠ Only {verified_count}/{len(sig_files)} signatures verified[/yellow]"
+                    )
                     results.append(("Signatures", False))
                     all_passed = False
             except FileNotFoundError:
-                console.print("[yellow]⚠ Cosign not found, skipping signature verification[/yellow]")
+                console.print(
+                    "[yellow]⚠ Cosign not found, skipping signature verification[/yellow]"
+                )
                 results.append(("Signatures", None))
             except Exception as e:
                 console.print(f"[red]✗ Signature verification failed: {e}[/red]")
@@ -424,11 +448,16 @@ def verify(
     # Verify SBOM
     if verify_sbom:
         console.print("[blue]Verifying SBOM integrity...[/blue]")
-        sbom_files = list(target_path.glob("**/sbom*.json")) if target_path.is_dir() else list(target_path.parent.glob("**/sbom*.json"))
-        
+        sbom_files = (
+            list(target_path.glob("**/sbom*.json"))
+            if target_path.is_dir()
+            else list(target_path.parent.glob("**/sbom*.json"))
+        )
+
         if sbom_files:
             try:
                 import json
+
                 valid_count = 0
                 for sbom_file in sbom_files:
                     with open(sbom_file) as f:
@@ -436,12 +465,14 @@ def verify(
                         # Basic validation - check for required CycloneDX fields
                         if "bomFormat" in sbom and "specVersion" in sbom:
                             valid_count += 1
-                
+
                 if valid_count == len(sbom_files):
                     console.print(f"[green]✓ All {valid_count} SBOMs validated[/green]")
                     results.append(("SBOM", True))
                 else:
-                    console.print(f"[yellow]⚠ Only {valid_count}/{len(sbom_files)} SBOMs valid[/yellow]")
+                    console.print(
+                        f"[yellow]⚠ Only {valid_count}/{len(sbom_files)} SBOMs valid[/yellow]"
+                    )
                     results.append(("SBOM", False))
                     all_passed = False
             except Exception as e:
@@ -455,11 +486,16 @@ def verify(
     # Verify provenance
     if verify_provenance:
         console.print("[blue]Verifying SLSA provenance...[/blue]")
-        prov_files = list(target_path.glob("**/provenance.json")) if target_path.is_dir() else list(target_path.parent.glob("**/provenance.json"))
-        
+        prov_files = (
+            list(target_path.glob("**/provenance.json"))
+            if target_path.is_dir()
+            else list(target_path.parent.glob("**/provenance.json"))
+        )
+
         if prov_files:
             try:
                 import json
+
                 valid_count = 0
                 for prov_file in prov_files:
                     with open(prov_file) as f:
@@ -467,12 +503,16 @@ def verify(
                         # Basic validation - check for required SLSA fields
                         if "buildType" in prov and "subject" in prov:
                             valid_count += 1
-                
+
                 if valid_count == len(prov_files):
-                    console.print(f"[green]✓ All {valid_count} provenance files validated[/green]")
+                    console.print(
+                        f"[green]✓ All {valid_count} provenance files validated[/green]"
+                    )
                     results.append(("Provenance", True))
                 else:
-                    console.print(f"[yellow]⚠ Only {valid_count}/{len(prov_files)} provenance files valid[/yellow]")
+                    console.print(
+                        f"[yellow]⚠ Only {valid_count}/{len(prov_files)} provenance files valid[/yellow]"
+                    )
                     results.append(("Provenance", False))
                     all_passed = False
             except Exception as e:
