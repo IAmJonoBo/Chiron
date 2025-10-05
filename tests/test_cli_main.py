@@ -4,15 +4,42 @@ from __future__ import annotations
 
 import json
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import click
 import pytest
-from click.testing import CliRunner
+from _pytest.monkeypatch import MonkeyPatch
+from click.testing import CliRunner, Result
 
 from chiron.cli.main import _run_command, cli
 from chiron.subprocess_utils import resolve_executable
+
+
+def _invoke_cli_and_capture_context(
+    args: Sequence[str],
+) -> tuple[Result, dict[str, object]]:
+    """Run the CLI with *args* and capture the resulting context object."""
+
+    command_name = "__capture_cli_context__"
+    captured: dict[str, object] = {}
+
+    def _capture_callback() -> None:
+        ctx = click.get_current_context()
+        obj = ctx.obj or {}
+        if isinstance(obj, dict):
+            captured.update(obj)
+
+    command = click.Command(command_name, callback=_capture_callback)
+    cli.add_command(command)
+    runner = CliRunner()
+    try:
+        result = runner.invoke(cli, [*args, command_name])
+    finally:
+        cli.commands.pop(command_name, None)
+
+    return result, captured
 
 
 class TestResolveExecutable:
@@ -199,8 +226,8 @@ class TestCliGroup:
         assert result.exit_code != 0 or "Error loading config" in result.output
 
 
-class TestInitCommand:
-    """Tests for init command."""
+class TestInitCommandCLI:
+    """CLI invocation tests for init command."""
 
     def test_init_creates_config_file(self, tmp_path: Path) -> None:
         """Test that init creates a configuration file."""
@@ -231,11 +258,13 @@ class TestInitCommand:
             assert result.exit_code == 0
             assert "already exists" in result.output
 
-    def test_init_with_wizard_cancelled(self, tmp_path: Path, monkeypatch) -> None:
+    def test_init_with_wizard_cancelled(
+        self, tmp_path: Path, monkeypatch: MonkeyPatch
+    ) -> None:
         """Test init wizard when user cancels."""
         runner = CliRunner()
 
-        def mock_wizard():
+        def mock_wizard() -> None:
             raise KeyboardInterrupt()
 
         monkeypatch.setattr("chiron.wizard.run_init_wizard", mock_wizard)
@@ -335,20 +364,14 @@ class TestWriteManifest:
 
     def test_cli_context_object_initialized(self) -> None:
         """Test that context object is properly initialized."""
+        result, context_obj = _invoke_cli_and_capture_context(
+            ["--verbose", "--json-output"]
+        )
 
-        @cli.command()
-        @click.pass_context
-        def test_cmd(ctx: click.Context) -> None:
-            """Test command to inspect context."""
-            click.echo(f"verbose={ctx.obj.get('verbose')}")
-            click.echo(f"json_output={ctx.obj.get('json_output')}")
-            click.echo(f"dry_run={ctx.obj.get('dry_run')}")
-
-        runner = CliRunner()
-        result = runner.invoke(cli, ["--verbose", "--json-output", "test-cmd"])
-
-        assert "verbose=True" in result.output
-        assert "json_output=True" in result.output
+        assert result.exit_code == 0
+        assert context_obj.get("verbose") is True
+        assert context_obj.get("json_output") is True
+        assert context_obj.get("dry_run") is False
 
     def test_cli_stores_config_in_context(self, tmp_path: Path) -> None:
         """Test that config is stored in context object."""
@@ -356,17 +379,14 @@ class TestWriteManifest:
         config_data = {"test_key": "test_value"}
         config_file.write_text(json.dumps(config_data))
 
-        @cli.command()
-        @click.pass_context
-        def test_cmd(ctx: click.Context) -> None:
-            """Test command to inspect config."""
-            config = ctx.obj.get("config", {})
-            click.echo(f"test_key={config.get('test_key')}")
+        result, context_obj = _invoke_cli_and_capture_context(
+            ["--config", str(config_file)]
+        )
 
-        runner = CliRunner()
-        result = runner.invoke(cli, ["--config", str(config_file), "test-cmd"])
-
-        assert "test_key=test_value" in result.output
+        assert result.exit_code == 0
+        config = context_obj.get("config")
+        assert isinstance(config, dict)
+        assert config.get("test_key") == "test_value"
 
 
 class TestInitCommand:
@@ -398,6 +418,7 @@ class TestInitCommand:
         runner = CliRunner()
         result = runner.invoke(cli, ["init", "--wizard"])
 
+        assert result.exit_code == 0
         mock_wizard.assert_called_once()
 
     @patch("chiron.wizard.run_init_wizard")

@@ -229,7 +229,7 @@ class MCPServer:
 
             bundler = WheelhouseBundler(wheelhouse_path)
             bundle_path = wheelhouse_path.parent / "wheelhouse-bundle.tar.gz"
-            
+
             metadata = bundler.create_bundle(
                 output_path=bundle_path,
                 include_sbom=with_sbom,
@@ -252,7 +252,7 @@ class MCPServer:
     def _verify_artifacts(self, args: dict[str, Any]) -> dict[str, Any]:
         """Verify artifacts with real implementation."""
         target = args.get("target")
-        
+
         if not target:
             return {
                 "status": "error",
@@ -269,9 +269,9 @@ class MCPServer:
             # Perform verification checks
             script_results = check_script_imports()
             cli_results = check_cli_commands()
-            
+
             all_passed = all(script_results.values()) and all(cli_results.values())
-            
+
             return {
                 "status": "success" if all_passed else "warning",
                 "message": "Artifact verification completed",
@@ -324,7 +324,7 @@ class MCPServer:
 
             bundler = WheelhouseBundler(wheelhouse_path)
             output_path = Path(output)
-            
+
             metadata = bundler.create_bundle(
                 output_path=output_path,
                 include_sbom=True,
@@ -347,7 +347,7 @@ class MCPServer:
     def _check_policy(self, args: dict[str, Any]) -> dict[str, Any]:
         """Check policy compliance with real implementation."""
         config_path = args.get("config_path")
-        
+
         if DependencyPolicy is None or PolicyEngine is None:
             return {
                 "status": "error",
@@ -367,10 +367,10 @@ class MCPServer:
             else:
                 # Use default policy
                 policy = DependencyPolicy()
-            
+
             # Create policy engine and check for violations
             engine = PolicyEngine(policy)
-            
+
             return {
                 "status": "success",
                 "message": "Policy loaded successfully",

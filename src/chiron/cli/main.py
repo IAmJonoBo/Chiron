@@ -10,6 +10,7 @@ import sys
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, cast
 
 import click
 import structlog
@@ -139,19 +140,27 @@ def cli(
     dry_run: bool,
 ) -> None:
     """Chiron - Frontier-grade, production-ready Python library and service."""
-    ctx.ensure_object(dict)
-    ctx.obj["verbose"] = verbose
-    ctx.obj["json_output"] = json_output
-    ctx.obj["dry_run"] = dry_run
+    state = cast(dict[str, object], ctx.ensure_object(dict))
+    state["verbose"] = verbose
+    state["json_output"] = json_output
+    state["dry_run"] = dry_run
 
     # Load configuration
+    config_payload: dict[str, Any]
     if config:
         try:
             with open(config) as f:
-                ctx.obj["config"] = json.load(f)
+                loaded_config = json.load(f)
+
+            if not isinstance(loaded_config, dict):
+                raise click.ClickException(
+                    "Configuration file must contain a JSON object."
+                )
+
+            config_payload = cast(dict[str, Any], loaded_config)
 
             # Validate configuration against schema
-            errors = validate_config(ctx.obj["config"])
+            errors = validate_config(config_payload)
             if errors:
                 console.print("[yellow]Configuration validation warnings:[/yellow]")
                 for error in errors:
@@ -162,7 +171,9 @@ def cli(
             console.print(f"[red]Error loading config: {e}[/red]")
             sys.exit(1)
     else:
-        ctx.obj["config"] = {}
+        config_payload = {}
+
+    state["config"] = config_payload
 
 
 @cli.command()

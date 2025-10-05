@@ -78,12 +78,12 @@ The `chiron.deps` package contains supply-chain management modules for dependenc
    - Integration with other modules
    - End-to-end workflows
 
-4. **security_overlay.py** - 🔴 Not started
+5. **security_overlay.py** - 🔴 Not started
    - Vulnerability scanning
    - Security policy enforcement
    - SBOM integration
 
-5. **reproducibility.py** - 🔴 Not started
+6. **reproducibility.py** - 🔴 Not started
    - Reproducibility checks
    - Wheel comparison
    - Hash verification
@@ -92,10 +92,10 @@ The `chiron.deps` package contains supply-chain management modules for dependenc
 
 4. **bundler.py** - ✅ **COMPLETE (98%)**
 5. **safe_upgrade.py** - 🔴 Not started
-7. **upgrade_advisor.py** - 🔴 Not started
-8. **conflict_resolver.py** - 🔴 Not started
-9. **drift.py** - 🔴 Not started
-10. **signing.py** - 🔴 Not started
+6. **upgrade_advisor.py** - 🔴 Not started
+7. **conflict_resolver.py** - 🔴 Not started
+8. **drift.py** - 🔴 Not started
+9. **signing.py** - 🔴 Not started
 
 ### Lower Priority Modules (Target: 30%+ coverage)
 
@@ -315,7 +315,7 @@ def test_property(text_input, int_input):
 
 ### Module Maturity
 
-- 🟢 Green (70%+ coverage): 3 modules (policy, bundler, plus __init__.py at 100%)
+- 🟢 Green (70%+ coverage): 3 modules (policy, bundler, plus **init**.py at 100%)
 - 🟡 Yellow (50-70% coverage): 1 module (constraints at 62%)
 - 🔴 Red (<50% coverage): 20 modules
 

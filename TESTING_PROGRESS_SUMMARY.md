@@ -69,12 +69,12 @@ Successfully implemented comprehensive test coverage across Chiron's core module
 
 ### 4. Historical Coverage Progress
 
-| Date         | Coverage | Change   | Tests | Milestone                    |
-| ------------ | -------- | -------- | ----- | ---------------------------- |
-| April 2025   | 38.78%   | -        | 142   | Baseline                     |
-| April 2025   | 55.45%   | +16.67pp | 254   | Observability complete       |
-| October 2025 | 58.73%   | +3.28pp  | 348   | Service routes complete      |
-| **Jan 2026** | **62.13%** | **+3.4pp**   | **367**   | **Milestone 1 complete ✅** |
+| Date         | Coverage   | Change     | Tests   | Milestone                   |
+| ------------ | ---------- | ---------- | ------- | --------------------------- |
+| April 2025   | 38.78%     | -          | 142     | Baseline                    |
+| April 2025   | 55.45%     | +16.67pp   | 254     | Observability complete      |
+| October 2025 | 58.73%     | +3.28pp    | 348     | Service routes complete     |
+| **Jan 2026** | **62.13%** | **+3.4pp** | **367** | **Milestone 1 complete ✅** |
 
 ## Technical Improvements
 
@@ -225,7 +225,6 @@ Successfully implemented comprehensive test coverage across Chiron's core module
 2. **CLI command coverage**
    - Add tests for remaining CLI commands to reach 60%+
    - Current: 40%, Target: 60%+
-   
 3. **Service route hardening**
    - Add timeout handling for subprocess calls
    - Expand error path testing
@@ -288,7 +287,8 @@ This testing implementation represents a **major quality improvement** for the C
 
 The project is now in a **significantly better state** for both development and production use, with comprehensive test coverage of critical paths and clear roadmap for remaining improvements.
 
-**Next Steps**: 
+**Next Steps**:
+
 - Focus on supply-chain module testing (supply_chain.py, security_overlay.py)
 - Increase CLI coverage to 60%+
 - Target 65%+ overall coverage (Milestone 2)

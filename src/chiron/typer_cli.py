@@ -15,19 +15,14 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated
+from typing import Annotated
+
+import click
 
 try:
     typer = importlib.import_module("typer")
 except ImportError as exc:
     raise RuntimeError("Typer must be installed to use the Chiron CLI") from exc
-
-if TYPE_CHECKING:
-    import typer as _typer
-
-    TyperContext = _typer.Context
-else:
-    TyperContext = typer.Context
 
 from chiron.github import (
     COPILOT_DISABLE_ENV_VAR,
@@ -105,7 +100,7 @@ def version() -> None:
     "offline",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def package_offline(ctx: TyperContext) -> None:
+def package_offline(ctx: click.Context) -> None:
     """Execute offline packaging workflow.
 
     Build complete offline deployment artifacts including dependencies,
@@ -128,7 +123,7 @@ def package_offline(ctx: TyperContext) -> None:
     "offline",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def doctor_offline(ctx: TyperContext) -> None:
+def doctor_offline(ctx: click.Context) -> None:
     """Diagnose offline packaging readiness.
 
     Validates tool availability, wheelhouse health, and configuration
@@ -146,7 +141,7 @@ def doctor_offline(ctx: TyperContext) -> None:
     "bootstrap",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def doctor_bootstrap(ctx: TyperContext) -> None:
+def doctor_bootstrap(ctx: click.Context) -> None:
     """Bootstrap offline environment from wheelhouse.
 
     Install dependencies from the offline wheelhouse, useful for
@@ -164,7 +159,7 @@ def doctor_bootstrap(ctx: TyperContext) -> None:
     "models",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def doctor_models(ctx: TyperContext) -> None:
+def doctor_models(ctx: click.Context) -> None:
     """Download model artifacts for offline use.
 
     Pre-populate caches for Sentence-Transformers, Hugging Face,
@@ -195,19 +190,80 @@ def deps_status(
         "--json",
         help="Output as JSON",
     ),
+    preflight: Path | None = typer.Option(
+        None,
+        "--preflight",
+        help="Optional path to dependency preflight summary JSON file",
+    ),
+    renovate: Path | None = typer.Option(
+        None,
+        "--renovate",
+        help="Optional path to Renovate insights JSON file",
+    ),
+    cve: Path | None = typer.Option(
+        None,
+        "--cve",
+        help="Optional path to CVE advisories JSON file",
+    ),
+    sbom: Path | None = typer.Option(
+        None,
+        "--sbom",
+        help="Optional path to SBOM document",
+    ),
+    metadata: Path | None = typer.Option(
+        None,
+        "--metadata",
+        help="Optional path to additional metadata JSON file",
+    ),
+    sbom_max_age_days: int | None = typer.Option(
+        None,
+        "--sbom-max-age-days",
+        help="Maximum allowed SBOM age in days before revalidation",
+    ),
+    fail_threshold: str = typer.Option(
+        "needs-review",
+        "--fail-threshold",
+        case_sensitive=False,
+        help="Fail when guard severity meets or exceeds this threshold",
+    ),
 ) -> None:
     """Show dependency status and health."""
+    from chiron.deps.guard import FAIL_THRESHOLD_CHOICES
     from chiron.deps.status import generate_status
 
     try:
-        status = generate_status(contract_path=contract, inputs={})
+        normalized_threshold = fail_threshold.lower()
+        if normalized_threshold not in FAIL_THRESHOLD_CHOICES:
+            raise typer.BadParameter(
+                f"Invalid fail threshold '{fail_threshold}'. "
+                f"Expected one of: {', '.join(sorted(FAIL_THRESHOLD_CHOICES))}."
+            )
+
+        status = generate_status(
+            preflight=preflight,
+            renovate=renovate,
+            cve=cve,
+            contract=contract,
+            sbom=sbom,
+            metadata=metadata,
+            sbom_max_age_days=sbom_max_age_days,
+            fail_threshold=normalized_threshold,
+            planner_settings=None,
+        )
 
         if json_output:
-            typer.echo(json.dumps(status, indent=2))
+            typer.echo(json.dumps(status.to_dict(), indent=2))
         else:
             typer.echo("=== Dependency Status ===")
             typer.echo(f"Contract: {contract}")
-            typer.echo(f"Status: {status.get('status', 'unknown')}")
+            typer.echo(f"Generated: {status.generated_at.isoformat()}")
+            typer.echo(f"Overall exit code: {status.exit_code}")
+            typer.echo(f"Guard exit code: {status.guard.exit_code}")
+            summary = status.summary
+            if summary:
+                typer.echo("Summary:")
+                for key, value in summary.items():
+                    typer.echo(f"  - {key}: {value}")
     except Exception as exc:
         typer.secho(f"Error: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1)
@@ -217,7 +273,7 @@ def deps_status(
     "guard",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def deps_guard(ctx: TyperContext) -> None:
+def deps_guard(ctx: click.Context) -> None:
     """Run dependency guard checks."""
     from chiron.deps import guard
 
@@ -231,7 +287,7 @@ def deps_guard(ctx: TyperContext) -> None:
     "upgrade",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def deps_upgrade(ctx: TyperContext) -> None:
+def deps_upgrade(ctx: click.Context) -> None:
     """Plan dependency upgrades."""
     from chiron.deps import planner
 
@@ -245,7 +301,7 @@ def deps_upgrade(ctx: TyperContext) -> None:
     "drift",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def deps_drift(ctx: TyperContext) -> None:
+def deps_drift(ctx: click.Context) -> None:
     """Detect dependency drift."""
     from chiron.deps import drift
 
@@ -259,7 +315,7 @@ def deps_drift(ctx: TyperContext) -> None:
     "sync",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def deps_sync(ctx: TyperContext) -> None:
+def deps_sync(ctx: click.Context) -> None:
     """Synchronize manifests from contract."""
     from chiron.deps import sync
 
@@ -273,7 +329,7 @@ def deps_sync(ctx: TyperContext) -> None:
     "preflight",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def deps_preflight(ctx: TyperContext) -> None:
+def deps_preflight(ctx: click.Context) -> None:
     """Run dependency preflight checks."""
     from chiron.deps import preflight
 
@@ -287,7 +343,7 @@ def deps_preflight(ctx: TyperContext) -> None:
     "graph",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def deps_graph(ctx: TyperContext) -> None:
+def deps_graph(ctx: click.Context) -> None:
     """Generate dependency graph visualization.
 
     Analyzes Python imports across the codebase and generates
@@ -304,7 +360,7 @@ def deps_graph(ctx: TyperContext) -> None:
     "verify",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def deps_verify(ctx: TyperContext) -> None:
+def deps_verify(ctx: click.Context) -> None:
     """Verify dependency pipeline setup and integration.
 
     Checks that all components of the dependency management pipeline
@@ -910,7 +966,7 @@ def deps_security(
     "format-yaml",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def tools_format_yaml(ctx: TyperContext) -> None:
+def tools_format_yaml(ctx: click.Context) -> None:
     """Format YAML files consistently across the repository.
 
     Runs yamlfmt with additional conveniences like removing macOS
@@ -932,7 +988,7 @@ def tools_format_yaml(ctx: TyperContext) -> None:
     "wheelhouse",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def remediate_wheelhouse(ctx: TyperContext) -> None:
+def remediate_wheelhouse(ctx: click.Context) -> None:
     """Remediate wheelhouse issues."""
     from chiron import remediation
 
@@ -946,7 +1002,7 @@ def remediate_wheelhouse(ctx: TyperContext) -> None:
     "runtime",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def remediate_runtime(ctx: TyperContext) -> None:
+def remediate_runtime(ctx: click.Context) -> None:
     """Remediate runtime issues."""
     from chiron import remediation
 
@@ -1455,7 +1511,7 @@ def orchestrate_air_gapped_prep(
     "governance",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def orchestrate_governance(ctx: TyperContext) -> None:
+def orchestrate_governance(ctx: click.Context) -> None:
     """Process dry-run governance artifacts.
 
     Derive governance artifacts for dry-run CI executions,
@@ -1548,7 +1604,7 @@ def copilot_status(
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
 def copilot_prepare(
-    ctx: TyperContext,
+    ctx: click.Context,
     all_extras: bool = typer.Option(
         True,
         "--all-extras/--no-all-extras",

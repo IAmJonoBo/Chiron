@@ -12,19 +12,20 @@ def _load_sitecustomize_env(env: dict[str, str]) -> dict[str, str]:
     """Reload ``sitecustomize`` with a temporary environment and capture it."""
 
     sys.modules.pop(_MODULE_NAME, None)
-    
+
     # Set up the temporary environment
     original_env = dict(os.environ)
     os.environ.clear()
     os.environ.update(env)
-    
+
     # Ensure the project sitecustomize.py is loaded (not system one)
     import pathlib
+
     project_root = str(pathlib.Path(__file__).parent.parent)
     original_path = sys.path.copy()
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
-    
+
     try:
         # Re-import the module which will trigger _configure_pip_environment()
         importlib.import_module(_MODULE_NAME)
@@ -65,15 +66,15 @@ def test_sitecustomize_disables_vendor_overrides_for_copilot() -> None:
 
 
 def test_sitecustomize_configures_wheelhouse_for_offline_installs() -> None:
-    import tempfile
     import shutil
+    import tempfile
     from pathlib import Path
-    
+
     # Create a temporary vendor/wheelhouse directory
     project_root = Path(__file__).parent.parent
     vendor_dir = project_root / "vendor" / "wheelhouse"
     vendor_dir.mkdir(parents=True, exist_ok=True)
-    
+
     try:
         environ = _load_sitecustomize_env({})
         find_links = environ.get("PIP_FIND_LINKS", "")
@@ -87,12 +88,12 @@ def test_sitecustomize_configures_wheelhouse_for_offline_installs() -> None:
 def test_sitecustomize_preserves_overrides_for_non_copilot_runs() -> None:
     import shutil
     from pathlib import Path
-    
+
     # Create a temporary vendor/wheelhouse directory
     project_root = Path(__file__).parent.parent
     vendor_dir = project_root / "vendor" / "wheelhouse"
     vendor_dir.mkdir(parents=True, exist_ok=True)
-    
+
     try:
         environ = _load_sitecustomize_env({"GITHUB_ACTIONS": "true"})
         find_links = environ.get("PIP_FIND_LINKS", "")
