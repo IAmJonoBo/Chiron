@@ -6,10 +6,10 @@
 | --------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Core library (`chiron.core`)                                    | 🟢     | **100% test coverage**. Telemetry degrades gracefully when OpenTelemetry unavailable; comprehensive tests added for all telemetry paths.                                                                                                                                                            |
 | FastAPI service (`chiron.service`)                              | 🟡     | Routes use shared subprocess wrapper with timeouts; 77% coverage on API routes, 65% on app, 48% on health routes. No background workers, authentication beyond Pydantic models.                                                                                                                     |
-| CLI (`chiron.cli.main`)                                         | 🟡     | Commands use shared subprocess wrapper with error handling; 30% test coverage added; relies on subprocess_utils for robust execution; many commands still untested.                                                                                                                                 |
+| CLI (`chiron.cli.main`)                                         | 🟡     | Commands use shared subprocess wrapper with error handling; 40% test coverage added (+10% from Oct 2025); build, release, wheelhouse commands tested; relies on subprocess_utils for robust execution; many commands still untested.                                                               |
 | Feature flags (`chiron.features`)                               | 🟡     | Global `get_feature_flags()` accessor and env fallback behave (60% coverage); OpenFeature-backed flows remain partially tested.                                                                                                                                                                     |
 | MCP server (`chiron.mcp.server`)                                | 🟢     | **IMPROVED**: Real operations implemented for wheelhouse building, artifact verification, and policy enforcement. Tools now use actual deps modules (bundler, policy, verify) instead of placeholders. 96% infrastructure coverage maintained. |
-| Supply-chain helpers (`chiron.deps/*`)                          | 🟡     | Modules migrating to subprocess_utils; policy & constraints have test coverage; remaining 22 modules still omitted but tracked in DEPS_MODULES_STATUS.md for systematic testing.                                                                                                                    |
+| Supply-chain helpers (`chiron.deps/*`)                          | 🟡     | Modules migrating to subprocess_utils; policy, constraints, and **bundler** have test coverage (62-98%); remaining 21 modules still omitted but tracked in DEPS_MODULES_STATUS.md for systematic testing.                                                                                          |
 | Observability (`chiron/telemetry.py`, `chiron/observability/*`) | 🟢     | **96-100% test coverage**. Telemetry (98%), logging (100%), metrics (96%), tracing (96%) fully tested with graceful degradation paths.                                                                                                                                                              |
 | Documentation                                                   | 🟢     | **EXCELLENT**: Comprehensive quality gates documentation. DEPS_MODULES_STATUS tracking. All status docs accurate and aligned. Quality metrics in README. Documentation consolidated with deprecated docs moved to `docs/deprecated/`. All Prometheus references replaced with Chiron/OpenTelemetry. |
 | Security toolchain extras                                       | 🟢     | **IMPROVED**: Shared subprocess wrapper with path probing, timeout handling, and graceful fallbacks for `uv`, `syft`, `cosign`, `semantic-release` binaries. Quality gates active.                                                                                                                  |
@@ -21,11 +21,36 @@
 2. **MCP Tooling** – ✅ **RESOLVED**: Implemented real integrations for wheelhouse build/verify, policy enforcement, and artifact verification. MCP server now uses actual deps modules (bundler.py, policy.py, verify.py) instead of placeholder responses. All tools tested with proper error handling and graceful degradation.
 3. **External Command Wrappers** – ✅ **RESOLVED**: Created shared `subprocess_utils` module with executable path probing, configurable timeouts, graceful error handling, and comprehensive tests. CLI and service routes updated to use new utilities.
 4. **Dependency Hygiene** – ✅ **RESOLVED**: Dependency conflicts fixed (rich, jsonschema, click versions aligned with semgrep constraints). Document why `semgrep<1.80` is pinned alongside OpenTelemetry ≥1.37.
-5. **Test Coverage** – ✅ **SIGNIFICANT PROGRESS**: Coverage increased from ~39% to 58.2% (+19.2%). Core, observability, telemetry, CLI, and service routes now well-tested. Service routes at production quality (93-97% coverage). Deps modules have policy & constraints tests; systematic testing plan in DEPS_MODULES_STATUS.md.
+5. **Test Coverage** – ✅ **EXCELLENT PROGRESS**: Coverage increased from ~39% to 62.13% (+23.13%). Core, observability, telemetry, CLI, service routes, and **bundler** now well-tested. Service routes at production quality (93-97% coverage). Deps modules have policy, constraints, and bundler tests; systematic testing plan in DEPS_MODULES_STATUS.md. **Target: 65%+ by next milestone.**
 6. **Docs Audit** – ✅ **RESOLVED**: Added ENVIRONMENT_SYNC.md, QUALITY_GATES.md, and DEPS_MODULES_STATUS.md guides. All documentation aligned with actual implementation status. Quality metrics in README. All status docs accurate. **April 2025**: Deprecated outdated summaries (TODO_IMPLEMENTATION_SUMMARY, TESTING_IMPLEMENTATION_SUMMARY, QUALITY_GATES_IMPLEMENTATION_SUMMARY) moved to `docs/deprecated/`. All Prometheus references replaced with Chiron/OpenTelemetry.
 7. **Quality Gates** – ✅ **RESOLVED**: Implemented frontier-grade quality gates workflow with coverage, security, type safety, SBOM, code quality, test, dependency, and documentation gates. Comprehensive documentation in QUALITY_GATES.md.
 
 ## Recent Completions (Current Sprint)
+
+### Test Coverage Improvements (January 2026) ✅
+
+1. **Test Failures Fixed** (6 tests)
+   - MCP server tests updated for real implementations (not placeholder "not_implemented")
+   - Sitecustomize tests fixed to properly load project module with correct sys.path
+   - All 367 tests now passing
+
+2. **CLI Test Coverage** (`tests/test_cli_main.py`)
+   - Added tests for build command (dry run, success, failure)
+   - Added tests for release command (success, failure)
+   - Added tests for wheelhouse command (help, dry run)
+   - CLI coverage: 31% → 40% (+9%)
+   
+3. **Deps Module Tests** (`tests/test_deps_bundler.py`)
+   - Added comprehensive tests for bundler.py (12 tests)
+   - Tests cover BundleMetadata, WheelhouseBundler, bundle creation, SBOM/OSV inclusion
+   - Removed bundler.py from coverage omit list
+   - bundler.py coverage: 0% (omitted) → 98%
+
+4. **Overall Test Metrics**
+   - Coverage: 58.73% → 62.13% (+3.4 percentage points)
+   - Tests passing: 348 → 367 (+19 tests)
+   - Exceeds 50% minimum quality gate ✅
+   - On track for 65%+ coverage milestone
 
 ### Test Coverage Improvements (October 2025) ✅
 

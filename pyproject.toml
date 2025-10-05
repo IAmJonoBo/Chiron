@@ -306,7 +306,6 @@ omit = [
   "src/chiron/tools/*",
   "src/chiron/typer_cli.py",
   # Deps modules - gradual inclusion as tests are added
-  "src/chiron/deps/bundler.py",
   "src/chiron/deps/conflict_resolver.py",
   "src/chiron/deps/drift.py",
   "src/chiron/deps/graph.py",

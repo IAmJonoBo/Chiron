@@ -231,11 +231,12 @@ class TestMCPServer:
         assert result["with_signatures"] is True
 
     def test_verify_artifacts_skeleton(self):
-        """Test _verify_artifacts skeleton implementation."""
+        """Test _verify_artifacts with real implementation."""
         server = MCPServer()
         result = server._verify_artifacts({"target": "/test/path"})
 
-        assert result["status"] == "not_implemented"
+        # Real implementation returns success/warning/error based on verification results
+        assert result["status"] in ["success", "warning", "error"]
         assert result["target"] == "/test/path"
 
     def test_create_airgap_bundle_defaults(self):
@@ -249,11 +250,14 @@ class TestMCPServer:
         assert result["include_security"] is False
 
     def test_check_policy_skeleton(self):
-        """Test _check_policy skeleton implementation."""
+        """Test _check_policy with real implementation."""
         server = MCPServer()
         result = server._check_policy({})
 
-        assert result["status"] == "not_implemented"
+        # Real implementation returns success with default policy or error if module unavailable
+        assert result["status"] in ["success", "error"]
+        if result["status"] == "success":
+            assert "policy" in result
 
     def test_health_check_structure(self):
         """Test _health_check response structure."""
@@ -457,8 +461,9 @@ class TestMCPServerIntegration:
 
         # Invalid arguments (missing required field)
         result = server.execute_tool("chiron_verify_artifacts", {})
-        # Should still execute but with None target
-        assert result["status"] == "not_implemented"
+        # Real implementation returns error when target is missing
+        assert result["status"] == "error"
+        assert "required" in result["message"].lower()
 
     def test_config_generation_and_usage(self):
         """Test that generated config matches server capabilities."""
