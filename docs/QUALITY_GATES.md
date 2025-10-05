@@ -22,6 +22,7 @@ Chiron implements 8 comprehensive quality gates that run on every push and pull 
 **Purpose**: Ensure adequate test coverage across the codebase
 
 **Standards**:
+
 - **Minimum**: 50% (gate fails below this)
 - **Target**: 60% (recommended for production)
 - **Frontier**: 80% (frontier-grade excellence)
@@ -29,6 +30,7 @@ Chiron implements 8 comprehensive quality gates that run on every push and pull 
 **Current Status**: 55.45% ✅ (exceeds minimum by 5.45%)
 
 **How it works**:
+
 ```bash
 # Run tests with coverage
 uv run pytest --cov=chiron --cov-report=xml --cov-report=term-missing --cov-fail-under=50
@@ -41,6 +43,7 @@ fi
 ```
 
 **Improving Coverage**:
+
 - Focus on high-impact modules first (deps, service, CLI)
 - Add unit tests for core logic
 - Add integration tests for subprocess interactions
@@ -51,16 +54,19 @@ fi
 **Purpose**: Enforce zero critical/high severity vulnerabilities
 
 **Standards**:
+
 - **Critical vulnerabilities**: 0 (gate fails on any)
 - **High severity issues**: 0 (gate fails on any)
 - **Medium/Low**: Allowed but logged for review
 
 **Tools Used**:
+
 - **Bandit**: Static security analysis for Python
 - **Safety**: Known vulnerability scanning
 - **Semgrep**: Pattern-based security analysis
 
 **How it works**:
+
 ```bash
 # Run Bandit
 uv run bandit -r src/ -f json -o bandit-report.json
@@ -78,6 +84,7 @@ semgrep --config=auto --sarif-output=semgrep.sarif
 ```
 
 **Common Issues**:
+
 - Hardcoded secrets → Use environment variables or key management
 - SQL injection → Use parameterized queries
 - Command injection → Use `subprocess_utils` with proper escaping
@@ -88,11 +95,13 @@ semgrep --config=auto --sarif-output=semgrep.sarif
 **Purpose**: Ensure type safety with strict type checking
 
 **Standards**:
+
 - **Mode**: Strict MyPy checking enabled
 - **Failures**: 0 type errors allowed
 - **Coverage**: All public APIs must be typed
 
 **Configuration** (pyproject.toml):
+
 ```toml
 [tool.mypy]
 python_version = "3.12"
@@ -104,11 +113,13 @@ disallow_incomplete_defs = true
 ```
 
 **How it works**:
+
 ```bash
 uv run mypy src/chiron --strict
 ```
 
 **Common Issues**:
+
 - Missing type hints → Add type annotations
 - `Any` type usage → Use specific types
 - Untyped third-party imports → Add type stubs or ignore_missing_imports
@@ -118,16 +129,19 @@ uv run mypy src/chiron --strict
 **Purpose**: Validate Software Bill of Materials and scan for vulnerabilities
 
 **Standards**:
+
 - **SBOM Format**: CycloneDX JSON + SPDX JSON
 - **Component Count**: > 0 (validation check)
 - **Critical Vulnerabilities**: 0 in SBOM scan
 - **High Vulnerabilities**: Logged for review
 
 **Tools Used**:
+
 - **Syft**: SBOM generation
 - **Grype**: Vulnerability scanning
 
 **How it works**:
+
 ```bash
 # Generate SBOM
 syft . -o cyclonedx-json=sbom.json
@@ -150,6 +164,7 @@ fi
 ```
 
 **Artifacts Generated**:
+
 - `sbom.json` - CycloneDX SBOM
 - `sbom-spdx.json` - SPDX SBOM
 - `vulnerability-report.json` - Vulnerability scan results
@@ -159,14 +174,17 @@ fi
 **Purpose**: Enforce code quality standards with linting and formatting
 
 **Standards**:
+
 - **Linting errors**: 0 allowed
 - **Format violations**: 0 allowed
 - **Complexity**: Monitored but not enforced
 
 **Tools Used**:
+
 - **Ruff**: Fast Python linter and formatter
 
 **How it works**:
+
 ```bash
 # Run linter
 uv run ruff check src/chiron --output-format=json > ruff-report.json
@@ -181,6 +199,7 @@ uv run ruff format --check src/chiron
 ```
 
 **Common Issues**:
+
 - Import order → Ruff auto-fixes with `--fix`
 - Line length → Wrap at 88 characters
 - Unused imports → Ruff auto-fixes with `--fix`
@@ -191,11 +210,13 @@ uv run ruff format --check src/chiron
 **Purpose**: Ensure all tests pass and maintain test quality
 
 **Standards**:
+
 - **Failed tests**: 0 allowed
 - **Minimum tests**: 100 recommended
 - **Test types**: Unit, integration, property-based
 
 **How it works**:
+
 ```bash
 # Run tests with JSON report
 uv run pytest --json-report --json-report-file=test-report.json
@@ -209,6 +230,7 @@ fi
 ```
 
 **Test Quality Metrics**:
+
 - **Total tests**: 254 (target: 350 for 60% coverage)
 - **Test types**: Unit (90%), Integration (8%), Contract (2%)
 - **Average duration**: ~6 seconds
@@ -219,11 +241,13 @@ fi
 **Purpose**: Ensure dependency integrity and consistency
 
 **Standards**:
+
 - **Lock file**: Must be synchronized
 - **Conflicts**: 0 allowed
 - **Security**: No known vulnerabilities in dependencies
 
 **How it works**:
+
 ```bash
 # Check for dependency conflicts
 uv sync --locked
@@ -233,6 +257,7 @@ python3 -c "import tomllib; tomllib.load(open('pyproject.toml', 'rb'))"
 ```
 
 **Common Issues**:
+
 - Version conflicts → Adjust version constraints
 - Lock file drift → Run `uv lock` to update
 - Missing dependencies → Add to pyproject.toml
@@ -242,17 +267,20 @@ python3 -c "import tomllib; tomllib.load(open('pyproject.toml', 'rb'))"
 **Purpose**: Ensure documentation builds successfully
 
 **Standards**:
+
 - **Build**: Must complete without errors
 - **Links**: Checked for validity
 - **Strict mode**: Enabled (warnings = errors)
 
 **How it works**:
+
 ```bash
 # Build documentation
 uv run mkdocs build --strict
 ```
 
 **Documentation Structure**:
+
 - `/docs` - User and developer guides
 - `/docs/index.md` - Documentation homepage
 - API docs - Auto-generated from docstrings
@@ -271,7 +299,7 @@ jobs:
   test-quality-gate:# Runs in ~2 minutes
   dependency-gate:  # Runs in ~1 minute
   docs-gate:        # Runs in ~1 minute
-  
+
   quality-gate-summary: # Aggregates results
     needs: [all gates above]
 ```
@@ -340,6 +368,7 @@ uv run pre-commit run --all-files
 **Current**: 55.45% → **Target**: 60% → **Frontier**: 80%
 
 Priority modules for testing:
+
 1. **deps modules** (0% → 50%+) - Highest impact
 2. **service routes** (48-77% → 80%+) - User-facing
 3. **CLI commands** (30% → 60%+) - User-facing
@@ -367,16 +396,16 @@ See [DEPS_MODULES_STATUS.md](DEPS_MODULES_STATUS.md) for detailed plan.
 
 ### Current Status (April 2025)
 
-| Metric | Current | Target | Frontier | Status |
-|--------|---------|--------|----------|--------|
-| Coverage | 55.45% | 60% | 80% | 🟡 On Track |
-| Tests | 254 | 350 | 500 | 🟡 On Track |
-| Critical Vulns | 0 | 0 | 0 | 🟢 Passing |
-| Type Errors | 0 | 0 | 0 | 🟢 Passing |
-| Lint Errors | 0 | 0 | 0 | 🟢 Passing |
-| Failed Tests | 0 | 0 | 0 | 🟢 Passing |
-| Dep Conflicts | 0 | 0 | 0 | 🟢 Passing |
-| Doc Build | Pass | Pass | Pass | 🟢 Passing |
+| Metric         | Current | Target | Frontier | Status      |
+| -------------- | ------- | ------ | -------- | ----------- |
+| Coverage       | 55.45%  | 60%    | 80%      | 🟡 On Track |
+| Tests          | 254     | 350    | 500      | 🟡 On Track |
+| Critical Vulns | 0       | 0      | 0        | 🟢 Passing  |
+| Type Errors    | 0       | 0      | 0        | 🟢 Passing  |
+| Lint Errors    | 0       | 0      | 0        | 🟢 Passing  |
+| Failed Tests   | 0       | 0      | 0        | 🟢 Passing  |
+| Dep Conflicts  | 0       | 0      | 0        | 🟢 Passing  |
+| Doc Build      | Pass    | Pass   | Pass     | 🟢 Passing  |
 
 **Overall Grade**: 🟡 Yellow (6/8 gates green, improving toward frontier)
 

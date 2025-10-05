@@ -29,6 +29,15 @@ if TYPE_CHECKING:
 else:
     TyperContext = typer.Context
 
+from chiron.github import (
+    COPILOT_DISABLE_ENV_VAR,
+    CopilotProvisioningError,
+    collect_status,
+    format_status_json,
+    generate_env_exports,
+    prepare_environment,
+)
+
 logger = logging.getLogger(__name__)
 
 # ============================================================================
@@ -64,6 +73,9 @@ app.add_typer(tools_app, name="tools")
 
 github_app = typer.Typer(help="GitHub Actions integration and artifact sync")
 app.add_typer(github_app, name="github")
+
+copilot_app = typer.Typer(help="GitHub Copilot coding agent helpers")
+github_app.add_typer(copilot_app, name="copilot")
 
 _SCRIPT_PROXY_CONTEXT = {
     "allow_extra_args": True,
@@ -1454,6 +1466,188 @@ def orchestrate_governance(ctx: TyperContext) -> None:
     exit_code = governance.main()
     if exit_code != 0:
         raise typer.Exit(exit_code)
+
+
+# ============================================================================
+# GitHub Copilot Commands
+# ============================================================================
+
+
+@copilot_app.command("status")
+def copilot_status(
+    json_output: bool = typer.Option(False, "--json", help="Output status as JSON")
+) -> None:
+    """Show readiness information for the Copilot coding agent."""
+
+    status = collect_status(Path.cwd())
+
+    if json_output:
+        typer.echo(format_status_json(status))
+        return
+
+    if status.is_agent_environment:
+        typer.secho(
+            "✅ Copilot coding agent environment detected", fg=typer.colors.GREEN
+        )
+        if status.indicator_keys:
+            typer.echo("   Indicators: " + ", ".join(status.indicator_keys))
+    else:
+        typer.secho(
+            "ℹ️  Copilot coding agent environment not detected", fg=typer.colors.BLUE
+        )
+        if status.indicator_keys:
+            typer.echo(
+                "   Copilot-related variables present: "
+                + ", ".join(status.indicator_keys)
+            )
+
+    if status.wheelhouse_disabled:
+        typer.secho(
+            "✅ Vendor wheelhouse overrides disabled (remote registries enabled)",
+            fg=typer.colors.GREEN,
+        )
+    else:
+        typer.secho(
+            f"⚠️  {COPILOT_DISABLE_ENV_VAR} not set — offline wheelhouse still enforced",
+            fg=typer.colors.YELLOW,
+        )
+        typer.echo('   Tip: eval "$(chiron github copilot env)"')
+
+    if status.pip_overrides_active:
+        typer.secho("⚠️  pip offline overrides still active", fg=typer.colors.YELLOW)
+        if status.pip_no_index:
+            typer.echo(f"   PIP_NO_INDEX={status.pip_no_index}")
+        if status.pip_find_links:
+            typer.echo(f"   PIP_FIND_LINKS={status.pip_find_links}")
+    else:
+        typer.secho("✅ pip overrides cleared", fg=typer.colors.GREEN)
+
+    if status.workflow_present:
+        typer.secho(
+            "✅ Workflow .github/workflows/copilot-setup-steps.yml present",
+            fg=typer.colors.GREEN,
+        )
+    else:
+        typer.secho("⚠️  Copilot setup workflow not found", fg=typer.colors.YELLOW)
+
+    if status.uv_available:
+        typer.secho("✅ uv executable available", fg=typer.colors.GREEN)
+    else:
+        typer.secho("⚠️  uv executable not found on PATH", fg=typer.colors.YELLOW)
+        typer.echo(
+            "   Install uv with 'pip install uv' or visit https://docs.astral.sh/uv/"
+        )
+
+    typer.echo(
+        "\nUse `chiron github copilot prepare --dry-run` to preview the provisioning step."
+    )
+
+
+@copilot_app.command(
+    "prepare",
+    context_settings=_SCRIPT_PROXY_CONTEXT,
+)
+def copilot_prepare(
+    ctx: TyperContext,
+    all_extras: bool = typer.Option(
+        True,
+        "--all-extras/--no-all-extras",
+        help="Sync all optional extras (matches GitHub Copilot workflow)",
+    ),
+    extras: str | None = typer.Option(
+        None,
+        "--extras",
+        help="Comma-separated extras when using --no-all-extras",
+    ),
+    include_dev: bool = typer.Option(
+        True, "--dev/--no-dev", help="Include development dependencies"
+    ),
+    uv_path: Path | None = typer.Option(
+        None, "--uv-path", help="Explicit path to the uv executable"
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Preview without executing uv"
+    ),
+    clear_offline_overrides: bool = typer.Option(
+        True,
+        "--clear-offline-overrides/--keep-offline-overrides",
+        help="Clear pip offline overrides so remote installs succeed",
+    ),
+) -> None:
+    """Run ``uv sync`` with Copilot-friendly settings."""
+
+    extras_list = (
+        tuple(item.strip() for item in extras.split(",") if item.strip())
+        if extras and not all_extras
+        else None
+    )
+
+    additional_args = list(ctx.args)
+
+    if extras and all_extras:
+        typer.secho(
+            "ℹ️  Ignoring --extras because --all-extras is active.",
+            fg=typer.colors.YELLOW,
+        )
+
+    result = prepare_environment(
+        workspace_root=Path.cwd(),
+        all_extras=all_extras,
+        extras=extras_list,
+        include_dev=include_dev,
+        uv_path=str(uv_path) if uv_path else None,
+        dry_run=dry_run,
+        clear_offline_overrides=clear_offline_overrides,
+        additional_args=additional_args,
+    )
+
+    if not result.command:
+        message = result.message or "uv executable not found on PATH"
+        typer.secho(f"❌ {message}", fg=typer.colors.RED)
+        raise typer.Exit(1)
+
+    typer.echo(f"$ {' '.join(result.command)}")
+
+    if result.env_overrides:
+        typer.echo("Environment overrides:")
+        for key in sorted(result.env_overrides):
+            value = result.env_overrides[key]
+            if value is None:
+                typer.echo(f"  unset {key}")
+            else:
+                typer.echo(f"  {key}={value}")
+
+    if result.dry_run:
+        typer.secho("Dry run — no commands executed.", fg=typer.colors.BLUE)
+        return
+
+    if result.success:
+        typer.secho(
+            "✅ Copilot environment prepared successfully", fg=typer.colors.GREEN
+        )
+    else:
+        message = result.message or "uv sync failed"
+        typer.secho(f"❌ {message}", fg=typer.colors.RED)
+        raise typer.Exit(result.exit_code or 1)
+
+
+@copilot_app.command("env")
+def copilot_env(
+    shell: str = typer.Option(
+        "bash",
+        "--shell",
+        help="Target shell for output (bash, zsh, sh, fish, powershell, cmd)",
+    )
+) -> None:
+    """Emit shell commands that configure Copilot-friendly environment variables."""
+
+    try:
+        snippet = generate_env_exports(shell)
+    except CopilotProvisioningError as exc:  # pragma: no cover - defensive
+        typer.secho(f"❌ {exc}", fg=typer.colors.RED)
+        raise typer.Exit(1) from exc
+
+    typer.echo(snippet)
 
 
 # ============================================================================

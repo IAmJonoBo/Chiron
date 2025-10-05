@@ -292,6 +292,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*" = ["S101", "ARG", "SIM"]
+"src/chiron/github/sync.py" = ["C901", "PLR0912", "PLR0913", "PLR0915"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["chiron"]

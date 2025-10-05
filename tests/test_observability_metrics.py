@@ -5,9 +5,7 @@ from __future__ import annotations
 import os
 from unittest.mock import MagicMock, Mock, patch
 
-import pytest
 from opentelemetry.metrics import Meter
-from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import (
     ConsoleMetricExporter,
     PeriodicExportingMetricReader,
@@ -70,7 +68,6 @@ class TestCreateMetricReaders:
     def test_create_metric_readers_with_exporter(self) -> None:
         """Test creating metric readers with OTLP exporter."""
         # Use ConsoleMetricExporter as a concrete exporter class for testing
-        from opentelemetry.sdk.metrics.export import ConsoleMetricExporter
 
         readers = _create_metric_readers(ConsoleMetricExporter, enable_console=False)
 
@@ -87,7 +84,6 @@ class TestCreateMetricReaders:
     def test_create_metric_readers_with_both(self) -> None:
         """Test creating metric readers with both exporters."""
         # Use ConsoleMetricExporter as a concrete exporter class for testing
-        from opentelemetry.sdk.metrics.export import ConsoleMetricExporter
 
         readers = _create_metric_readers(ConsoleMetricExporter, enable_console=True)
 

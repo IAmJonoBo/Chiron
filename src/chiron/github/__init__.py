@@ -1,6 +1,6 @@
-"""Compatibility layer for accessing packaged GitHub helpers."""
+"""GitHub integration helpers for Chiron."""
 
-from chiron.github.copilot import (
+from .copilot import (
     COPILOT_DISABLE_ENV_VAR,
     CopilotProvisioningError,
     CopilotStatus,
@@ -11,7 +11,7 @@ from chiron.github.copilot import (
     generate_env_exports,
     prepare_environment,
 )
-from chiron.github.sync import (
+from .sync import (
     GitHubArtifactSync,
     download_artifacts,
     sync_to_local,
@@ -22,8 +22,8 @@ __all__ = [
     "COPILOT_DISABLE_ENV_VAR",
     "CopilotProvisioningError",
     "CopilotStatus",
-    "GitHubArtifactSync",
     "PrepareResult",
+    "GitHubArtifactSync",
     "collect_status",
     "detect_agent_environment",
     "download_artifacts",

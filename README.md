@@ -100,7 +100,7 @@ chiron serve        # Start the service
 
 ## 🏗️ Architecture
 
-```
+```text
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   CLI Layer     │    │  Service Layer  │    │   Core Library  │
 │                 │    │                 │    │                 │
@@ -180,6 +180,12 @@ See [Environment Sync Documentation](docs/ENVIRONMENT_SYNC.md) for details.
 - Refresh the repository wheelhouse with `uv run chiron wheelhouse` (defaults to packaging the `dev` and `test` extras) before running `pip install -e '.[dev,test]'` in fresh environments.
 - The repository-level `sitecustomize.py` automatically points pip at `vendor/wheelhouse` and raises the network timeout so installation succeeds without extra flags.
 - Generated artifacts include `manifest.json`, `requirements.txt`, and `wheelhouse.sha256` for auditability and reproducible distribution to upstream runners.
+- To opt back into remote registries (for example when running GitHub Copilot coding agent), export `CHIRON_DISABLE_VENDOR_WHEELHOUSE=1` or let the bundled `copilot-setup-steps` workflow do it for you so dependencies download directly from PyPI.
+
+### GitHub Copilot coding agent support
+
+- `.github/workflows/copilot-setup-steps.yml` primes Copilot's ephemeral environment with `uv` and installs the dev/test extras before the agent starts, ensuring remote dependency downloads succeed.
+- Keep the repository’s Copilot **Recommended allowlist** enabled (repository **Settings → Copilot → Coding agent**) so the agent can reach PyPI and other package registries. Add any internal registries to the custom allowlist if needed.
 
 ### Setup
 
@@ -228,6 +234,7 @@ uv run pytest -m contract
 ```
 
 **Test Coverage**: 55.45% (254 tests passing)
+
 - Minimum gate: 50% ✅
 - Target: 60% 🎯
 - Frontier: 80% 🌟
@@ -277,6 +284,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 Chiron is actively developed and maintained. We follow semantic versioning and maintain backwards compatibility within major versions.
 
 ### Quality Status
+
 - ✅ **Test Coverage**: 55.45% (exceeds 50% minimum gate)
 - ✅ **Security Gate**: Zero critical vulnerabilities
 - ✅ **Type Safety**: Strict MyPy checking passes
@@ -284,6 +292,7 @@ Chiron is actively developed and maintained. We follow semantic versioning and m
 - ✅ **All Tests Passing**: 254 tests (0 failures)
 
 ### Feature Status
+
 - ✅ Core library functionality (100% coverage)
 - ✅ Observability suite (96-100% coverage)
 - ✅ Service mode with FastAPI
@@ -300,13 +309,9 @@ See [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) for detailed status.
 
 ---
 
-<div align="center">
-
 **[Documentation](https://github.com/IAmJonoBo/Chiron/docs)** •
 **[PyPI](https://pypi.org/project/chiron/)** •
 **[Issues](https://github.com/IAmJonoBo/Chiron/issues)** •
 **[Discussions](https://github.com/IAmJonoBo/Chiron/discussions)**
 
-Made with ❤️ for the Python community
-
-</div>
+Made with ❤️ for the Python community.

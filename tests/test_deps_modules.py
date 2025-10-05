@@ -152,9 +152,7 @@ class TestPolicyEngine:
     def test_check_version_allowed_with_ceiling(self) -> None:
         """Test version checking with ceiling constraint."""
         engine = PolicyEngine()
-        engine.add_policy(
-            PackagePolicy(name="test-package", version_ceiling="2.0.0")
-        )
+        engine.add_policy(PackagePolicy(name="test-package", version_ceiling="2.0.0"))
 
         # Version below ceiling should be allowed
         assert engine.check_version_allowed("test-package", "1.0.0") is True
@@ -341,9 +339,7 @@ class TestConstraintsGenerator:
         assert result is False
 
     @patch("chiron.deps.constraints.run_subprocess")
-    def test_generate_with_pip_tools(
-        self, mock_run: MagicMock, tmp_path: Path
-    ) -> None:
+    def test_generate_with_pip_tools(self, mock_run: MagicMock, tmp_path: Path) -> None:
         """Test constraints generation with pip-tools."""
         config = ConstraintsConfig(
             project_root=tmp_path,

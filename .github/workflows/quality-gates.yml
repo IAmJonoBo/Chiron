@@ -195,10 +195,10 @@ jobs:
           grype sbom:./sbom.json -o json --file vulnerability-report.json
           CRITICAL_VULNS=$(jq '[.matches[] | select(.vulnerability.severity == "Critical")] | length' vulnerability-report.json)
           HIGH_VULNS=$(jq '[.matches[] | select(.vulnerability.severity == "High")] | length' vulnerability-report.json)
-          
+
           echo "Critical vulnerabilities: $CRITICAL_VULNS"
           echo "High vulnerabilities: $HIGH_VULNS"
-          
+
           if [ "$CRITICAL_VULNS" -gt 0 ]; then
             echo "❌ VULNERABILITY GATE FAILED: Found $CRITICAL_VULNS critical vulnerabilities"
             jq '[.matches[] | select(.vulnerability.severity == "Critical")]' vulnerability-report.json
@@ -278,20 +278,20 @@ jobs:
           TOTAL_TESTS=$(jq '.summary.total' test-report.json)
           PASSED_TESTS=$(jq '.summary.passed' test-report.json)
           FAILED_TESTS=$(jq '.summary.failed // 0' test-report.json)
-          
+
           echo "Total tests: $TOTAL_TESTS"
           echo "Passed tests: $PASSED_TESTS"
           echo "Failed tests: $FAILED_TESTS"
-          
+
           if [ "$FAILED_TESTS" -gt 0 ]; then
             echo "❌ TEST QUALITY GATE FAILED: $FAILED_TESTS tests failed"
             exit 1
           fi
-          
+
           if [ "$TOTAL_TESTS" -lt 100 ]; then
             echo "⚠️  Test count below recommended minimum (100), current: $TOTAL_TESTS"
           fi
-          
+
           echo "✅ TEST QUALITY GATE PASSED: All $PASSED_TESTS tests passed"
 
   # Dependency Quality Gate
@@ -371,7 +371,7 @@ jobs:
           echo "Test Quality Gate: ${{ needs.test-quality-gate.result }}"
           echo "Dependency Gate: ${{ needs.dependency-gate.result }}"
           echo "Documentation Gate: ${{ needs.docs-gate.result }}"
-          
+
           # Count failures
           FAILED=0
           [[ "${{ needs.coverage-gate.result }}" == "failure" ]] && ((FAILED++))
@@ -382,7 +382,7 @@ jobs:
           [[ "${{ needs.test-quality-gate.result }}" == "failure" ]] && ((FAILED++))
           [[ "${{ needs.dependency-gate.result }}" == "failure" ]] && ((FAILED++))
           [[ "${{ needs.docs-gate.result }}" == "failure" ]] && ((FAILED++))
-          
+
           if [ $FAILED -gt 0 ]; then
             echo "❌ $FAILED quality gate(s) failed"
             exit 1

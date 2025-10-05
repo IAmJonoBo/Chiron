@@ -18,12 +18,14 @@ Successfully transformed Chiron's quality infrastructure from 🟡 Yellow to fro
 ### 1. Subprocess Utilities Infrastructure ✅
 
 **Problem**: CLI and service routes shelled out to external commands without:
+
 - Executable path probing
 - Timeout handling
 - Graceful error recovery
 - Binary availability checks
 
 **Solution**: Created `src/chiron/subprocess_utils.py` with:
+
 - 🎯 Comprehensive subprocess wrapper
 - 🔍 Executable path resolution with fallbacks
 - ⏱️ Smart timeout defaults per command type (uv: 300s, syft: 180s, etc.)
@@ -32,6 +34,7 @@ Successfully transformed Chiron's quality infrastructure from 🟡 Yellow to fro
 - 🧪 100% test coverage (50+ tests)
 
 **Impact**:
+
 - ✅ Security toolchain extras: 🟡 → 🟢 (path probing, timeouts, error handling)
 - ✅ CLI commands: More robust with proper error handling
 - ✅ Service routes: Safer subprocess execution
@@ -43,18 +46,19 @@ Successfully transformed Chiron's quality infrastructure from 🟡 Yellow to fro
 
 **Solution**: Implemented `.github/workflows/quality-gates.yml` with 8 gates:
 
-| Gate | Standard | Status |
-|------|----------|--------|
-| **Coverage** | ≥50% min, 60% target, 80% frontier | 🟢 55.45% (exceeds min) |
-| **Security** | 0 critical/high vulnerabilities | 🟢 0 critical |
-| **Type Safety** | Strict MyPy, 0 errors | 🟢 Passing |
-| **SBOM** | Valid SBOM, 0 critical vulns | 🟢 Passing |
-| **Code Quality** | 0 lint/format errors | 🟢 Passing |
-| **Test Quality** | All tests pass | 🟢 254/254 passing |
-| **Dependency** | No conflicts | 🟢 Passing |
-| **Documentation** | Docs build successfully | 🟢 Passing |
+| Gate              | Standard                           | Status                  |
+| ----------------- | ---------------------------------- | ----------------------- |
+| **Coverage**      | ≥50% min, 60% target, 80% frontier | 🟢 55.45% (exceeds min) |
+| **Security**      | 0 critical/high vulnerabilities    | 🟢 0 critical           |
+| **Type Safety**   | Strict MyPy, 0 errors              | 🟢 Passing              |
+| **SBOM**          | Valid SBOM, 0 critical vulns       | 🟢 Passing              |
+| **Code Quality**  | 0 lint/format errors               | 🟢 Passing              |
+| **Test Quality**  | All tests pass                     | 🟢 254/254 passing      |
+| **Dependency**    | No conflicts                       | 🟢 Passing              |
+| **Documentation** | Docs build successfully            | 🟢 Passing              |
 
 **Impact**:
+
 - ✅ Automated quality enforcement on every PR
 - ✅ Clear quality metrics visible to all contributors
 - ✅ Frontier standards documented and enforced
@@ -65,6 +69,7 @@ Successfully transformed Chiron's quality infrastructure from 🟡 Yellow to fro
 **Problem**: `chiron.deps/*` modules had 0% coverage (10,335 lines omitted)
 
 **Solution**: Systematic testing approach:
+
 - 🧪 Created `tests/test_deps_modules.py` with 80+ tests
 - ✅ policy.py: ~70% coverage (50+ tests)
 - ✅ constraints.py: ~70% coverage (30+ tests), migrated to subprocess_utils
@@ -72,6 +77,7 @@ Successfully transformed Chiron's quality infrastructure from 🟡 Yellow to fro
 - 🎯 Updated pyproject.toml to explicitly list modules for gradual inclusion
 
 **Impact**:
+
 - ✅ Supply-chain helpers: 🟡 (improved from 0% to systematic testing plan)
 - ✅ 2 high-priority modules now tested and using subprocess_utils
 - ✅ Clear roadmap for remaining 22 modules
@@ -84,6 +90,7 @@ Successfully transformed Chiron's quality infrastructure from 🟡 Yellow to fro
 **Solution**: Created and updated comprehensive guides:
 
 #### New Documentation
+
 1. **docs/QUALITY_GATES.md** (~12KB)
    - Complete guide to all 8 quality gates
    - Standards, tools, and troubleshooting for each gate
@@ -97,6 +104,7 @@ Successfully transformed Chiron's quality infrastructure from 🟡 Yellow to fro
    - Integration points and patterns
 
 #### Updated Documentation
+
 3. **README.md**
    - Added quality gates badge
    - Quality metrics dashboard
@@ -116,6 +124,7 @@ Successfully transformed Chiron's quality infrastructure from 🟡 Yellow to fro
    - Updated milestone tracking with completion status
 
 **Impact**:
+
 - ✅ Documentation: 🟡 → 🟢 (fully aligned with implementation)
 - ✅ All guides reference each other appropriately
 - ✅ Clear quality metrics visible in README
@@ -125,47 +134,52 @@ Successfully transformed Chiron's quality infrastructure from 🟡 Yellow to fro
 
 ### Items Moving to Green 🟢
 
-| Area | Before | After | Reason |
-|------|--------|-------|--------|
-| Security toolchain extras | 🟡 | 🟢 | Subprocess utils with path probing, timeouts, fallbacks |
-| Subprocess utilities | N/A | 🟢 | New module with 100% coverage, comprehensive tests |
-| Documentation | 🟡 | 🟢 | All guides aligned, quality gates documented, tracking in place |
-| Quality Gates | N/A | 🟢 | 8 comprehensive gates implemented and documented |
+| Area                      | Before | After | Reason                                                          |
+| ------------------------- | ------ | ----- | --------------------------------------------------------------- |
+| Security toolchain extras | 🟡     | 🟢    | Subprocess utils with path probing, timeouts, fallbacks         |
+| Subprocess utilities      | N/A    | 🟢    | New module with 100% coverage, comprehensive tests              |
+| Documentation             | 🟡     | 🟢    | All guides aligned, quality gates documented, tracking in place |
+| Quality Gates             | N/A    | 🟢    | 8 comprehensive gates implemented and documented                |
 
 ### Items Improving (Still Yellow) 🟡
 
-| Area | Before | After | Progress |
-|------|--------|-------|----------|
-| Supply-chain helpers | 🟡 (0%) | 🟡 (improving) | 2 modules tested, 22 tracked with roadmap |
-| FastAPI service | 🟡 (48-77%) | 🟡 (48-77%) | Now uses subprocess_utils, coverage stable |
-| CLI | 🟡 (30%) | 🟡 (30%) | Now uses subprocess_utils, more robust |
+| Area                 | Before      | After          | Progress                                   |
+| -------------------- | ----------- | -------------- | ------------------------------------------ |
+| Supply-chain helpers | 🟡 (0%)     | 🟡 (improving) | 2 modules tested, 22 tracked with roadmap  |
+| FastAPI service      | 🟡 (48-77%) | 🟡 (48-77%)    | Now uses subprocess_utils, coverage stable |
+| CLI                  | 🟡 (30%)    | 🟡 (30%)       | Now uses subprocess_utils, more robust     |
 
 ## Metrics
 
 ### Test Coverage
+
 - **Before**: 38.78%
 - **After**: 55.45%
 - **Change**: +16.67 percentage points
 - **Status**: ✅ Exceeds 50% minimum gate by 5.45%
 
 ### Test Count
+
 - **Before**: 142 tests
 - **After**: 254+ tests (includes new subprocess and deps tests)
 - **Change**: +112+ tests (+79%)
 - **Target for 60% coverage**: ~350 tests
 
 ### Quality Gates
+
 - **Before**: Ad-hoc quality checks
 - **After**: 8 comprehensive, automated gates
 - **Status**: 6/8 at frontier level (75%)
 
 ### Documentation
+
 - **Before**: 🟡 Some guides out of sync
 - **After**: 🟢 Fully aligned, comprehensive
 - **New Docs**: 2 major guides (~22KB)
 - **Updated Docs**: 3 key documents
 
 ### Code Quality
+
 - **Lines of Code**: ~2,000+ in src/chiron (excluding deps)
 - **Modules with 100% Coverage**: 3 (core, observability suite, subprocess_utils)
 - **Modules with 90%+ Coverage**: 5
@@ -211,6 +225,7 @@ From IMPLEMENTATION_SUMMARY.md "Notable Gaps & Follow-up Work":
 ## Next Steps
 
 ### Immediate (This Sprint Wrap-up)
+
 - [x] Complete subprocess utilities implementation
 - [x] Implement all 8 quality gates
 - [x] Add deps module testing foundation
@@ -218,18 +233,21 @@ From IMPLEMENTATION_SUMMARY.md "Notable Gaps & Follow-up Work":
 - [x] Update all status documents
 
 ### Short Term (Next Sprint)
+
 - [ ] Add tests for remaining high-priority deps modules (supply_chain, security_overlay, reproducibility)
 - [ ] Increase service route coverage to 80%+
 - [ ] Target 58-60% overall coverage
 - [ ] Add authentication layer to FastAPI service
 
 ### Medium Term (2-3 Sprints)
+
 - [ ] Complete medium-priority deps module testing
 - [ ] Increase CLI coverage to 60%+
 - [ ] Target 65% overall coverage
 - [ ] Add integration tests for end-to-end workflows
 
 ### Long Term (Frontier Grade)
+
 - [ ] Complete all deps module testing
 - [ ] Implement real MCP operations
 - [ ] Achieve 70%+ overall coverage
@@ -238,9 +256,11 @@ From IMPLEMENTATION_SUMMARY.md "Notable Gaps & Follow-up Work":
 ## Success Criteria
 
 ### Original Goal
+
 ✅ "Get the remaining non-green items in IMPLEMENTATION_SUMMARY.md green and implement quality gates to frontier standards"
 
 ### Achieved
+
 - ✅ External Command Wrappers: 🟡 → 🟢
 - ✅ Documentation: 🟡 → 🟢
 - ✅ Quality Gates: Implemented 8 comprehensive gates
@@ -249,6 +269,7 @@ From IMPLEMENTATION_SUMMARY.md "Notable Gaps & Follow-up Work":
 - ✅ All documentation aligned with implementation
 
 ### Remaining Work
+
 - 🟡 Supply-chain modules: Continue systematic testing (on track)
 - 🔴 MCP server: Implement real operations (planned)
 - 🟡 Service/CLI coverage: Increase to 80%+ (planned)
@@ -256,6 +277,7 @@ From IMPLEMENTATION_SUMMARY.md "Notable Gaps & Follow-up Work":
 ## Lessons Learned
 
 ### What Worked Well
+
 1. **Systematic Approach**: Creating subprocess_utils first enabled consistent improvements across CLI and service
 2. **Comprehensive Testing**: 50+ tests for subprocess_utils caught edge cases early
 3. **Documentation-Driven**: Writing QUALITY_GATES.md clarified standards and implementation
@@ -263,11 +285,13 @@ From IMPLEMENTATION_SUMMARY.md "Notable Gaps & Follow-up Work":
 5. **Quality Gates**: Automated enforcement ensures standards are maintained
 
 ### What Could Be Improved
+
 1. **Time Estimation**: Comprehensive testing takes longer than initially estimated
 2. **Scope Management**: Full deps module testing requires dedicated sprint
 3. **Integration Tests**: Need more end-to-end tests for complex workflows
 
 ### Best Practices Established
+
 1. Always use `subprocess_utils` for external commands
 2. Document quality standards before implementing gates
 3. Create tracking documents for large systematic work
@@ -281,17 +305,19 @@ This sprint successfully addressed the core quality infrastructure gaps identifi
 ✅ **Infrastructure**: Subprocess utilities provide robust command execution  
 ✅ **Quality Gates**: 8 comprehensive gates enforce frontier standards  
 ✅ **Testing Foundation**: Systematic plan for supply-chain modules  
-✅ **Documentation**: All guides aligned and comprehensive  
+✅ **Documentation**: All guides aligned and comprehensive
 
 **Overall Status**: Project moved from 🟡 Yellow (improving) to strong 🟡 Yellow (on track for 🟢 Green)
 
 The project is now well-positioned to achieve frontier-grade quality across all areas:
+
 - Clear quality standards documented
 - Automated enforcement in place
 - Systematic testing plan established
 - All documentation aligned
 
 **Estimated Timeline to Frontier Grade**: 2-3 additional sprints focusing on:
+
 1. Completing deps module testing
 2. Increasing service/CLI coverage
 3. Implementing real MCP operations

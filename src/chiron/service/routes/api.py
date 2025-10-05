@@ -172,7 +172,11 @@ async def build_wheelhouse(request: WheelhouseRequest) -> dict[str, Any]:
             "packages": request.packages,
         }
 
-    except (subprocess.CalledProcessError, ExecutableNotFoundError, SubprocessTimeoutError) as e:
+    except (
+        subprocess.CalledProcessError,
+        ExecutableNotFoundError,
+        SubprocessTimeoutError,
+    ) as e:
         logger.error("Wheelhouse build failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Build failed: {e}") from e
 
@@ -253,6 +257,12 @@ async def create_airgap_bundle(request: AirgapBundleRequest) -> dict[str, Any]:
             "include_security": request.include_security,
         }
 
-    except (subprocess.CalledProcessError, ExecutableNotFoundError, SubprocessTimeoutError) as e:
+    except (
+        subprocess.CalledProcessError,
+        ExecutableNotFoundError,
+        SubprocessTimeoutError,
+    ) as e:
         logger.error("Airgap bundle creation failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Bundle creation failed: {e}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Bundle creation failed: {e}"
+        ) from e

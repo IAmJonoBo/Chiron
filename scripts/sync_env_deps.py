@@ -7,12 +7,10 @@ workflows use consistent dependency installation commands.
 
 from __future__ import annotations
 
-import json
 import logging
 import re
 import sys
 from pathlib import Path
-from typing import Any
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
