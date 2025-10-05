@@ -29,9 +29,7 @@ class TestLoadSchema:
 
     @patch("chiron.schema_validator.SCHEMAS_DIR")
     @patch("builtins.open", new_callable=mock_open)
-    def test_load_schema_success(
-        self, mock_file: Mock, mock_schemas_dir: Mock
-    ) -> None:
+    def test_load_schema_success(self, mock_file: Mock, mock_schemas_dir: Mock) -> None:
         """Test loading a schema successfully."""
         mock_schemas_dir.__truediv__.return_value.exists.return_value = True
         schema_data = {"type": "object", "properties": {}}
@@ -47,9 +45,7 @@ class TestLoadSchema:
 class TestValidateConfig:
     """Tests for validate_config function."""
 
-    @pytest.mark.skipif(
-        not JSONSCHEMA_AVAILABLE, reason="jsonschema not available"
-    )
+    @pytest.mark.skipif(not JSONSCHEMA_AVAILABLE, reason="jsonschema not available")
     def test_validate_config_valid(self) -> None:
         """Test validating a valid configuration."""
         config = {"project_name": "test"}
@@ -64,9 +60,7 @@ class TestValidateConfig:
 
         assert errors == []
 
-    @pytest.mark.skipif(
-        not JSONSCHEMA_AVAILABLE, reason="jsonschema not available"
-    )
+    @pytest.mark.skipif(not JSONSCHEMA_AVAILABLE, reason="jsonschema not available")
     def test_validate_config_invalid(self) -> None:
         """Test validating an invalid configuration."""
         config = {"project_name": 123}  # Should be string
@@ -81,9 +75,7 @@ class TestValidateConfig:
         assert len(errors) > 0
         assert "project_name" in errors[0]
 
-    @pytest.mark.skipif(
-        not JSONSCHEMA_AVAILABLE, reason="jsonschema not available"
-    )
+    @pytest.mark.skipif(not JSONSCHEMA_AVAILABLE, reason="jsonschema not available")
     def test_validate_config_schema_not_found(self) -> None:
         """Test validation when schema is not found."""
         with patch(
@@ -95,9 +87,7 @@ class TestValidateConfig:
         assert len(errors) > 0
         assert "Schema not found" in errors[0]
 
-    @pytest.mark.skipif(
-        not JSONSCHEMA_AVAILABLE, reason="jsonschema not available"
-    )
+    @pytest.mark.skipif(not JSONSCHEMA_AVAILABLE, reason="jsonschema not available")
     def test_validate_config_invalid_schema_json(self) -> None:
         """Test validation with invalid schema JSON."""
         with patch(
@@ -109,9 +99,7 @@ class TestValidateConfig:
         assert len(errors) > 0
         assert "Invalid schema JSON" in errors[0]
 
-    @pytest.mark.skipif(
-        not JSONSCHEMA_AVAILABLE, reason="jsonschema not available"
-    )
+    @pytest.mark.skipif(not JSONSCHEMA_AVAILABLE, reason="jsonschema not available")
     def test_validate_config_with_nested_errors(self) -> None:
         """Test validation with nested property errors."""
         config = {"nested": {"field": "wrong_type"}}
@@ -160,9 +148,7 @@ class TestValidateConfigFile:
         assert len(errors) > 0
         assert "Invalid JSON" in errors[0]
 
-    @pytest.mark.skipif(
-        not JSONSCHEMA_AVAILABLE, reason="jsonschema not available"
-    )
+    @pytest.mark.skipif(not JSONSCHEMA_AVAILABLE, reason="jsonschema not available")
     def test_validate_config_file_valid(self, tmp_path: Path) -> None:
         """Test validating a valid config file."""
         config_file = tmp_path / "config.json"
@@ -181,9 +167,7 @@ class TestValidateConfigFile:
         config_file = tmp_path / "config.json"
         config_file.write_text("{}")
 
-        with patch(
-            "builtins.open", side_effect=PermissionError("Permission denied")
-        ):
+        with patch("builtins.open", side_effect=PermissionError("Permission denied")):
             errors = validate_config_file(config_file)
 
         assert len(errors) > 0

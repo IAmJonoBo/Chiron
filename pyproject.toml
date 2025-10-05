@@ -179,7 +179,15 @@ path = "src/chiron/__init__.py"
 packages = ["src/chiron"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/", "tests/", "docs/", "pyproject.toml", "README.md", "LICENSE"]
+include = [
+  "src/",
+  "tests/",
+  "docs/",
+  "pyproject.toml",
+  "README.md",
+  "LICENSE",
+  "sitecustomize.py",
+]
 
 # Testing configuration
 [tool.pytest.ini_options]

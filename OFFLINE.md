@@ -44,6 +44,16 @@ Test the CLI:
 chiron doctor
 ```
 
+### Refreshing the Vendored Wheelhouse
+
+When developing or preparing artefacts for upstream CI, regenerate the local wheelhouse before running tests:
+
+```bash
+uv run chiron wheelhouse  # defaults to dev+test extras
+```
+
+The command downloads wheels into `vendor/wheelhouse`, writes `requirements.txt`, `manifest.json`, and `wheelhouse.sha256`, and optionally signs/SBOMs the bundle. The repository ships with a `sitecustomize.py` hook that automatically sets `PIP_FIND_LINKS` (and `PIP_NO_INDEX` when the manifest confirms dev+test coverage), so plain `pip install -e "[dev,test]"` runs against the vendored assets with no extra flags.
+
 ## Using Chiron in Offline Mode
 
 ### Start the Service
@@ -92,11 +102,9 @@ chiron airgap pack --output custom-bundle.tar.gz
 make airgap
 
 # Or manually
-mkdir wheelhouse
-uv pip download -d wheelhouse chiron[all]
-uv pip download -d wheelhouse <additional-packages>
-syft wheelhouse/ -o cyclonedx-json=sbom.json
-tar -czf chiron-airgap-custom.tar.gz wheelhouse/ requirements.txt sbom.json
+uv run chiron wheelhouse --include-all-extras --with-sbom
+syft vendor/wheelhouse -o cyclonedx-json=vendor/wheelhouse/sbom.json
+tar -czf chiron-airgap-custom.tar.gz vendor/wheelhouse vendor/wheelhouse/requirements.txt vendor/wheelhouse/sbom.json
 ```
 
 ## Verification and Security
@@ -107,7 +115,7 @@ Always verify checksums and signatures:
 
 ```bash
 # Verify checksums
-sha256sum -c SHA256SUMS
+sha256sum -c wheelhouse.sha256
 
 # Verify signatures (if cosign is available)
 cosign verify-blob --bundle chiron-airgap.tar.gz.sigstore.json chiron-airgap.tar.gz

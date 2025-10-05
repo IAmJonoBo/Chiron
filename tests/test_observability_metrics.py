@@ -33,9 +33,7 @@ class TestLoadOTLPMetricExporter:
             assert isinstance(exporter_cls, type)
 
     @patch("chiron.observability.metrics.importlib.import_module")
-    def test_load_otlp_metric_exporter_not_available(
-        self, mock_import: Mock
-    ) -> None:
+    def test_load_otlp_metric_exporter_not_available(self, mock_import: Mock) -> None:
         """Test when OTLP metric exporter module is not available."""
         mock_import.side_effect = ModuleNotFoundError("Module not found")
 
@@ -44,9 +42,7 @@ class TestLoadOTLPMetricExporter:
         assert result is None
 
     @patch("chiron.observability.metrics.importlib.import_module")
-    def test_load_otlp_metric_exporter_class_not_found(
-        self, mock_import: Mock
-    ) -> None:
+    def test_load_otlp_metric_exporter_class_not_found(self, mock_import: Mock) -> None:
         """Test when exporter class is not in the module."""
         mock_module = MagicMock()
         del mock_module.OTLPMetricExporter  # Make attribute not exist

@@ -26,7 +26,7 @@ This directory contains up-to-date documentation for the Chiron project. Key sta
 ## Getting Started Checklist
 
 1. Read the refreshed [GAP_ANALYSIS](GAP_ANALYSIS.md) to understand open issues.
-2. Run tests with `python -m venv .venv && .venv/bin/pip install -e ".[dev,test]" && .venv/bin/pytest` and review failures before developing new features.
+2. Refresh the vendored dependency wheelhouse with `uv run chiron wheelhouse` (defaults to the dev+test extras), then run tests via `python -m venv .venv && .venv/bin/pip install -e ".[dev,test]" && .venv/bin/pytest`. The install step will automatically consume the pre-populated `vendor/wheelhouse` via `sitecustomize`, keeping offline and CI parity.
 3. If working on the FastAPI service, prefer exercising endpoints via `TestClient` rather than shelling out to `uv`/`tar`.
 4. For MCP or feature-flag work, implement `get_feature_flags()` and convert dry-run responses into real operations before updating guides.
 

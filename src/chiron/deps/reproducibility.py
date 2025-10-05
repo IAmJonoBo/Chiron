@@ -325,39 +325,46 @@ class ReproducibilityChecker:
             List of difference descriptions
         """
         differences = []
-        
+
         try:
-            with zipfile.ZipFile(wheel1, "r") as zf1, zipfile.ZipFile(wheel2, "r") as zf2:
+            with (
+                zipfile.ZipFile(wheel1, "r") as zf1,
+                zipfile.ZipFile(wheel2, "r") as zf2,
+            ):
                 files1 = set(zf1.namelist())
                 files2 = set(zf2.namelist())
-                
+
                 # Check for file list differences
                 only_in_1 = files1 - files2
                 only_in_2 = files2 - files1
-                
+
                 if only_in_1:
-                    differences.append(f"Files only in original: {', '.join(sorted(only_in_1))}")
+                    differences.append(
+                        f"Files only in original: {', '.join(sorted(only_in_1))}"
+                    )
                 if only_in_2:
-                    differences.append(f"Files only in rebuilt: {', '.join(sorted(only_in_2))}")
-                
+                    differences.append(
+                        f"Files only in rebuilt: {', '.join(sorted(only_in_2))}"
+                    )
+
                 # Check common files for content differences
                 common_files = files1 & files2
                 for filename in sorted(common_files):
                     if filename.endswith("RECORD"):
                         continue  # Skip RECORD files
-                        
+
                     content1 = zf1.read(filename)
                     content2 = zf2.read(filename)
-                    
+
                     if content1 != content2:
                         size_diff = len(content2) - len(content1)
                         differences.append(
                             f"{filename}: content differs (size: {len(content1)} vs {len(content2)}, diff: {size_diff:+d} bytes)"
                         )
-                        
+
         except Exception as e:
             differences.append(f"Error comparing wheels: {e}")
-        
+
         return differences
 
     def verify_wheelhouse(
@@ -384,7 +391,7 @@ class ReproducibilityChecker:
             # Execute rebuild script to rebuild wheels
             rebuild_dir = wheelhouse_dir.parent / "rebuilt-wheels"
             rebuild_dir.mkdir(exist_ok=True)
-            
+
             try:
                 logger.info(f"Executing rebuild script: {rebuild_script}")
                 result = subprocess.run(
@@ -395,17 +402,19 @@ class ReproducibilityChecker:
                     check=True,
                 )
                 logger.debug(f"Rebuild script output: {result.stdout}")
-                
+
                 # Compare original and rebuilt wheels
                 for wheel in wheels:
                     rebuilt_wheel = rebuild_dir / wheel.name
                     if rebuilt_wheel.exists():
                         original_digest = self.compute_wheel_digest(wheel)
                         rebuilt_digest = self.compute_wheel_digest(rebuilt_wheel)
-                        
-                        is_reproducible = original_digest.sha256 == rebuilt_digest.sha256
+
+                        is_reproducible = (
+                            original_digest.sha256 == rebuilt_digest.sha256
+                        )
                         size_match = original_digest.size == rebuilt_digest.size
-                        
+
                         # If not reproducible, check normalized comparison
                         normalized_match = False
                         differences = []
@@ -414,8 +423,10 @@ class ReproducibilityChecker:
                                 wheel, rebuilt_wheel
                             )
                             if not normalized_match:
-                                differences = self._find_differences(wheel, rebuilt_wheel)
-                        
+                                differences = self._find_differences(
+                                    wheel, rebuilt_wheel
+                                )
+
                         reports[wheel.name] = ReproducibilityReport(
                             wheel_name=wheel.name,
                             is_reproducible=is_reproducible,
@@ -425,8 +436,10 @@ class ReproducibilityChecker:
                             normalized_match=normalized_match,
                             differences=differences,
                         )
-                        
-                        print(f"  {wheel.name}: {'✓ reproducible' if is_reproducible else '✗ differs'}")
+
+                        print(
+                            f"  {wheel.name}: {'✓ reproducible' if is_reproducible else '✗ differs'}"
+                        )
                     else:
                         logger.warning(f"Rebuilt wheel not found: {wheel.name}")
                         reports[wheel.name] = ReproducibilityReport(
@@ -437,7 +450,7 @@ class ReproducibilityChecker:
                             size_match=False,
                             differences=["Rebuilt wheel not produced"],
                         )
-                        
+
             except subprocess.TimeoutExpired:
                 logger.error("Rebuild script timed out after 10 minutes")
                 print("Error: Rebuild script timed out")

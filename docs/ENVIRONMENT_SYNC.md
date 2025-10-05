@@ -31,6 +31,7 @@ The synchronization system consists of three components:
 ### Triggered By
 
 Synchronization is triggered when these files change:
+
 - `pyproject.toml` - Project dependencies
 - `.devcontainer/**` - Devcontainer configuration
 - `.github/workflows/ci.yml` - CI workflow
@@ -49,6 +50,7 @@ python scripts/sync_env_deps.py
 ```
 
 This will:
+
 - Update all environment configurations
 - Report changes made
 - Validate consistency
@@ -72,11 +74,13 @@ git commit --no-verify -m "Update dependencies"
 ### CI Workflow
 
 On push to main, if sync is needed:
+
 - A PR is automatically created with the sync changes
 - The PR includes a detailed description of changes
 - Review and merge the PR to apply the changes
 
 On pull requests:
+
 - The workflow validates that environments are in sync
 - Fails if sync is needed
 - Run `python scripts/sync_env_deps.py` locally to fix
@@ -109,6 +113,7 @@ All workflows use the same `uv sync` command pattern.
 ### Dependency Command Extraction
 
 The sync script extracts the canonical command by:
+
 1. Reading `pyproject.toml` to understand dependency structure
 2. Determining the appropriate `uv sync` flags
 3. Applying the same command to all environments
@@ -116,6 +121,7 @@ The sync script extracts the canonical command by:
 ### Update Strategy
 
 Updates are applied using:
+
 - Regex pattern matching for `uv sync` commands
 - Preserves formatting and context
 - Only modifies the actual command string
@@ -123,6 +129,7 @@ Updates are applied using:
 ### Validation
 
 Consistency validation checks:
+
 - All files contain `uv sync` commands
 - Commands use compatible flags
 - No conflicting patterns exist
@@ -193,6 +200,7 @@ git commit
 ## Future Enhancements
 
 Planned improvements:
+
 - Support for additional package managers
 - Sync of tool versions (uv, Python)
 - Validation of installed package versions

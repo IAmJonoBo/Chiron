@@ -224,7 +224,7 @@ jobs:
           cd airgap-bundles
 
           # Generate checksums
-          sha256sum *.tar.gz > SHA256SUMS
+          sha256sum *.tar.gz > wheelhouse.sha256
 
           # Generate detailed manifest
           cat > MANIFEST.txt << EOF
@@ -243,7 +243,7 @@ jobs:
           - Installation scripts and documentation
 
           Verification:
-          1. Verify checksums: sha256sum -c SHA256SUMS
+          1. Verify checksums: sha256sum -c wheelhouse.sha256
           2. Review SBOM: cat wheelhouse-sbom.json
           3. Check vulnerabilities: cat wheelhouse-vulnerabilities.json
           4. Install: bash install-offline.sh
@@ -302,7 +302,7 @@ jobs:
             ### Verification
             ```bash
             # Verify checksums
-            sha256sum -c SHA256SUMS
+            sha256sum -c wheelhouse.sha256
 
             # Verify signatures (requires cosign)
             cosign verify-blob --bundle chiron-airgap-*.tar.gz.sigstore.json chiron-airgap-*.tar.gz
