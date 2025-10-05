@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-import ast
 from pathlib import Path
-from unittest.mock import Mock, patch
-
-import pytest
 
 from chiron.deps.graph import (
     analyze_dependencies,
@@ -235,9 +231,7 @@ import json
         assert "json" in graph["chiron"]["external_deps"]
         assert "sys" in graph["chiron"]["external_deps"]
 
-    def test_analyze_dependencies_custom_exclude_patterns(
-        self, tmp_path: Path
-    ) -> None:
+    def test_analyze_dependencies_custom_exclude_patterns(self, tmp_path: Path) -> None:
         """Test analyzing with custom exclude patterns."""
         # Create test directory
         test_dir = tmp_path / "tests"

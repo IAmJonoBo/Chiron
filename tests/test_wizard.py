@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
-
-import pytest
 
 from chiron.wizard import ChironWizard, run_init_wizard
 
@@ -37,19 +34,19 @@ class TestChironWizard:
         """Test basic project initialization."""
         # Mock user inputs
         mock_prompt.side_effect = [
-            "my-service",           # service name
-            "1.0.0",               # version
-            "http://otel:4317",    # OTLP endpoint
-            "my-wheelhouse",       # wheelhouse path
-            "3.12 3.13",          # python versions
+            "my-service",  # service name
+            "1.0.0",  # version
+            "http://otel:4317",  # OTLP endpoint
+            "my-wheelhouse",  # wheelhouse path
+            "3.12 3.13",  # python versions
         ]
         mock_confirm.side_effect = [
-            True,   # telemetry enabled
-            True,   # security enabled
-            True,   # audit logging
+            True,  # telemetry enabled
+            True,  # security enabled
+            True,  # audit logging
             False,  # require signatures
-            True,   # linux
-            True,   # macos
+            True,  # linux
+            True,  # macos
             False,  # windows
             False,  # save config
         ]
@@ -87,7 +84,7 @@ class TestChironWizard:
         mock_confirm.side_effect = [
             False,  # telemetry disabled
             False,  # security disabled
-            True,   # linux
+            True,  # linux
             False,  # macos
             False,  # windows
             False,  # don't save
@@ -108,15 +105,16 @@ class TestChironWizard:
     ) -> None:
         """Test project initialization with security disabled."""
         mock_prompt.side_effect = [
-            "test-service",
-            "0.1.0",
-            "wheelhouse",
-            "3.12",
+            "test-service",  # service_name
+            "0.1.0",  # version
+            "http://localhost:4317",  # otlp_endpoint (telemetry enabled)
+            "wheelhouse",  # wheelhouse_path
+            "3.12 3.13",  # python_versions
         ]
         mock_confirm.side_effect = [
-            True,   # telemetry enabled
+            True,  # telemetry enabled
             False,  # security disabled
-            True,   # linux
+            True,  # linux
             False,  # macos
             False,  # windows
             False,  # don't save
@@ -144,10 +142,11 @@ class TestChironWizard:
     ) -> None:
         """Test saving configuration to file."""
         mock_prompt.side_effect = [
-            "test-service",
-            "0.1.0",
-            "wheelhouse",
-            "3.12",
+            "test-service",  # service_name
+            "0.1.0",  # version
+            "http://localhost:4317",  # otlp_endpoint (telemetry enabled)
+            "wheelhouse",  # wheelhouse_path
+            "3.12 3.13",  # python_versions
         ]
         mock_confirm.side_effect = [
             True,  # telemetry
@@ -155,8 +154,8 @@ class TestChironWizard:
             True,  # audit logging
             True,  # require signatures
             True,  # linux
-            False, # macos
-            False, # windows
+            False,  # macos
+            False,  # windows
             True,  # save config
         ]
 
@@ -165,7 +164,7 @@ class TestChironWizard:
         mock_open.return_value.__enter__.return_value = mock_file
 
         wizard = ChironWizard()
-        config = wizard.init_project()
+        _config = wizard.init_project()
 
         # Verify file was opened for writing
         mock_open.assert_called_once()
@@ -183,9 +182,9 @@ class TestChironWizard:
             "my-wheelhouse",  # output directory
         ]
         mock_confirm.side_effect = [
-            True,   # with SBOM
+            True,  # with SBOM
             False,  # no signatures
-            True,   # with vuln scan
+            True,  # with vuln scan
         ]
 
         wizard = ChironWizard()
@@ -230,10 +229,10 @@ class TestChironWizard:
             "/path/to/artifact",  # target
         ]
         mock_confirm.side_effect = [
-            True,   # verify signatures
-            True,   # verify SBOM
+            True,  # verify signatures
+            True,  # verify SBOM
             False,  # no provenance
-            True,   # verify hashes
+            True,  # verify hashes
         ]
 
         wizard = ChironWizard()
@@ -324,9 +323,7 @@ class TestChironWizard:
         assert "3.13" in versions
 
     @patch("chiron.wizard.Prompt.ask")
-    def test_select_python_versions_with_extra_spaces(
-        self, mock_prompt: Mock
-    ) -> None:
+    def test_select_python_versions_with_extra_spaces(self, mock_prompt: Mock) -> None:
         """Test parsing Python versions with extra spaces."""
         mock_prompt.return_value = "3.12  3.13   3.14"
 

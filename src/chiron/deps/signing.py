@@ -57,7 +57,7 @@ class CosignSigner:
         cosign = shutil.which("cosign")
         if not cosign:
             logger.error(
-                "cosign not found. " "Install from: https://github.com/sigstore/cosign"
+                "cosign not found. Install from: https://github.com/sigstore/cosign"
             )
             return SigningResult(
                 success=False, error_message="cosign not found in PATH"

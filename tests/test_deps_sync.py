@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
-from packaging.specifiers import SpecifierSet
-from packaging.version import Version
 
 from chiron.deps.sync import (
     ALLOWED_DRIFT_STATUSES,

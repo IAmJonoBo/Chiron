@@ -76,7 +76,7 @@ class SBOMGenerator:
         cyclonedx = shutil.which("cyclonedx-py")
         if not cyclonedx:
             logger.error(
-                "cyclonedx-py not found. " "Install with: pip install cyclonedx-bom"
+                "cyclonedx-py not found. Install with: pip install cyclonedx-bom"
             )
             return False
 

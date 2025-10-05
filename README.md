@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/IAmJonoBo/Chiron/workflows/CI/badge.svg)](https://github.com/IAmJonoBo/Chiron/actions/workflows/ci.yml)
 [![Quality Gates](https://github.com/IAmJonoBo/Chiron/workflows/Quality%20Gates/badge.svg)](https://github.com/IAmJonoBo/Chiron/actions/workflows/quality-gates.yml)
-[![Security Scan](https://github.com/IAmJonoBo/Chiron/workflows/Security%20Scan/badge.svg)](https://github.com/IAmJonoBo/Chiron/actions)
 [![codecov](https://codecov.io/gh/IAmJonoBo/Chiron/branch/main/graph/badge.svg)](https://codecov.io/gh/IAmJonoBo/Chiron)
 [![PyPI version](https://badge.fury.io/py/chiron.svg)](https://badge.fury.io/py/chiron)
 [![Python versions](https://img.shields.io/pypi/pyversions/chiron.svg)](https://pypi.org/project/chiron/)

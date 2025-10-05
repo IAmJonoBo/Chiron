@@ -75,7 +75,7 @@ def validate_mcp_server():
     print("\n9. Testing unknown tool handling...")
     result = server.execute_tool("unknown_tool", {})
     assert "error" in result, "Should return error for unknown tool"
-    print(f"   ✅ Unknown tool handled correctly")
+    print("   ✅ Unknown tool handled correctly")
 
     print("\n" + "=" * 70)
     print("✅ All MCP Server validations passed!")

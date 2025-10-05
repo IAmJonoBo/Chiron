@@ -131,9 +131,10 @@ class TestCliWheelhouseCommandErrors:
     def test_wheelhouse_create_dry_run(self, tmp_path: Path) -> None:
         """Test wheelhouse creation in dry-run mode."""
         runner = CliRunner()
-        with patch("chiron.cli.main._run_command") as mock_run:
+        with patch("chiron.cli.main._run_command") as _mock_run:
             result = runner.invoke(
-                cli, ["--dry-run", "wheelhouse", "create", "--output-dir", str(tmp_path)]
+                cli,
+                ["--dry-run", "wheelhouse", "create", "--output-dir", str(tmp_path)],
             )
             # Just check that it doesn't crash unexpectedly
             # Exit code might vary depending on validation
@@ -228,7 +229,7 @@ class TestCliMultipleErrorScenarios:
     def test_dry_run_with_multiple_commands(self) -> None:
         """Test dry-run mode with multiple commands."""
         runner = CliRunner()
-        with patch("chiron.cli.main._run_command") as mock_run:
+        with patch("chiron.cli.main._run_command") as _mock_run:
             # Test that dry-run prevents execution
             result = runner.invoke(cli, ["--dry-run", "release"])
             assert result.exit_code == 0
@@ -257,9 +258,7 @@ class TestCliExceptionHandling:
     """Tests for general exception handling."""
 
     @patch("chiron.cli.main.validate_config")
-    def test_config_validation_error(
-        self, mock_validate: Mock, tmp_path: Path
-    ) -> None:
+    def test_config_validation_error(self, mock_validate: Mock, tmp_path: Path) -> None:
         """Test handling of config validation errors."""
         runner = CliRunner()
         config_file = tmp_path / "config.json"

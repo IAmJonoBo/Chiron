@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import tarfile
 from pathlib import Path
-from unittest.mock import Mock, patch
 
 import pytest
 
@@ -142,7 +141,7 @@ class TestWheelhouseBundler:
         bundler = WheelhouseBundler(wheelhouse_dir)
         output_path = tmp_path / "bundle.tar.gz"
 
-        metadata = bundler.create_bundle(
+        _metadata = bundler.create_bundle(
             output_path, include_sbom=False, include_osv=False
         )
 
@@ -188,7 +187,7 @@ class TestWheelhouseBundler:
         bundler = WheelhouseBundler(wheelhouse_dir)
         output_path = tmp_path / "bundle.tar.gz"
 
-        metadata = bundler.create_bundle(
+        _metadata = bundler.create_bundle(
             output_path, include_sbom=True, include_osv=False
         )
 
@@ -215,7 +214,7 @@ class TestWheelhouseBundler:
         bundler = WheelhouseBundler(wheelhouse_dir)
         output_path = tmp_path / "bundle.tar.gz"
 
-        metadata = bundler.create_bundle(
+        _metadata = bundler.create_bundle(
             output_path, include_sbom=False, include_osv=True
         )
 

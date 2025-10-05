@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, call, mock_open, patch
-
-import pytest
+from unittest.mock import Mock, patch
 
 from chiron.deps.signing import (
     CosignSigner,

@@ -368,8 +368,8 @@ class MCPServer:
                 # Use default policy
                 policy = DependencyPolicy()
 
-            # Create policy engine and check for violations
-            engine = PolicyEngine(policy)
+            # Policy engine would be used to check for violations
+            # engine = PolicyEngine(policy)
 
             return {
                 "status": "success",

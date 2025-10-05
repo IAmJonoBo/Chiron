@@ -599,7 +599,9 @@ def deps_policy(
                         icon = (
                             "❌"
                             if v.severity == "error"
-                            else "⚠️" if v.severity == "warning" else "ℹ️"
+                            else "⚠️"
+                            if v.severity == "warning"
+                            else "ℹ️"
                         )
                         typer.echo(f"   {icon} {v.violation_type}: {v.message}")
         else:
@@ -1531,7 +1533,7 @@ def orchestrate_governance(ctx: click.Context) -> None:
 
 @copilot_app.command("status")
 def copilot_status(
-    json_output: bool = typer.Option(False, "--json", help="Output status as JSON")
+    json_output: bool = typer.Option(False, "--json", help="Output status as JSON"),
 ) -> None:
     """Show readiness information for the Copilot coding agent."""
 
@@ -1693,7 +1695,7 @@ def copilot_env(
         "bash",
         "--shell",
         help="Target shell for output (bash, zsh, sh, fish, powershell, cmd)",
-    )
+    ),
 ) -> None:
     """Emit shell commands that configure Copilot-friendly environment variables."""
 
