@@ -13,7 +13,7 @@ from chiron.service.app import create_app
 
 
 @pytest.fixture()
-def service_client(tmp_path, monkeypatch) -> TestClient:
+def service_client(tmp_path, monkeypatch):
     """Provide a TestClient bound to a temporary workspace."""
     config: dict[str, Any] = {
         "service_name": "test-service",
@@ -25,7 +25,9 @@ def service_client(tmp_path, monkeypatch) -> TestClient:
     }
     app = create_app(config=config)
     monkeypatch.chdir(tmp_path)
-    return TestClient(app)
+    # Use context manager to properly initialize lifespan
+    with TestClient(app) as client:
+        yield client
 
 
 def test_list_wheelhouse_empty(service_client: TestClient) -> None:
@@ -137,3 +139,84 @@ def test_create_airgap_bundle_requires_name(service_client: TestClient) -> None:
         json={"bundle_name": ""},
     )
     assert response.status_code == 400
+
+
+def test_health_check(service_client: TestClient) -> None:
+    """Test basic health check endpoint."""
+    response = service_client.get("/health/")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "healthy"
+    assert "version" in data
+    assert "telemetry_enabled" in data
+    assert "security_mode" in data
+    assert "timestamp" in data
+
+
+def test_liveness_check(service_client: TestClient) -> None:
+    """Test liveness check endpoint."""
+    response = service_client.get("/health/live")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "alive"
+
+
+def test_readiness_check(service_client: TestClient) -> None:
+    """Test readiness check endpoint."""
+    response = service_client.get("/health/ready")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "healthy"
+    assert "checks" in data
+    assert "config_valid" in data["checks"]
+    assert "dependencies" in data["checks"]
+
+
+def test_health_check_error_handling(monkeypatch, tmp_path) -> None:
+    """Test health check error handling when core fails."""
+    from chiron.service.app import create_app
+    from chiron.exceptions import ChironError
+    
+    config: dict[str, Any] = {
+        "service_name": "test-service",
+        "telemetry_enabled": False,
+        "security_enabled": False,
+        "cors_enabled": False,
+    }
+    app = create_app(config=config)
+    
+    with TestClient(app) as client:
+        # Mock health_check to raise an error
+        def mock_health_check(*args, **kwargs):
+            raise ChironError("Health check failed")
+        
+        monkeypatch.setattr(client.app.state.core, "health_check", mock_health_check)
+        
+        response = client.get("/health/")
+        assert response.status_code == 503
+        assert "unhealthy" in response.json()["detail"].lower()
+
+
+def test_readiness_check_config_invalid(monkeypatch, tmp_path) -> None:
+    """Test readiness check when config validation fails."""
+    from chiron.service.app import create_app
+    from chiron.exceptions import ChironError
+    
+    config: dict[str, Any] = {
+        "service_name": "test-service",
+        "telemetry_enabled": False,
+        "security_enabled": False,
+        "cors_enabled": False,
+    }
+    app = create_app(config=config)
+    
+    with TestClient(app) as client:
+        # Mock validate_config to raise an error
+        def mock_validate_config(*args, **kwargs):
+            raise ChironError("Config invalid")
+        
+        monkeypatch.setattr(client.app.state.core, "validate_config", mock_validate_config)
+        
+        response = client.get("/health/ready")
+        assert response.status_code == 503
+        assert "not ready" in response.json()["detail"].lower()
