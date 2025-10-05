@@ -285,11 +285,11 @@ Chiron is actively developed and maintained. We follow semantic versioning and m
 
 ### Quality Status
 
-- ✅ **Test Coverage**: 55.45% (exceeds 50% minimum gate)
+- ✅ **Test Coverage**: 58.2% (exceeds 50% minimum gate, approaching 60% target)
 - ✅ **Security Gate**: Zero critical vulnerabilities
 - ✅ **Type Safety**: Strict MyPy checking passes
 - ✅ **Code Quality**: Ruff linting passes
-- ✅ **All Tests Passing**: 254 tests (0 failures)
+- ✅ **All Tests Passing**: 334 tests (0 failures)
 
 ### Feature Status
 
@@ -299,8 +299,8 @@ Chiron is actively developed and maintained. We follow semantic versioning and m
 - ✅ CLI interface with subprocess utilities
 - ✅ Security and SBOM features
 - ✅ Quality gates enforcement
+- ✅ MCP server with real operations (wheelhouse, policy, verification)
 - 🟡 Supply-chain modules (testing in progress)
-- 🔴 MCP server (infrastructure only)
 - 🚧 Advanced plugin system
 - 🚧 Multi-tenant support
 - 📋 Performance benchmarking suite

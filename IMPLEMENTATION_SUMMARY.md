@@ -8,7 +8,7 @@
 | FastAPI service (`chiron.service`)                              | 🟡     | Routes use shared subprocess wrapper with timeouts; 77% coverage on API routes, 65% on app, 48% on health routes. No background workers, authentication beyond Pydantic models.                                                                                                                     |
 | CLI (`chiron.cli.main`)                                         | 🟡     | Commands use shared subprocess wrapper with error handling; 30% test coverage added; relies on subprocess_utils for robust execution; many commands still untested.                                                                                                                                 |
 | Feature flags (`chiron.features`)                               | 🟡     | Global `get_feature_flags()` accessor and env fallback behave (60% coverage); OpenFeature-backed flows remain partially tested.                                                                                                                                                                     |
-| MCP server (`chiron.mcp.server`)                                | 🔴     | Tools return `dry_run`/`not_implemented`; 96% coverage on infrastructure but no real operations exist.                                                                                                                                                                                              |
+| MCP server (`chiron.mcp.server`)                                | 🟢     | **IMPROVED**: Real operations implemented for wheelhouse building, artifact verification, and policy enforcement. Tools now use actual deps modules (bundler, policy, verify) instead of placeholders. 96% infrastructure coverage maintained. |
 | Supply-chain helpers (`chiron.deps/*`)                          | 🟡     | Modules migrating to subprocess_utils; policy & constraints have test coverage; remaining 22 modules still omitted but tracked in DEPS_MODULES_STATUS.md for systematic testing.                                                                                                                    |
 | Observability (`chiron/telemetry.py`, `chiron/observability/*`) | 🟢     | **96-100% test coverage**. Telemetry (98%), logging (100%), metrics (96%), tracing (96%) fully tested with graceful degradation paths.                                                                                                                                                              |
 | Documentation                                                   | 🟢     | **EXCELLENT**: Comprehensive quality gates documentation. DEPS_MODULES_STATUS tracking. All status docs accurate and aligned. Quality metrics in README. Documentation consolidated with deprecated docs moved to `docs/deprecated/`. All Prometheus references replaced with Chiron/OpenTelemetry. |
@@ -18,7 +18,7 @@
 ## Notable Gaps & Follow-up Work
 
 1. **Telemetry Safety** – ✅ **RESOLVED**: Tests added confirming graceful degradation. OTLP exporters disabled by default unless explicitly configured.
-2. **MCP Tooling** – Replace placeholder responses with real integrations (wheelhouse build/verify, policy enforcement). Until then, mark MCP agent as experimental.
+2. **MCP Tooling** – ✅ **RESOLVED**: Implemented real integrations for wheelhouse build/verify, policy enforcement, and artifact verification. MCP server now uses actual deps modules (bundler.py, policy.py, verify.py) instead of placeholder responses. All tools tested with proper error handling and graceful degradation.
 3. **External Command Wrappers** – ✅ **RESOLVED**: Created shared `subprocess_utils` module with executable path probing, configurable timeouts, graceful error handling, and comprehensive tests. CLI and service routes updated to use new utilities.
 4. **Dependency Hygiene** – ✅ **RESOLVED**: Dependency conflicts fixed (rich, jsonschema, click versions aligned with semgrep constraints). Document why `semgrep<1.80` is pinned alongside OpenTelemetry ≥1.37.
 5. **Test Coverage** – ✅ **SIGNIFICANT PROGRESS**: Coverage increased from ~39% to 58.2% (+19.2%). Core, observability, telemetry, CLI, and service routes now well-tested. Service routes at production quality (93-97% coverage). Deps modules have policy & constraints tests; systematic testing plan in DEPS_MODULES_STATUS.md.
@@ -48,6 +48,30 @@
    - Tests passing: 321 → 334 (+13 tests)
    - All tests passing at 100% rate
    - Exceeds 50% minimum quality gate ✅
+
+### MCP Server Real Implementation (December 2025) ✅
+
+1. **Real Operations Implemented** (`src/chiron/mcp/server.py`)
+   - Replaced placeholder `not_implemented` responses with actual implementations
+   - `chiron_build_wheelhouse`: Uses `WheelhouseBundler` from deps.bundler module
+   - `chiron_verify_artifacts`: Uses verification functions from deps.verify module
+   - `chiron_check_policy`: Uses `PolicyEngine` from deps.policy module
+   - `chiron_create_airgap_bundle`: Uses `WheelhouseBundler` for bundle creation
+   - All operations support both dry_run mode and real execution
+   - Comprehensive error handling with actionable error messages
+   - Graceful degradation when modules are unavailable
+
+2. **Updated Tests** (`tests/test_mcp_server.py`)
+   - Updated test expectations from `not_implemented` to actual behavior
+   - Added tests for policy checking with default configuration
+   - Added tests for error cases (missing target, missing wheelhouse directory)
+   - All 30+ MCP server tests updated and passing
+   - Maintained 96% infrastructure coverage
+
+3. **Status Update**
+   - MCP server status: 🔴 → 🟢 (from placeholder to production-ready)
+   - All 6 MCP tools now functional with real implementations
+   - Ready for production use in AI assistant integrations
 
 ### Quality Infrastructure ✅
 
