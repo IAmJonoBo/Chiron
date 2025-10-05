@@ -316,5 +316,5 @@ class TestConflictResolver:
 
         # Summary should be a dictionary
         assert isinstance(report.summary, dict)
-        # Should have at least total count
-        assert "total" in report.summary or len(report.summary) == 0
+        # Should have at least total_conflicts count
+        assert "total_conflicts" in report.summary or len(report.summary) == 0
