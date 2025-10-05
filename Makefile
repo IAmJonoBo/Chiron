@@ -101,3 +101,6 @@ coverage: ## Generate coverage report
 
 benchmark: ## Run performance benchmarks
 	uv run pytest tests/ -m benchmark --benchmark-only
+
+sync-env: ## Sync dev and CI environment dependencies
+	python scripts/sync_env_deps.py
