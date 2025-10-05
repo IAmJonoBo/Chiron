@@ -300,11 +300,31 @@ known-first-party = ["chiron"]
 [tool.coverage.run]
 source = ["src/chiron"]
 omit = [
-  "src/chiron/deps/*",
   "src/chiron/doctor/*",
   "src/chiron/remediation/*",
   "src/chiron/tools/*",
   "src/chiron/typer_cli.py",
+  # Deps modules - gradual inclusion as tests are added
+  "src/chiron/deps/bundler.py",
+  "src/chiron/deps/conflict_resolver.py",
+  "src/chiron/deps/drift.py",
+  "src/chiron/deps/graph.py",
+  "src/chiron/deps/guard.py",
+  "src/chiron/deps/mirror_manager.py",
+  "src/chiron/deps/oci_packaging.py",
+  "src/chiron/deps/planner.py",
+  "src/chiron/deps/preflight.py",
+  "src/chiron/deps/preflight_summary.py",
+  "src/chiron/deps/private_mirror.py",
+  "src/chiron/deps/reproducibility.py",
+  "src/chiron/deps/safe_upgrade.py",
+  "src/chiron/deps/security_overlay.py",
+  "src/chiron/deps/signing.py",
+  "src/chiron/deps/status.py",
+  "src/chiron/deps/supply_chain.py",
+  "src/chiron/deps/sync.py",
+  "src/chiron/deps/upgrade_advisor.py",
+  "src/chiron/deps/verify.py",
 ]
 
 [tool.coverage.report]

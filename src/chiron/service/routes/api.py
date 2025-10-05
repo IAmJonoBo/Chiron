@@ -9,6 +9,11 @@ from starlette.requests import Request
 
 from chiron.core import ChironCore
 from chiron.exceptions import ChironError
+from chiron.subprocess_utils import (
+    ExecutableNotFoundError,
+    SubprocessTimeoutError,
+    run_subprocess,
+)
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -154,7 +159,7 @@ async def build_wheelhouse(request: WheelhouseRequest) -> dict[str, Any]:
         )
 
         for package in request.packages:
-            subprocess.run(
+            run_subprocess(
                 ["uv", "pip", "download", "-d", str(wheelhouse_path), package],
                 check=True,
                 capture_output=True,
@@ -167,9 +172,9 @@ async def build_wheelhouse(request: WheelhouseRequest) -> dict[str, Any]:
             "packages": request.packages,
         }
 
-    except subprocess.CalledProcessError as e:
+    except (subprocess.CalledProcessError, ExecutableNotFoundError, SubprocessTimeoutError) as e:
         logger.error("Wheelhouse build failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Build failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Build failed: {e}") from e
 
 
 @router.get("/airgap/bundles", summary="List airgap bundles")
@@ -223,20 +228,21 @@ async def create_airgap_bundle(request: AirgapBundleRequest) -> dict[str, Any]:
             if request.include_extras:
                 cmd[-1] = ".[all]"
 
-            subprocess.run(cmd, check=True, capture_output=True)
+            run_subprocess(cmd, check=True, capture_output=True)
 
             # Add security tools if requested
             if request.include_security:
                 for tool in ["bandit", "safety", "semgrep"]:
-                    subprocess.run(
+                    run_subprocess(
                         ["uv", "pip", "download", "-d", str(wheelhouse_dir), tool],
                         check=True,
                         capture_output=True,
                     )
 
             # Create bundle
-            subprocess.run(
-                ["tar", "-czf", output_file, "-C", temp_dir, "wheelhouse/"], check=True
+            run_subprocess(
+                ["tar", "-czf", output_file, "-C", temp_dir, "wheelhouse/"],
+                check=True,
             )
 
         return {
@@ -247,6 +253,6 @@ async def create_airgap_bundle(request: AirgapBundleRequest) -> dict[str, Any]:
             "include_security": request.include_security,
         }
 
-    except subprocess.CalledProcessError as e:
+    except (subprocess.CalledProcessError, ExecutableNotFoundError, SubprocessTimeoutError) as e:
         logger.error("Airgap bundle creation failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Bundle creation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Bundle creation failed: {e}") from e

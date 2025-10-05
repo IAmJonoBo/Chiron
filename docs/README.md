@@ -9,6 +9,7 @@ This directory contains up-to-date documentation for the Chiron project. Key sta
 - [GAP_ANALYSIS](GAP_ANALYSIS.md) – Current gaps, failing tests, and remediation plan
 - [IMPLEMENTATION_SUMMARY](../IMPLEMENTATION_SUMMARY.md) – Reality check of feature maturity
 - [TESTING_IMPLEMENTATION_SUMMARY](../TESTING_IMPLEMENTATION_SUMMARY.md) – Latest pytest outcomes and coverage
+- [DEPS_MODULES_STATUS](DEPS_MODULES_STATUS.md) – **NEW**: Supply-chain modules testing roadmap and status tracking
 
 ### For New Users
 
@@ -17,7 +18,9 @@ This directory contains up-to-date documentation for the Chiron project. Key sta
 
 ### Additional Guides
 
-- [ENVIRONMENT_SYNC](ENVIRONMENT_SYNC.md) – **NEW**: Automatic synchronization between dev and CI environments
+- [QUALITY_GATES](QUALITY_GATES.md) – **NEW**: Comprehensive quality gates documentation with frontier standards
+- [DEPS_MODULES_STATUS](DEPS_MODULES_STATUS.md) – **NEW**: Supply-chain modules testing roadmap
+- [ENVIRONMENT_SYNC](ENVIRONMENT_SYNC.md) – Automatic synchronization between dev and CI environments
 - [CI_REPRODUCIBILITY_VALIDATION](CI_REPRODUCIBILITY_VALIDATION.md) – Reproducibility checks and rebuild workflows
 - [GRAFANA_DEPLOYMENT_GUIDE](GRAFANA_DEPLOYMENT_GUIDE.md) – Grafana deployment notes (ensure metrics endpoints exist first)
 - [MCP_INTEGRATION_TESTING](MCP_INTEGRATION_TESTING.md) – MCP testing playbook (tools currently marked experimental)
