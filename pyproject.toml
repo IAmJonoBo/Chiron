@@ -249,6 +249,16 @@ module = "tests.*"
 disallow_untyped_defs = false
 
 [[tool.mypy.overrides]]
+module = "chiron.typer_cli"
+# Legacy/alternative CLI - not currently used
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "chiron.doctor.*"
+# Legacy doctor module - not currently used in main CLI
+ignore_errors = true
+
+[[tool.mypy.overrides]]
 module = [
   "openfeature",
   "openfeature.*",
@@ -261,6 +271,8 @@ module = [
   "opentelemetry",
   "opentelemetry.*",
   "chiron_packaging.*",
+  "google",
+  "google.*",
 ]
 ignore_missing_imports = true
 
