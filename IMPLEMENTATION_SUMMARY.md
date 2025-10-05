@@ -186,7 +186,7 @@
     - CLI: 27% → 42% (in progress)
     - Overall: 55.8% → 63.06% (+7.26%)
     - Tests: 321 → 599 (+278 tests)
-- **Milestone 3** (Planned): Supply-chain & observability – activate `chiron.deps` workflows with real data, complete remaining module tests (target 60%+ coverage), update docs with verified runbooks.
-- **Milestone 4** (Frontier Grade): Achieve 70%+ coverage across all modules, implement all MCP operations, add authentication to service layer, reach frontier standards on all quality gates.
+- **Milestone 3** (Planned): Supply-chain & observability – activate `chiron.deps` workflows with real data, complete remaining module tests (target 65%+ coverage), update docs with verified runbooks.
+- **Milestone 4** (Frontier Grade): Achieve 70%+ coverage across all modules, add authentication to service layer, reach frontier standards on all quality gates.
 
 This summary supersedes earlier versions and accurately reflects current implementation status as of the quality gates implementation.
