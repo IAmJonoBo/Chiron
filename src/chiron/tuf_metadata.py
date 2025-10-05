@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -43,7 +43,7 @@ class TUFMetadata:
         Returns:
             Root metadata dictionary
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires = now + timedelta(days=expires_days)
 
         metadata = {
@@ -76,7 +76,7 @@ class TUFMetadata:
         Returns:
             Targets metadata dictionary
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires = now + timedelta(days=expires_days)
 
         targets = {}
@@ -122,7 +122,7 @@ class TUFMetadata:
         Returns:
             Snapshot metadata dictionary
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires = now + timedelta(days=expires_days)
 
         metadata = {
@@ -147,7 +147,7 @@ class TUFMetadata:
         Returns:
             Timestamp metadata dictionary
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires = now + timedelta(hours=expires_hours)
 
         metadata = {
@@ -183,7 +183,7 @@ class TUFMetadata:
                 expires = datetime.fromisoformat(
                     metadata["expires"].replace("Z", "+00:00")
                 )
-                if expires < datetime.now(timezone.utc):
+                if expires < datetime.now(UTC):
                     errors.append("Metadata has expired")
             except ValueError:
                 errors.append("Invalid expiration date format")
@@ -227,7 +227,8 @@ class TUFMetadata:
             Metadata dictionary
         """
         with open(filepath) as f:
-            return json.load(f)
+            data: dict[str, Any] = json.load(f)
+            return data
 
     def _detect_platform(self, filename: str) -> str:
         """Detect platform from filename.

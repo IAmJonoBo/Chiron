@@ -1,9 +1,11 @@
 """Command-line interface for Chiron."""
 
 import json
+import shutil
+import subprocess
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional
 
 import click
 import structlog
@@ -17,6 +19,38 @@ from chiron.schema_validator import validate_config
 
 console = Console()
 logger = structlog.get_logger(__name__)
+
+
+def _resolve_executable(executable: str) -> str:
+    """Return an absolute path to the requested executable or raise a Click error."""
+
+    path = Path(executable)
+    if path.is_absolute():
+        return str(path)
+
+    if path.parent != Path("."):
+        candidate = path.resolve()
+        if candidate.exists():
+            return str(candidate)
+
+    resolved = shutil.which(executable)
+    if resolved is None:
+        raise click.ClickException(
+            f"Required executable '{executable}' was not found on PATH."
+        )
+    return resolved
+
+
+def _run_command(
+    command: Sequence[str], **kwargs: object
+) -> subprocess.CompletedProcess:
+    """Run a command with sanitized executable resolution."""
+
+    if not command:
+        raise click.ClickException("Command must contain at least one argument.")
+
+    resolved = [_resolve_executable(command[0]), *command[1:]]
+    return subprocess.run(resolved, **kwargs)  # noqa: S603
 
 
 @click.group()
@@ -34,7 +68,7 @@ logger = structlog.get_logger(__name__)
 @click.pass_context
 def cli(
     ctx: click.Context,
-    config: Optional[Path],
+    config: Path | None,
     verbose: bool,
     json_output: bool,
     dry_run: bool,
@@ -68,14 +102,13 @@ def cli(
 
 @cli.command()
 @click.option("--wizard", is_flag=True, help="Use interactive wizard mode")
-@click.pass_context
-def init(ctx: click.Context, wizard: bool) -> None:
+def init(wizard: bool) -> None:
     """Initialize a new Chiron project."""
     if wizard:
         from chiron.wizard import run_init_wizard
 
         try:
-            config = run_init_wizard()
+            run_init_wizard()
             # Config is already saved by wizard
             return
         except KeyboardInterrupt:
@@ -121,11 +154,9 @@ def build(ctx: click.Context) -> None:
 
     console.print("[blue]Building project with cibuildwheel...[/blue]")
 
-    import subprocess
-
     try:
         # Use uv to run cibuildwheel
-        result = subprocess.run(
+        result = _run_command(
             ["uv", "run", "cibuildwheel", "--platform", "auto"],
             check=True,
             capture_output=True,
@@ -147,11 +178,9 @@ def release(ctx: click.Context) -> None:
     """Cut a semantic release."""
     console.print("[blue]Creating semantic release...[/blue]")
 
-    import subprocess
-
     try:
         # Use semantic-release to create a release
-        result = subprocess.run(
+        result = _run_command(
             ["uv", "run", "semantic-release", "version"],
             check=True,
             capture_output=True,
@@ -188,16 +217,13 @@ def wheelhouse(
 
     console.print(f"[blue]Creating wheelhouse in {output_dir}...[/blue]")
 
-    import subprocess
-    from pathlib import Path
-
     try:
         wheelhouse_path = Path(output_dir)
         wheelhouse_path.mkdir(exist_ok=True)
 
         # Download dependencies
         console.print("[blue]Downloading dependencies...[/blue]")
-        subprocess.run(
+        _run_command(
             ["uv", "pip", "download", "-d", str(wheelhouse_path), "."],
             check=True,
             capture_output=True,
@@ -207,7 +233,7 @@ def wheelhouse(
         if with_sbom:
             console.print("[blue]Generating SBOM...[/blue]")
             try:
-                subprocess.run(
+                _run_command(
                     ["syft", str(wheelhouse_path), "-o", "cyclonedx-json=sbom.json"],
                     check=True,
                     capture_output=True,
@@ -223,7 +249,7 @@ def wheelhouse(
             console.print("[blue]Signing artifacts...[/blue]")
             try:
                 for wheel in wheelhouse_path.glob("*.whl"):
-                    subprocess.run(
+                    _run_command(
                         [
                             "cosign",
                             "sign-blob",
@@ -271,9 +297,7 @@ def airgap(
 
     console.print(f"[blue]Creating air-gapped bundle: {output}...[/blue]")
 
-    import subprocess
     import tempfile
-    from pathlib import Path
 
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -287,13 +311,13 @@ def airgap(
             if include_extras:
                 cmd[-1] = ".[all]"
 
-            subprocess.run(cmd, check=True, capture_output=True)
+            _run_command(cmd, check=True, capture_output=True)
 
             # Security tools
             if include_security:
                 console.print("[blue]Adding security tools...[/blue]")
                 for tool in ["bandit", "safety", "semgrep"]:
-                    subprocess.run(
+                    _run_command(
                         ["uv", "pip", "download", "-d", str(wheelhouse_dir), tool],
                         check=True,
                         capture_output=True,
@@ -301,7 +325,7 @@ def airgap(
 
             # Create bundle
             console.print(f"[blue]Creating bundle: {output}...[/blue]")
-            subprocess.run(
+            _run_command(
                 ["tar", "-czf", output, "-C", temp_dir, "wheelhouse/"], check=True
             )
 
@@ -322,7 +346,7 @@ def airgap(
 @click.pass_context
 def verify(
     ctx: click.Context,
-    target: Optional[str],
+    target: str | None,
     verify_signatures: bool,
     verify_sbom: bool,
     verify_provenance: bool,
@@ -331,9 +355,6 @@ def verify(
 ) -> None:
     """Verify signatures, provenance, and SBOM of artifacts."""
     console.print("[blue]Verifying artifacts...[/blue]")
-
-    import subprocess
-    from pathlib import Path
 
     # If --all is specified, enable all verifications
     if verify_all:
@@ -348,7 +369,7 @@ def verify(
         console.print(f"[red]Target not found: {target}[/red]")
         sys.exit(1)
 
-    results = []
+    results: list[tuple[str, bool | None]] = []
     all_passed = True
 
     # Verify hashes
@@ -362,7 +383,7 @@ def verify(
 
         if sha256_file.exists():
             try:
-                result = subprocess.run(
+                result = _run_command(
                     ["sha256sum", "-c", str(sha256_file)],
                     cwd=sha256_file.parent,
                     capture_output=True,
@@ -373,7 +394,7 @@ def verify(
                     console.print("[green]✓ Checksums verified[/green]")
                     results.append(("Checksums", True))
                 else:
-                    console.print(f"[red]✗ Checksum verification failed[/red]")
+                    console.print("[red]✗ Checksum verification failed[/red]")
                     if ctx.obj["verbose"]:
                         console.print(result.stderr)
                     results.append(("Checksums", False))
@@ -398,7 +419,7 @@ def verify(
         if sig_files:
             try:
                 # Check if cosign is available
-                subprocess.run(["cosign", "version"], capture_output=True, check=True)
+                _run_command(["cosign", "version"], capture_output=True, check=True)
 
                 verified_count = 0
                 for sig_file in sig_files:
@@ -406,7 +427,7 @@ def verify(
                         ""
                     )  # Remove .sigstore.json
                     if artifact.exists():
-                        result = subprocess.run(
+                        result = _run_command(
                             [
                                 "cosign",
                                 "verify-blob",
@@ -552,15 +573,12 @@ def download(packages: tuple[str, ...], output_dir: str) -> None:
         f"[blue]Downloading {len(packages)} packages to {output_dir}...[/blue]"
     )
 
-    import subprocess
-    from pathlib import Path
-
     try:
         Path(output_dir).mkdir(exist_ok=True)
 
         for package in packages:
             console.print(f"[blue]Downloading {package}...[/blue]")
-            subprocess.run(
+            _run_command(
                 ["uv", "pip", "download", "-d", output_dir, package], check=True
             )
 

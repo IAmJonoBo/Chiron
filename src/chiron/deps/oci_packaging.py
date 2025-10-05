@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
-import tarfile
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -57,6 +58,24 @@ class OCIPackager:
         """
         self.registry = registry
 
+    @staticmethod
+    def _run_command(
+        cmd: Sequence[str], **kwargs: object
+    ) -> subprocess.CompletedProcess:
+        """Execute a command ensuring the executable is resolved on PATH."""
+
+        if not cmd:
+            raise ValueError("Command must not be empty.")
+
+        executable = cmd[0]
+        path = Path(executable)
+        if not path.is_absolute():
+            resolved = shutil.which(executable)
+            if resolved:
+                cmd = [resolved, *cmd[1:]]
+
+        return subprocess.run(cmd, **kwargs)  # noqa: S603
+
     def check_oras_installed(self) -> bool:
         """Check if ORAS CLI is installed.
 
@@ -64,7 +83,7 @@ class OCIPackager:
             True if ORAS is available
         """
         try:
-            result = subprocess.run(
+            result = self._run_command(
                 ["oras", "version"],
                 check=True,
                 capture_output=True,
@@ -281,7 +300,7 @@ class OCIPackager:
                     f"{artifact_path}:{artifact_type}",
                 ]
 
-            result = subprocess.run(
+            result = self._run_command(
                 cmd,
                 check=True,
                 capture_output=True,
@@ -338,7 +357,7 @@ class OCIPackager:
         print(f"Pulling from {ref}...")
 
         try:
-            subprocess.run(
+            self._run_command(
                 [
                     "oras",
                     "pull",

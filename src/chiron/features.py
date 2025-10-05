@@ -7,7 +7,7 @@ a vendor-agnostic feature flag SDK.
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, cast
 
 __all__ = ["FeatureFlags", "get_feature_flags", "is_feature_enabled"]
 
@@ -19,112 +19,84 @@ try:
     OPENFEATURE_AVAILABLE = True
 except ImportError:
     OPENFEATURE_AVAILABLE = False
-    api = None  # type: ignore
-    EvaluationContext = None  # type: ignore
+    api = cast(Any, None)
+    EvaluationContext = cast(Any, None)
+    InMemoryFlag = cast(Any, None)
+    InMemoryProvider = cast(Any, None)
 
 
 class FeatureFlags:
     """Feature flag manager using OpenFeature."""
 
-    # Default flag definitions
-    DEFAULT_FLAGS = {
-        "allow_public_publish": (
-            InMemoryFlag(
+    if OPENFEATURE_AVAILABLE:
+        DEFAULT_FLAGS: dict[str, InMemoryFlag] = {
+            "allow_public_publish": InMemoryFlag(
                 "allow_public_publish",
                 False,
                 {
                     "description": "Allow publishing to public PyPI",
                     "default": False,
                 },
-            )
-            if OPENFEATURE_AVAILABLE
-            else None
-        ),
-        "require_slsa_provenance": (
-            InMemoryFlag(
+            ),
+            "require_slsa_provenance": InMemoryFlag(
                 "require_slsa_provenance",
                 True,
                 {
                     "description": "Require SLSA provenance for releases",
                     "default": True,
                 },
-            )
-            if OPENFEATURE_AVAILABLE
-            else None
-        ),
-        "enable_oci_distribution": (
-            InMemoryFlag(
+            ),
+            "enable_oci_distribution": InMemoryFlag(
                 "enable_oci_distribution",
                 False,
                 {
                     "description": "Enable OCI artifact distribution",
                     "default": False,
                 },
-            )
-            if OPENFEATURE_AVAILABLE
-            else None
-        ),
-        "enable_tuf_metadata": (
-            InMemoryFlag(
+            ),
+            "enable_tuf_metadata": InMemoryFlag(
                 "enable_tuf_metadata",
                 False,
                 {
                     "description": "Enable TUF metadata generation",
                     "default": False,
                 },
-            )
-            if OPENFEATURE_AVAILABLE
-            else None
-        ),
-        "enable_mcp_agent": (
-            InMemoryFlag(
+            ),
+            "enable_mcp_agent": InMemoryFlag(
                 "enable_mcp_agent",
                 False,
                 {
                     "description": "Enable MCP agent mode",
                     "default": False,
                 },
-            )
-            if OPENFEATURE_AVAILABLE
-            else None
-        ),
-        "dry_run_by_default": (
-            InMemoryFlag(
+            ),
+            "dry_run_by_default": InMemoryFlag(
                 "dry_run_by_default",
                 True,
                 {
                     "description": "Default to dry-run for destructive operations",
                     "default": True,
                 },
-            )
-            if OPENFEATURE_AVAILABLE
-            else None
-        ),
-        "require_code_signatures": (
-            InMemoryFlag(
+            ),
+            "require_code_signatures": InMemoryFlag(
                 "require_code_signatures",
                 True,
                 {
                     "description": "Require code signatures for artifacts",
                     "default": True,
                 },
-            )
-            if OPENFEATURE_AVAILABLE
-            else None
-        ),
-        "enable_vulnerability_blocking": (
-            InMemoryFlag(
+            ),
+            "enable_vulnerability_blocking": InMemoryFlag(
                 "enable_vulnerability_blocking",
                 True,
                 {
                     "description": "Block releases with critical vulnerabilities",
                     "default": True,
                 },
-            )
-            if OPENFEATURE_AVAILABLE
-            else None
-        ),
-    }
+            ),
+        }
+    else:  # pragma: no cover - fallback when OpenFeature missing
+        DEFAULT_FLAGS = {}
 
     def __init__(self, flags: dict[str, Any] | None = None):
         """Initialize feature flags.
@@ -132,7 +104,7 @@ class FeatureFlags:
         Args:
             flags: Custom flag definitions (overrides defaults)
         """
-        self._initialized = False
+        self._initialized: bool = False
 
         if not OPENFEATURE_AVAILABLE:
             return
@@ -151,7 +123,7 @@ class FeatureFlags:
         self._initialized = True
 
     @property
-    def client(self):
+    def client(self) -> Any:
         """Get the OpenFeature client."""
         if not OPENFEATURE_AVAILABLE:
             raise ImportError(
@@ -176,17 +148,14 @@ class FeatureFlags:
             Boolean flag value
         """
         if not OPENFEATURE_AVAILABLE or not self._initialized:
-            # Fall back to environment variable
             env_key = f"CHIRON_FEATURE_{flag_key.upper()}"
-            return os.getenv(env_key, str(default)).lower() in (
-                "true",
-                "1",
-                "yes",
-                "on",
-            )
+            value = os.getenv(env_key)
+            if value is None:
+                return default
+            return value.lower() in {"true", "1", "yes", "on"}
 
         eval_context = EvaluationContext(**context) if context else None
-        return self.client.get_boolean_value(flag_key, default, eval_context)
+        return bool(self.client.get_boolean_value(flag_key, default, eval_context))
 
     def get_string(
         self, flag_key: str, default: str = "", context: dict[str, Any] | None = None
@@ -206,7 +175,7 @@ class FeatureFlags:
             return os.getenv(env_key, default)
 
         eval_context = EvaluationContext(**context) if context else None
-        return self.client.get_string_value(flag_key, default, eval_context)
+        return str(self.client.get_string_value(flag_key, default, eval_context))
 
     def is_enabled(self, flag_key: str, context: dict[str, Any] | None = None) -> bool:
         """Check if a feature flag is enabled.

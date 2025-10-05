@@ -9,12 +9,11 @@ from __future__ import annotations
 
 import json
 import re
-import subprocess
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
 
 
 class Severity(Enum):

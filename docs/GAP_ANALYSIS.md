@@ -3,25 +3,26 @@
 ## Executive Summary
 
 - The repository mixes production-ready claims with prototype-level code; several subsystems (CLI/service subprocess flows, supply-chain helpers, MCP tooling) remain skeletal.
-- Latest pytest run (`.venv/bin/pytest`) finishes with **135 passed / 0 failed / 6 skipped** and overall coverage of **59.45%**, clearing the recalibrated `--cov-fail-under=50` gate.
+- Latest pytest run (`uv run --extra dev --extra test pytest`) finishes with **141 passed / 0 failed / 0 skipped** and overall coverage of **60.92%**, still barely clearing the relaxed `--cov-fail-under=50` gate while leaving 1,200+ statements untouched.
 - Telemetry initialisation now degrades gracefully when OpenTelemetry is missing, but background OTLP exporters still log connection noise unless configuration disables them.
 - MCP feature-flag tooling now resolves flags correctly, yet the tools still surface `not_implemented` for most actions.
-- Pact contract tests are skipped automatically when the sandbox blocks localhost binding, avoiding hard failures but leaving contract coverage outstanding.
+- Pact contract tests execute against the Ruby mock (130+ pending-deprecation warnings) but remain synthetic—no real HTTP client flow has been wired in yet.
 - Most `chiron.deps`, `chiron.doctor`, `chiron.remediation`, and `chiron.tools` modules lack automated coverage and remain unverified integration points despite extensive doc claims.
 
 ## Test Outcomes
 
-| Scope                                      | Result | Notes                                                                                |
-| ------------------------------------------ | ------ | ------------------------------------------------------------------------------------ |
-| Unit / integration (`.venv/bin/pytest`)    | ✅     | 135 passed, 6 skipped; coverage 59.45%                                               |
-| Contract tests (`tests/test_contracts.py`) | ⚠️     | Skipped automatically when Pact mock service cannot bind to localhost within sandbox |
-| Coverage gate (`--cov-fail-under=50`)      | ✅     | Passes with focused coverage and explicit omissions for unimplemented subsystems     |
+| Scope                                      | Result | Notes                                                                                            |
+| ------------------------------------------ | ------ | ------------------------------------------------------------------------------------------------ |
+| Unit / integration (`uv run pytest`)       | ✅     | 141 passed, 0 failed; coverage 60.92%; warnings dominated by Pact deprecation notices            |
+| Contract tests (`tests/test_contracts.py`) | ⚠️     | Execute against Pact mock but remain synthetic; no real HTTP clients or contract enforcement yet |
+| Coverage gate (`--cov-fail-under=50`)      | ✅     | Passes due to heavy omit list; CLI/supply-chain/observability modules stay at 0% coverage        |
 
 **Current Blockers**
 
 - Significant surface area (`chiron.deps`, CLI/service layers, observability modules) is still untested or explicitly omitted from coverage.
 - OTLP exporter logging remains noisy unless telemetry exporters are disabled via configuration.
 - Contract coverage remains minimal until we wire the Pact mock into real client flows or provide an HTTP-level alternative.
+- Security extras now pin `semgrep>=1.70,<1.80` and `click<8.2` to coexist with `rich>=13.5` and OpenTelemetry ≥1.37; running semgrep inside the main runtime environment remains brittle and should be isolated.
 
 **Observability Noise**
 
@@ -50,7 +51,7 @@
 ## Documentation Gaps
 
 - `IMPLEMENTATION_SUMMARY.md` and `ROADMAP.md` previously marked all phases ✅; several features are still skeletons or missing entry points (see MCP and feature flag issues above).
-- `TESTING_IMPLEMENTATION_SUMMARY.md` claimed "1,437 lines of tests" with ≥80% coverage; actual run shows 5.87% coverage and failing suites.
+- `TESTING_IMPLEMENTATION_SUMMARY.md` claimed "1,437 lines of tests" with ≥80% coverage; actual run now lands at 60.92% coverage with major subsystems omitted and 130+ Pact warnings per run.
 - `docs/README.md` highlighted guides that assume working CI reproducibility and MCP integrations; these paths require revalidation once the underlying tooling is implemented.
 
 ## Recommendations
@@ -58,8 +59,9 @@
 1. **Tame Telemetry Output** – Provide configuration (or default) that disables OTLP exporters when no collector endpoint is configured, preventing noisy warnings in CI/test runs.
 2. **Elevate Coverage** – Prioritise high-risk modules (`chiron.core`, `chiron.service.routes.api`, `chiron.mcp.server`, `chiron.deps.*`) with focused unit/integration tests before re-enabling strict coverage gates.
 3. **Contract Strategy** – Either provision a sandbox-friendly Pact runner (dynamic ports, bundled Ruby) or replace contract coverage with equivalent HTTP-level tests.
-4. **Audit Documentation** – Keep the refreshed summaries (`IMPLEMENTATION_SUMMARY.md`, `TESTING_IMPLEMENTATION_SUMMARY.md`) as the source of truth; remove or archive outdated success narratives.
-5. **Secure External Calls** – Wrap CLI/service subprocess calls with explicit timeouts and error messages; add dependency injection to allow mocking during tests.
+4. **Harden Tooling Dependencies** – Document the `semgrep`/`click` pin rationale and run heavy scanners (`semgrep`, `syft`, `cosign`) via isolated tools (`uvx`, `pipx`) to keep the runtime environment clean.
+5. **Audit Documentation** – Keep the refreshed summaries (`IMPLEMENTATION_SUMMARY.md`, `TESTING_IMPLEMENTATION_SUMMARY.md`) as the source of truth; remove or archive outdated success narratives.
+6. **Secure External Calls** – Wrap CLI/service subprocess calls with explicit timeouts and error messages; add dependency injection to allow mocking during tests.
 
 ## Next Steps
 

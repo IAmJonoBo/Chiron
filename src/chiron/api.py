@@ -1,9 +1,6 @@
 """FastAPI adapter for Chiron wheelhouse management."""
 
-from typing import Dict, List
-
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
 
 app = FastAPI(
     title="Chiron API",
@@ -13,7 +10,7 @@ app = FastAPI(
 
 
 @app.get("/")
-async def root() -> Dict[str, str]:
+async def root() -> dict[str, str]:
     """Root endpoint returning API information."""
     return {
         "name": "Chiron API",
@@ -23,13 +20,13 @@ async def root() -> Dict[str, str]:
 
 
 @app.get("/health")
-async def health() -> Dict[str, str]:
+async def health() -> dict[str, str]:
     """Health check endpoint."""
     return {"status": "healthy"}
 
 
 @app.get("/wheelhouse")
-async def list_wheelhouse() -> Dict[str, List[str]]:
+async def list_wheelhouse() -> dict[str, list[str]]:
     """List packages in the wheelhouse.
 
     Returns:
@@ -40,7 +37,7 @@ async def list_wheelhouse() -> Dict[str, List[str]]:
 
 
 @app.post("/wheelhouse/build")
-async def build_wheelhouse(packages: List[str]) -> Dict[str, str]:
+async def build_wheelhouse(packages: list[str]) -> dict[str, str]:
     """Build a wheelhouse for specified packages.
 
     Args:
@@ -63,7 +60,7 @@ async def build_wheelhouse(packages: List[str]) -> Dict[str, str]:
 
 
 @app.get("/airgap/bundles")
-async def list_airgap_bundles() -> Dict[str, List[str]]:
+async def list_airgap_bundles() -> dict[str, list[str]]:
     """List available airgap bundles.
 
     Returns:
@@ -74,7 +71,7 @@ async def list_airgap_bundles() -> Dict[str, List[str]]:
 
 
 @app.post("/airgap/create")
-async def create_airgap_bundle(bundle_name: str) -> Dict[str, str]:
+async def create_airgap_bundle(bundle_name: str) -> dict[str, str]:
     """Create a new airgap bundle.
 
     Args:
@@ -99,4 +96,4 @@ async def create_airgap_bundle(bundle_name: str) -> Dict[str, str]:
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)

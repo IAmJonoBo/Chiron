@@ -110,7 +110,6 @@ async def list_wheelhouse() -> dict[str, list[str]]:
     Returns:
         Dictionary containing list of package files in the wheelhouse.
     """
-    import os
     from pathlib import Path
 
     wheelhouse_path = Path("wheelhouse")

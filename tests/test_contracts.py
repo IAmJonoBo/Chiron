@@ -72,7 +72,7 @@ class TestChironAPIContract:
         )
 
         with pact:
-            response = requests.get(f"{pact.uri}/healthz")
+            response = requests.get(f"{pact.uri}/healthz", timeout=5)
             assert response.status_code == 200
 
     def test_wheelhouse_list_contract(self, pact):
@@ -103,7 +103,7 @@ class TestChironAPIContract:
         )
 
         with pact:
-            response = requests.get(f"{pact.uri}/api/v1/wheelhouses")
+            response = requests.get(f"{pact.uri}/api/v1/wheelhouses", timeout=5)
             assert response.status_code == 200
 
     def test_verify_artifact_contract(self, pact):
@@ -135,7 +135,9 @@ class TestChironAPIContract:
 
         with pact:
             response = requests.post(
-                f"{pact.uri}/api/v1/verify", json={"artifact": "wheelhouse.tar.gz"}
+                f"{pact.uri}/api/v1/verify",
+                json={"artifact": "wheelhouse.tar.gz"},
+                timeout=5,
             )
             assert response.status_code == 200
 
@@ -167,7 +169,7 @@ class TestChironAPIContract:
         )
 
         with pact:
-            response = requests.post(f"{pact.uri}/api/v1/sbom/generate")
+            response = requests.post(f"{pact.uri}/api/v1/sbom/generate", timeout=5)
             assert response.status_code == 200
 
     def test_policy_check_contract(self, pact):
@@ -197,6 +199,7 @@ class TestChironAPIContract:
             response = requests.post(
                 f"{pact.uri}/api/v1/policy/check",
                 json={"dependencies": [{"name": "example-pkg", "version": "1.0.0"}]},
+                timeout=5,
             )
             assert response.status_code == 200
 
@@ -227,5 +230,5 @@ class TestChironFeatureFlagContract:
         )
 
         with pact:
-            response = requests.get(f"{pact.uri}/api/v1/features")
+            response = requests.get(f"{pact.uri}/api/v1/features", timeout=5)
             assert response.status_code == 200

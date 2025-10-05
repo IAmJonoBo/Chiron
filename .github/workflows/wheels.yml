@@ -1,5 +1,8 @@
 name: Build Wheels
 
+permissions:
+  contents: read
+
 on:
   push:
     tags:
@@ -36,7 +39,7 @@ jobs:
         run: python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_BUILD: cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*
-          CIBW_SKIP: "pp* *-musllinux_i686 *_i686 *-win32"
+          CIBW_SKIP: pp* *-musllinux_i686 *_i686 *-win32
           CIBW_ARCHS_MACOS: x86_64 arm64
           CIBW_ARCHS_LINUX: x86_64 aarch64
           CIBW_ARCHS_WINDOWS: AMD64
@@ -123,7 +126,7 @@ jobs:
               "completeness": {"parameters": True, "environment": True, "materials": True},
             },
             "materials": [{
-              "uri": f"git+https://github.com/${{{{ github.repository }}}}@${{{{ github.sha }}}}",
+              "uri": f"git+https://github.com/${{ github.repository }}@${{ github.sha }}",
               "digest": {"sha1": "${{ github.sha }}"}
             }]
           }

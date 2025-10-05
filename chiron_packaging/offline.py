@@ -2566,7 +2566,7 @@ class OfflinePackagingOrchestrator:
         }
 
     def _format_preflight_targets(self, values: Any) -> list[str]:
-        if not isinstance(values, Sequence) or isinstance(values, (str, bytes)):
+        if not isinstance(values, Sequence) or isinstance(values, str | bytes):
             return []
         formatted: list[str] = []
         for entry in values:

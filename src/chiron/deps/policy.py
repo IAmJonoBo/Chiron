@@ -13,9 +13,8 @@ import tomllib
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
-from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 
 logger = logging.getLogger(__name__)

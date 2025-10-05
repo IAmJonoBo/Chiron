@@ -390,7 +390,7 @@ def _coerce_int(value: Any | None) -> int | None:
 
 
 def _coerce_str_list(values: object | None) -> list[str]:
-    if not isinstance(values, (list, tuple, set)):
+    if not isinstance(values, list | tuple | set):
         return []
     result: list[str] = []
     for item in values:

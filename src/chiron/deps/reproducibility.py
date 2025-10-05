@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-import subprocess
+import sys
 import tempfile
 import zipfile
 from dataclasses import dataclass, field
@@ -269,7 +269,6 @@ class ReproducibilityChecker:
         """
         # Set all mtimes to epoch
         import os
-        import time
 
         epoch = 0
 

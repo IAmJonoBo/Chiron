@@ -249,7 +249,7 @@ class AutoRemediator:
                 actions.append(
                     RemediationAction(
                         action_type="command",
-                        description=f"Remove corrupted artifact and re-download",
+                        description="Remove corrupted artifact and re-download",
                         command=["rm", "-rf", str(artifact_path)],
                         confidence=0.6,
                         auto_apply=False,

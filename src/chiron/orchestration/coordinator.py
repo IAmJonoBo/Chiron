@@ -251,11 +251,6 @@ class OrchestrationCoordinator:
             str(output_dir),
         ]
 
-        env = {
-            "EXTRAS": "pii,observability,rag,llm,governance,integrations",
-            "INCLUDE_DEV": "true" if include_dev else "false",
-        }
-
         result = self._run_command(cmd, "Wheelhouse build", check=False)
         success = result.returncode == 0
 
@@ -337,9 +332,9 @@ class OrchestrationCoordinator:
             output_file = VAR_ROOT / "remediation-recommendations.json"
             cmd.extend(["--output", str(output_file)])
 
-        result = self._run_command(cmd, "Wheelhouse remediation", check=False)
+        self._run_command(cmd, "Wheelhouse remediation", check=False)
 
-        data = {}
+        data: dict[str, Any] = {}
         if output_file.exists():
             data = json.loads(output_file.read_text())
 
@@ -647,7 +642,6 @@ class OrchestrationCoordinator:
 
         # Copy artifacts to vendor
         if artifact_dir.exists():
-            vendor_target = VENDOR_ROOT / "wheelhouse"
             # Logic to copy artifacts
             results["copy"] = True
 

@@ -283,7 +283,6 @@ def deps_graph(ctx: TyperContext) -> None:
     """
     from chiron.deps import graph
 
-    argv = list(ctx.args)
     exit_code = graph.main()
     if exit_code != 0:
         raise typer.Exit(exit_code)
@@ -301,7 +300,6 @@ def deps_verify(ctx: TyperContext) -> None:
     """
     from chiron.deps import verify
 
-    argv = list(ctx.args)
     exit_code = verify.main()
     if exit_code != 0:
         raise typer.Exit(exit_code)
@@ -389,7 +387,7 @@ def deps_scan(
         typer.echo("❌ Scan failed", err=True)
         raise typer.Exit(1)
 
-    typer.echo(f"\n📊 Vulnerability Summary:")
+    typer.echo("\n📊 Vulnerability Summary:")
     typer.echo(f"   Total: {summary.total_vulnerabilities}")
     typer.echo(f"   Critical: {summary.critical}")
     typer.echo(f"   High: {summary.high}")
@@ -439,7 +437,7 @@ def deps_bundle(
     from chiron.deps.bundler import create_wheelhouse_bundle
     from chiron.deps.signing import sign_wheelhouse_bundle
 
-    typer.echo(f"📦 Creating wheelhouse bundle...")
+    typer.echo("📦 Creating wheelhouse bundle...")
 
     try:
         metadata = create_wheelhouse_bundle(
@@ -507,7 +505,7 @@ def deps_policy(
             if allowed:
                 typer.echo("   Status: ✅ Allowed")
             else:
-                typer.echo(f"   Status: ❌ Denied")
+                typer.echo("   Status: ❌ Denied")
                 typer.echo(f"   Reason: {reason}")
 
             if version:
@@ -516,7 +514,7 @@ def deps_policy(
                 if allowed:
                     typer.echo("   Status: ✅ Allowed")
                 else:
-                    typer.echo(f"   Status: ❌ Denied")
+                    typer.echo("   Status: ❌ Denied")
                     typer.echo(f"   Reason: {reason}")
 
             if upgrade_from and version:
@@ -597,7 +595,7 @@ def deps_mirror(
         success = setup_private_mirror(MirrorType(mirror_type), wheelhouse, config)
 
         if success:
-            typer.echo(f"✅ Mirror setup complete")
+            typer.echo("✅ Mirror setup complete")
             typer.echo(f"   Server: http://{host}:{port}")
         else:
             typer.echo("❌ Mirror setup failed", err=True)
@@ -676,7 +674,7 @@ def deps_oci(
             push=False,
         )
 
-        typer.echo(f"✅ OCI artifact created")
+        typer.echo("✅ OCI artifact created")
         typer.echo(f"   Repository: {metadata.registry}/{metadata.name}")
         typer.echo(f"   Tag: {metadata.tag}")
 
@@ -699,7 +697,7 @@ def deps_oci(
             push=True,
         )
 
-        typer.echo(f"✅ Pushed successfully")
+        typer.echo("✅ Pushed successfully")
         if metadata.digest:
             typer.echo(f"   Digest: {metadata.digest}")
 
@@ -762,7 +760,7 @@ def deps_reproducibility(
             typer.echo("❌ --wheelhouse required for compute action", err=True)
             raise typer.Exit(1)
 
-        typer.echo(f"🔍 Computing wheel digests...")
+        typer.echo("🔍 Computing wheel digests...")
         checker.save_digests(wheelhouse, digests)
         typer.echo(f"✅ Saved digests to {digests}")
 
@@ -790,7 +788,7 @@ def deps_reproducibility(
             )
             raise typer.Exit(1)
 
-        typer.echo(f"🔍 Comparing wheels...")
+        typer.echo("🔍 Comparing wheels...")
         report = checker.compare_wheels(original, rebuilt)
 
         typer.echo(f"\nWheel: {report.wheel_name}")
@@ -861,7 +859,7 @@ def deps_security(
         typer.echo(f"✅ Imported {count} CVEs")
 
     elif action == "generate":
-        typer.echo(f"📝 Generating constraints file...")
+        typer.echo("📝 Generating constraints file...")
         manager.generate_constraints_file(output)
         typer.echo(f"✅ Generated {output}")
 
@@ -1099,11 +1097,6 @@ def remediate_auto(
     except Exception as exc:
         typer.secho(f"❌ Remediation failed: {exc}", fg=typer.colors.RED)
         raise typer.Exit(1)
-
-    args = ["runtime", *ctx.args]
-    exit_code = remediation.main(args)
-    if exit_code != 0:
-        raise typer.Exit(exit_code)
 
 
 # ============================================================================

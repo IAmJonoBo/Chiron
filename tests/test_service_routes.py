@@ -51,17 +51,25 @@ def test_list_wheelhouse_with_files(service_client: TestClient) -> None:
     ]
 
 
-def test_build_wheelhouse_invokes_subprocess(monkeypatch, service_client: TestClient):
-    pass
+def test_build_wheelhouse_invokes_subprocess(
+    monkeypatch, service_client: TestClient
+) -> None:
+    captured_commands: list[list[str]] = []
 
+    def fake_run(
+        cmd: list[str],
+        check: bool,
+        capture_output: bool = False,
+        text: bool = False,
+    ):  # type: ignore[override]
+        captured_commands.append(cmd)
 
-def fake_run(cmd, check, capture_output):  # type: ignore[override]
-    captured_commands.append(cmd)
+        class Result:
+            returncode = 0
+            stdout = "" if text else b""
+            stderr = "" if text else b""
 
-    class Result:
-        returncode = 0
-
-    return Result()
+        return Result()
 
     monkeypatch.setattr(subprocess, "run", fake_run)
 
@@ -72,8 +80,8 @@ def fake_run(cmd, check, capture_output):  # type: ignore[override]
 
     assert response.status_code == 200
     assert response.json()["status"] == "success"
-    assert any("requests" in cmd for cmd in captured_commands)
-    assert any("numpy" in cmd for cmd in captured_commands)
+    assert any("requests" in " ".join(cmd) for cmd in captured_commands)
+    assert any("numpy" in " ".join(cmd) for cmd in captured_commands)
 
 
 def test_build_wheelhouse_missing_packages(service_client: TestClient) -> None:

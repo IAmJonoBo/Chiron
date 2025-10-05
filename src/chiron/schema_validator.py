@@ -4,16 +4,16 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 try:
-    import jsonschema
     from jsonschema import Draft202012Validator, ValidationError
 
     JSONSCHEMA_AVAILABLE = True
-except ImportError:
+except ImportError:  # pragma: no cover - optional dependency
     JSONSCHEMA_AVAILABLE = False
-    ValidationError = Exception  # type: ignore
+    Draft202012Validator = cast(Any, None)
+    ValidationError = Exception
 
 
 SCHEMAS_DIR = Path(__file__).parent / "schemas"

@@ -32,9 +32,9 @@ dependencies = [
   "opentelemetry-sdk>=1.37.0",
   "opentelemetry-instrumentation-fastapi>=0.42b0",
   "opentelemetry-exporter-otlp>=1.37.0",
-  "click>=8.3.0",
+  "click>=8.1.8,<8.2.0",
   "structlog>=25.4.0",
-  "rich>=14.1.0",
+  "rich>=13.5.2,<14.0",
 ]
 
 [project.optional-dependencies]
@@ -95,7 +95,7 @@ security = [
   "cyclonedx-bom>=7.1.0",
   "safety>=3.6.2",
   "bandit>=1.8.6",
-  "semgrep>=1.139.0",
+  "semgrep>=1.70.0,<1.80.0",
 ]
 dev = [
   "pytest>=8.4.2",
@@ -104,7 +104,7 @@ dev = [
   "pytest-mock>=3.15.1",
   "hypothesis>=6.140.2",
   "mypy>=1.18.2",
-  "ruff>=0.13.3",
+  "ruff>=0.12.3,<0.13",
   "pre-commit>=4.3.0",
   "uv>=0.8.22",
 ]
@@ -144,14 +144,14 @@ all = [
   "cyclonedx-bom>=7.1.0",
   "safety>=3.6.2",
   "bandit>=1.8.6",
-  "semgrep>=1.139.0",
+  "semgrep>=1.70.0,<1.80.0",
   "pytest>=8.4.2",
   "pytest-cov>=7.0.0",
   "pytest-asyncio>=1.2.0",
   "pytest-mock>=3.15.1",
   "hypothesis>=6.140.2",
   "mypy>=1.18.2",
-  "ruff>=0.13.3",
+  "ruff>=0.12.3,<0.13",
   "pre-commit>=4.3.0",
   "uv>=0.8.22",
   "pact-python>=2.3.3",
@@ -226,10 +226,28 @@ show_error_codes = true
 module = "tests.*"
 disallow_untyped_defs = false
 
+[[tool.mypy.overrides]]
+module = [
+  "openfeature",
+  "openfeature.*",
+  "huggingface_hub",
+  "sentence_transformers",
+  "spacy",
+  "spacy.*",
+  "jsonschema",
+  "jsonschema.*",
+  "opentelemetry",
+  "opentelemetry.*",
+  "chiron_packaging.*",
+]
+ignore_missing_imports = true
+
 # Linting and formatting configuration
 [tool.ruff]
 target-version = "py312"
 line-length = 88
+
+[tool.ruff.lint]
 select = [
   "E",   # pycodestyle errors
   "W",   # pycodestyle warnings
@@ -249,10 +267,10 @@ ignore = [
   "S101", # use of assert
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/**/*" = ["S101", "ARG", "SIM"]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["chiron"]
 
 # Coverage configuration

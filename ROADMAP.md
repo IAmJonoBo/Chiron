@@ -2,6 +2,8 @@
 
 This roadmap tracks the implementation progress of features specified in [CHIRON_UPGRADE_PLAN.md](./CHIRON_UPGRADE_PLAN.md).
 
+> ⚠️ **Reality Check**: Status icons below are legacy placeholders from the aspirational spec and no longer reflect the current implementation. Refer to `IMPLEMENTATION_SUMMARY.md` and `docs/GAP_ANALYSIS.md` for the up-to-date picture; prioritise updating each section before treating a ✅ as shipped.
+
 ## Status Legend
 
 - ✅ Complete - Feature fully implemented and tested

@@ -3,8 +3,6 @@
 import json
 from unittest.mock import Mock, patch
 
-import pytest
-
 from chiron.mcp.server import MCPServer, create_mcp_server_config
 
 

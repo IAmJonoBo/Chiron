@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import shutil
 import subprocess
 import sys
@@ -27,6 +28,12 @@ DEFAULT_ARTIFACT_TYPES = [
     "models-cache",
     "dependency-reports",
 ]
+
+
+def _is_safe_artifact_name(name: str) -> bool:
+    """Return True when artifact name contains only safe characters."""
+
+    return bool(re.fullmatch(r"[A-Za-z0-9._-]+", name))
 
 
 @dataclass
@@ -82,19 +89,28 @@ class GitHubArtifactSync:
         self.repo = repo
         self.target_dir = target_dir or Path("vendor/artifacts")
         self.verbose = verbose
+        self._gh_path = shutil.which("gh")
         self._gh_available = self._check_gh_cli()
 
     def _check_gh_cli(self) -> bool:
         """Check if GitHub CLI is available."""
+        if self._gh_path is None:
+            return False
+
         try:
-            result = subprocess.run(
-                ["gh", "--version"],
+            result = subprocess.run(  # noqa: S603 - gh path resolved via shutil.which
+                [self._gh_path, "--version"],
                 capture_output=True,
                 text=True,
                 timeout=5,
+                check=True,
             )
             return result.returncode == 0
-        except (subprocess.TimeoutExpired, FileNotFoundError):
+        except (
+            subprocess.TimeoutExpired,
+            subprocess.CalledProcessError,
+            FileNotFoundError,
+        ):
             return False
 
     def download_artifacts(
@@ -139,8 +155,16 @@ class GitHubArtifactSync:
             try:
                 logger.info(f"Downloading artifact: {artifact_name} from run {run_id}")
 
+                if artifact_name and not _is_safe_artifact_name(artifact_name):
+                    raise ValueError(
+                        "Artifact names may only contain letters, numbers, dots, hyphens, and underscores."
+                    )
+
+                if self._gh_path is None:
+                    raise RuntimeError("GitHub CLI not available")
+
                 cmd = [
-                    "gh",
+                    self._gh_path,
                     "run",
                     "download",
                     str(run_id),
@@ -152,7 +176,7 @@ class GitHubArtifactSync:
                     self.repo,
                 ]
 
-                result = subprocess.run(
+                result = subprocess.run(  # noqa: S603 - inputs validated above
                     cmd,
                     capture_output=True,
                     text=True,

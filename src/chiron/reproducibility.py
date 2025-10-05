@@ -7,7 +7,6 @@ by comparing checksums and metadata across different build environments.
 from __future__ import annotations
 
 import hashlib
-import json
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -80,8 +79,8 @@ class ReproducibilityChecker:
         size = wheel_path.stat().st_size
 
         # Extract metadata and file list
-        metadata = {}
-        file_list = []
+        metadata: dict[str, Any] = {}
+        file_list: list[str] = []
 
         try:
             with zipfile.ZipFile(wheel_path, "r") as zf:
@@ -171,7 +170,7 @@ class ReproducibilityChecker:
         Returns:
             Comparison report dictionary
         """
-        differences = []
+        differences: list[dict[str, int | str]] = []
         identical_files = 0
         different_files = 0
 

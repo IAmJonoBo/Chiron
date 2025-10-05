@@ -1,9 +1,7 @@
 """Tests for TUF metadata module."""
 
-import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from unittest.mock import Mock, patch
 
 import pytest
 
@@ -116,7 +114,7 @@ class TestTUFMetadata:
         metadata = tuf.generate_root_metadata(expires_days=30)
 
         expires = datetime.fromisoformat(metadata["expires"].replace("Z", "+00:00"))
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Should expire approximately 30 days from now
         delta = expires - now
@@ -220,7 +218,7 @@ class TestTUFMetadata:
         metadata = tuf.generate_snapshot_metadata(expires_days=7)
 
         expires = datetime.fromisoformat(metadata["expires"].replace("Z", "+00:00"))
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Should expire approximately 7 days from now
         delta = expires - now
@@ -243,7 +241,7 @@ class TestTUFMetadata:
         metadata = tuf.generate_timestamp_metadata(expires_hours=1)
 
         expires = datetime.fromisoformat(metadata["expires"].replace("Z", "+00:00"))
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Should expire approximately 1 hour from now
         delta = (expires - now).total_seconds() / 3600
@@ -280,7 +278,7 @@ class TestTUFMetadata:
         tuf = TUFMetadata(tmp_repo)
 
         # Create metadata that expired yesterday
-        past_date = datetime.now(timezone.utc) - timedelta(days=1)
+        past_date = datetime.now(UTC) - timedelta(days=1)
         metadata = {
             "_type": "root",
             "spec_version": "1.0.0",
@@ -300,7 +298,7 @@ class TestTUFMetadata:
             "_type": "root",
             "spec_version": "2.0.0",  # Unsupported version
             "version": 1,
-            "expires": datetime.now(timezone.utc).isoformat(),
+            "expires": datetime.now(UTC).isoformat(),
         }
 
         is_valid, errors = tuf.verify_metadata(metadata)
@@ -515,7 +513,7 @@ class TestTUFMetadataIntegration:
             timestamp["expires"].replace("Z", "+00:00")
         )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Verify relative expiration times
         assert (root_expires - now).days > (targets_expires - now).days

@@ -16,7 +16,6 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any, Literal
 
 logger = logging.getLogger(__name__)
@@ -126,7 +125,7 @@ class ConflictResolver:
     def analyze_conflicts(
         self,
         dependencies: dict[str, Any],
-        lock_data: dict[str, Any] | None = None,
+        _lock_data: dict[str, Any] | None = None,
     ) -> ConflictAnalysisReport:
         """
         Analyze dependencies for conflicts.
@@ -307,7 +306,6 @@ class ConflictResolver:
         suggestions: list[str] = []
 
         direct = [c for c in constraints if c.is_direct]
-        indirect = [c for c in constraints if not c.is_direct]
 
         if direct:
             suggestions.append(
@@ -327,7 +325,7 @@ class ConflictResolver:
     def _generate_resolution(
         self,
         conflict: ConflictInfo,
-        dependencies: dict[str, Any],
+        _dependencies: dict[str, Any],
     ) -> ConflictResolution | None:
         """Generate resolution proposal for a conflict."""
         if conflict.conflict_type != "version":

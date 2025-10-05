@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import json
 import subprocess
 import sys
 import time
@@ -150,7 +149,7 @@ class DevpiMirrorManager:
             True if server is responding
         """
         try:
-            result = subprocess.run(
+            subprocess.run(
                 ["devpi", "use", f"http://{self.config.host}:{self.config.port}"],
                 check=True,
                 capture_output=True,
