@@ -134,11 +134,14 @@ cython_debug/
 *.swo
 *~
 
-# OS
+# OS junk (macOS, Windows)
 .DS_Store
+**/.DS_Store
 Thumbs.db
 ._*
+**/._*
 .AppleDouble
+*.AppleDouble
 .Spotlight-V100
 .Trashes
 Icon?

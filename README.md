@@ -175,6 +175,18 @@ The sync system:
 
 See [Environment Sync Documentation](docs/ENVIRONMENT_SYNC.md) for details.
 
+### macOS filesystem hygiene
+
+- A pre-commit hook now runs `scripts/cleanup-macos-cruft.sh` automatically to purge Finder-created `._*`/`.DS_Store` artifacts before validation.
+- For long-running sessions, set `COPYFILE_DISABLE=1` in your shell (for example, add `export COPYFILE_DISABLE=1` to `~/.bash_profile`) so macOS skips generating AppleDouble files during `uv` install or wheel extraction.
+- You can run the cleanup manually at any time:
+
+  ```bash
+  bash scripts/cleanup-macos-cruft.sh --extra-path .venv
+  ```
+
+- CI runs on Linux and won't hit this bug, but keeping local working trees clean prevents sync issues and speeds up dependency installs.
+
 ### Vendored Dependencies & Offline Installs
 
 - Refresh the repository wheelhouse with `uv run chiron wheelhouse` (defaults to packaging the `dev` and `test` extras) before running `pip install -e '.[dev,test]'` in fresh environments.

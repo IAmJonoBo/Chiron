@@ -28,6 +28,14 @@ repos:
 
   - repo: local
     hooks:
+      - id: cleanup-apple-metadata
+        name: Cleanup Apple metadata artifacts
+        entry: bash scripts/cleanup-macos-cruft.sh
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+        always_run: true
+
       - id: block-apple-metadata
         name: Prevent Apple metadata artifacts
         entry: python3 scripts/check_apple_metadata.py
