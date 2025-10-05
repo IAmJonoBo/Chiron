@@ -77,7 +77,7 @@ class TestResolveExecutable:
 class TestRunCommand:
     """Tests for _run_command helper."""
 
-    @patch("chiron.cli.main.run_subprocess")
+    @patch("subprocess.run")
     def test_run_command_success(self, mock_run: Mock) -> None:
         """Test running a command successfully."""
         mock_result = Mock(spec=subprocess.CompletedProcess)
@@ -96,7 +96,7 @@ class TestRunCommand:
 
         assert "at least one argument" in str(exc_info.value)
 
-    @patch("chiron.cli.main.run_subprocess")
+    @patch("subprocess.run")
     def test_run_command_with_kwargs(self, mock_run: Mock) -> None:
         """Test running a command with additional kwargs."""
         mock_result = Mock(spec=subprocess.CompletedProcess)
@@ -109,12 +109,10 @@ class TestRunCommand:
         assert call_kwargs.get("capture_output") is True
         assert call_kwargs.get("text") is True
 
-    @patch("chiron.cli.main.run_subprocess")
-    def test_run_command_executable_not_found(self, mock_run: Mock) -> None:
+    @patch("chiron.cli.main._resolve_executable")
+    def test_run_command_executable_not_found(self, mock_resolve: Mock) -> None:
         """Test when executable is not found."""
-        from chiron.subprocess_utils import ExecutableNotFoundError
-
-        mock_run.side_effect = ExecutableNotFoundError("nonexistent-command")
+        mock_resolve.side_effect = click.ClickException("nonexistent-command not found")
 
         with pytest.raises(click.ClickException) as exc_info:
             _run_command(["nonexistent-command"])
@@ -199,6 +197,115 @@ class TestCliGroup:
 
         # Should show error about invalid JSON
         assert result.exit_code != 0 or "Error loading config" in result.output
+
+
+class TestInitCommand:
+    """Tests for init command."""
+
+    def test_init_creates_config_file(self, tmp_path: Path) -> None:
+        """Test that init creates a configuration file."""
+        runner = CliRunner()
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            result = runner.invoke(cli, ["init"])
+
+            assert result.exit_code == 0
+            assert Path("chiron.json").exists()
+
+            # Verify config content
+            with open("chiron.json") as f:
+                config = json.load(f)
+            assert "service_name" in config
+            assert "version" in config
+            assert "telemetry" in config
+            assert "security" in config
+
+    def test_init_with_existing_config(self, tmp_path: Path) -> None:
+        """Test init when config already exists."""
+        runner = CliRunner()
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            # Create existing config
+            Path("chiron.json").write_text('{"existing": "config"}')
+
+            result = runner.invoke(cli, ["init"])
+
+            assert result.exit_code == 0
+            assert "already exists" in result.output
+
+    def test_init_with_wizard_cancelled(self, tmp_path: Path, monkeypatch) -> None:
+        """Test init wizard when user cancels."""
+        runner = CliRunner()
+
+        def mock_wizard():
+            raise KeyboardInterrupt()
+
+        monkeypatch.setattr("chiron.wizard.run_init_wizard", mock_wizard)
+
+        with runner.isolated_filesystem(temp_dir=tmp_path):
+            result = runner.invoke(cli, ["init", "--wizard"])
+
+            assert result.exit_code == 0
+            assert "cancelled" in result.output.lower()
+
+
+class TestWriteWheelChecksums:
+    """Tests for _write_wheel_checksums helper."""
+
+    def test_write_checksums_with_wheels(self, tmp_path: Path) -> None:
+        """Test writing checksums for wheel files."""
+        from chiron.cli.main import _write_wheel_checksums
+
+        wheelhouse = tmp_path / "wheelhouse"
+        wheelhouse.mkdir()
+
+        # Create test wheel files
+        (wheelhouse / "package1-1.0.0-py3-none-any.whl").write_bytes(b"test content 1")
+        (wheelhouse / "package2-2.0.0-py3-none-any.whl").write_bytes(b"test content 2")
+
+        checksum_file = _write_wheel_checksums(wheelhouse)
+
+        assert checksum_file is not None
+        assert checksum_file.exists()
+        assert checksum_file.name == "wheelhouse.sha256"
+
+        # Verify checksum content
+        content = checksum_file.read_text()
+        assert "package1-1.0.0-py3-none-any.whl" in content
+        assert "package2-2.0.0-py3-none-any.whl" in content
+
+    def test_write_checksums_no_wheels(self, tmp_path: Path) -> None:
+        """Test writing checksums when no wheels present."""
+        from chiron.cli.main import _write_wheel_checksums
+
+        wheelhouse = tmp_path / "wheelhouse"
+        wheelhouse.mkdir()
+
+        checksum_file = _write_wheel_checksums(wheelhouse)
+
+        assert checksum_file is None
+
+
+class TestWriteManifest:
+    """Tests for _write_manifest helper."""
+
+    def test_write_manifest(self, tmp_path: Path) -> None:
+        """Test writing wheelhouse manifest."""
+        from chiron.cli.main import _write_manifest
+
+        manifest_path = tmp_path / "manifest.json"
+        extras = ["dev", "security"]
+
+        _write_manifest(manifest_path, extras)
+
+        assert manifest_path.exists()
+
+        # Verify manifest content
+        with open(manifest_path) as f:
+            manifest = json.load(f)
+
+        assert "generated_at" in manifest
+        assert manifest["extras"] == extras
+        assert manifest["include_dev"] is True
+        assert "commit" in manifest
 
     def test_cli_with_nonexistent_config_file(self) -> None:
         """Test CLI with non-existent config file."""

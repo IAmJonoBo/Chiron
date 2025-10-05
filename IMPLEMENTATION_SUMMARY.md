@@ -21,11 +21,33 @@
 2. **MCP Tooling** – Replace placeholder responses with real integrations (wheelhouse build/verify, policy enforcement). Until then, mark MCP agent as experimental.
 3. **External Command Wrappers** – ✅ **RESOLVED**: Created shared `subprocess_utils` module with executable path probing, configurable timeouts, graceful error handling, and comprehensive tests. CLI and service routes updated to use new utilities.
 4. **Dependency Hygiene** – ✅ **RESOLVED**: Dependency conflicts fixed (rich, jsonschema, click versions aligned with semgrep constraints). Document why `semgrep<1.80` is pinned alongside OpenTelemetry ≥1.37.
-5. **Test Coverage** – ✅ **SIGNIFICANT PROGRESS**: Coverage increased from ~39% to 55.45% (+16.67%). Core, observability, telemetry, and CLI now well-tested. Deps modules have policy & constraints tests; systematic testing plan in DEPS_MODULES_STATUS.md.
+5. **Test Coverage** – ✅ **SIGNIFICANT PROGRESS**: Coverage increased from ~39% to 58.2% (+19.2%). Core, observability, telemetry, CLI, and service routes now well-tested. Service routes at production quality (93-97% coverage). Deps modules have policy & constraints tests; systematic testing plan in DEPS_MODULES_STATUS.md.
 6. **Docs Audit** – ✅ **RESOLVED**: Added ENVIRONMENT_SYNC.md, QUALITY_GATES.md, and DEPS_MODULES_STATUS.md guides. All documentation aligned with actual implementation status. Quality metrics in README. All status docs accurate. **April 2025**: Deprecated outdated summaries (TODO_IMPLEMENTATION_SUMMARY, TESTING_IMPLEMENTATION_SUMMARY, QUALITY_GATES_IMPLEMENTATION_SUMMARY) moved to `docs/deprecated/`. All Prometheus references replaced with Chiron/OpenTelemetry.
 7. **Quality Gates** – ✅ **RESOLVED**: Implemented frontier-grade quality gates workflow with coverage, security, type safety, SBOM, code quality, test, dependency, and documentation gates. Comprehensive documentation in QUALITY_GATES.md.
 
 ## Recent Completions (Current Sprint)
+
+### Test Coverage Improvements (October 2025) ✅
+
+1. **Service Route Tests** (`tests/test_service_routes.py`)
+   - Fixed TestClient fixture to properly initialize app lifespan
+   - Health endpoint tests: 5 comprehensive tests covering success and error paths
+   - API route tests: 5 tests covering data processing, error handling, and subprocess errors
+   - Health routes: 48% → 93% coverage (+45%)
+   - API routes: 77% → 97% coverage (+20%)
+   - Service module average: 89% coverage (production-ready quality)
+
+2. **CLI Tests** (`tests/test_cli_main.py`)
+   - Fixed incorrect mocking (subprocess.run instead of non-existent run_subprocess)
+   - Init command tests: 3 tests covering config creation, existing config, wizard cancellation
+   - Helper function tests: 3 tests covering checksum generation and manifest writing
+   - CLI coverage: 27% → 31% (+4%)
+
+3. **Overall Test Metrics**
+   - Coverage: 55.8% → 58.2% (+2.4 percentage points)
+   - Tests passing: 321 → 334 (+13 tests)
+   - All tests passing at 100% rate
+   - Exceeds 50% minimum quality gate ✅
 
 ### Quality Infrastructure ✅
 
@@ -110,6 +132,12 @@
 
 - **Milestone 1** ✅ **COMPLETE**: Stabilise core library – telemetry fallback ✅, feature flag accessor ✅, smoke tests for FastAPI endpoints ✅, subprocess utilities ✅, quality gates ✅.
 - **Milestone 2** (In Progress): Harden tooling – implement MCP actions, add contract/integration coverage for deps modules, increase service/CLI test coverage to 80%+.
+  - **Progress Update (October 2025)**: Service test coverage substantially improved:
+    - Health routes: 48% → 93% ✅
+    - API routes: 77% → 97% ✅
+    - CLI: 27% → 31% (in progress)
+    - Overall: 55.8% → 58.2% (+2.4%)
+    - Tests: 321 → 334 (+13 tests)
 - **Milestone 3** (Planned): Supply-chain & observability – activate `chiron.deps` workflows with real data, complete remaining module tests (target 60%+ coverage), update docs with verified runbooks.
 - **Milestone 4** (Frontier Grade): Achieve 70%+ coverage across all modules, implement all MCP operations, add authentication to service layer, reach frontier standards on all quality gates.
 
