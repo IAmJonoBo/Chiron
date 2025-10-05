@@ -2,6 +2,7 @@
 
 from chiron.github.copilot import (
     COPILOT_DISABLE_ENV_VAR,
+    COPILOT_INDICATOR_KEYS,
     CopilotProvisioningError,
     CopilotStatus,
     PrepareResult,
@@ -20,6 +21,7 @@ from chiron.github.sync import (
 
 __all__ = [
     "COPILOT_DISABLE_ENV_VAR",
+    "COPILOT_INDICATOR_KEYS",
     "CopilotProvisioningError",
     "CopilotStatus",
     "GitHubArtifactSync",

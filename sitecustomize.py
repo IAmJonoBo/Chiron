@@ -21,12 +21,21 @@ from pathlib import Path
 _VENDOR_WHEELHOUSE = Path(__file__).resolve().parent / "vendor" / "wheelhouse"
 _MANIFEST_FILENAME = "manifest.json"
 _REQUIRED_EXTRAS = {"dev", "test"}
+_COPILOT_INDICATOR_KEYS: tuple[str, ...] = (
+    "GITHUB_COPILOT_AGENT_ID",
+    "GITHUB_COPILOT_WORKSPACE_ID",
+    "GITHUB_COPILOT_CODING_AGENT",
+    "GITHUB_COPILOT_RUN_ID",
+    "COPILOT_AGENT_ID",
+    "COPILOT_AGENT_VERSION",
+    "COPILOT_WORKSPACE_ID",
+)
 _DISABLE_ENV_VAR = "CHIRON_DISABLE_VENDOR_WHEELHOUSE"
 
 
 def _iter_existing_values(value: str | None) -> Iterable[str]:
     if not value:
-        return []
+        return
     # pip interprets both spaces and newlines as separators in find-links values
     for part in value.replace("\n", " ").split():
         cleaned = part.strip()
@@ -52,8 +61,29 @@ def _should_force_offline(manifest_path: Path) -> bool:
     return include_dev and _REQUIRED_EXTRAS.issubset(extras)
 
 
+def _is_copilot_agent_environment() -> bool:
+    for key in _COPILOT_INDICATOR_KEYS:
+        if os.environ.get(key):
+            return True
+
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        return any(
+            key.startswith("COPILOT_") and os.environ.get(key) for key in os.environ
+        )
+
+    return False
+
+
 def _configure_pip_environment() -> None:
-    if os.environ.get(_DISABLE_ENV_VAR):
+    env = os.environ
+
+    if _is_copilot_agent_environment():
+        env[_DISABLE_ENV_VAR] = "1"
+        env.pop("PIP_NO_INDEX", None)
+        env.pop("PIP_FIND_LINKS", None)
+
+    if env.get(_DISABLE_ENV_VAR):
+        env.setdefault("PIP_DEFAULT_TIMEOUT", "120")
         return
 
     if not _VENDOR_WHEELHOUSE.is_dir():
@@ -62,15 +92,15 @@ def _configure_pip_environment() -> None:
     manifest_path = _VENDOR_WHEELHOUSE / _MANIFEST_FILENAME
     force_offline = _should_force_offline(manifest_path)
 
-    existing_links = list(_iter_existing_values(os.environ.get("PIP_FIND_LINKS")))
+    existing_links = list(_iter_existing_values(env.get("PIP_FIND_LINKS")))
     wheelhouse_path = str(_VENDOR_WHEELHOUSE)
     if wheelhouse_path not in existing_links:
-        os.environ["PIP_FIND_LINKS"] = " ".join([wheelhouse_path, *existing_links])
+        env["PIP_FIND_LINKS"] = " ".join([wheelhouse_path, *existing_links])
 
-    if force_offline and "PIP_NO_INDEX" not in os.environ:
-        os.environ["PIP_NO_INDEX"] = "1"
+    if force_offline and "PIP_NO_INDEX" not in env:
+        env["PIP_NO_INDEX"] = "1"
 
-    os.environ.setdefault("PIP_DEFAULT_TIMEOUT", "120")
+    env.setdefault("PIP_DEFAULT_TIMEOUT", "120")
 
 
 _configure_pip_environment()

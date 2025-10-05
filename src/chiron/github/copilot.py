@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 COPILOT_DISABLE_ENV_VAR = "CHIRON_DISABLE_VENDOR_WHEELHOUSE"
-_COPILOT_INDICATOR_KEYS: tuple[str, ...] = (
+COPILOT_INDICATOR_KEYS: tuple[str, ...] = (
     "GITHUB_COPILOT_AGENT_ID",
     "GITHUB_COPILOT_WORKSPACE_ID",
     "GITHUB_COPILOT_CODING_AGENT",
@@ -95,7 +95,7 @@ def detect_agent_environment(
 
     data = _normalise_env(env)
 
-    indicators = [key for key in _COPILOT_INDICATOR_KEYS if key in data and data[key]]
+    indicators = [key for key in COPILOT_INDICATOR_KEYS if key in data and data[key]]
     if indicators:
         return True, tuple(indicators)
 

@@ -106,14 +106,13 @@ class TestPolicyEngine:
 
         allowed, reason = engine.check_package_allowed("test-package")
         assert allowed is False
+        assert reason is not None
         assert "not in allowlist" in reason.lower()
 
     def test_check_package_in_denylist(self) -> None:
         """Test package in denylist is blocked."""
         blocked_pkg = PackagePolicy(
-            name="blocked-package",
-            allowed=False,
-            reason="Security vulnerability"
+            name="blocked-package", allowed=False, reason="Security vulnerability"
         )
         policy = DependencyPolicy()
         policy.denylist["blocked-package"] = blocked_pkg
@@ -121,6 +120,7 @@ class TestPolicyEngine:
 
         allowed, reason = engine.check_package_allowed("blocked-package")
         assert allowed is False
+        assert reason is not None
         assert "Security vulnerability" in reason
 
     def test_check_version_allowed_no_constraints(self) -> None:
@@ -149,6 +149,7 @@ class TestPolicyEngine:
         # Version above ceiling should be blocked
         allowed, reason = engine.check_version_allowed("test-package", "3.0.0")
         assert allowed is False
+        assert reason is not None
         assert "ceiling" in reason.lower()
 
     def test_check_version_allowed_with_floor(self) -> None:
@@ -161,6 +162,7 @@ class TestPolicyEngine:
         # Version below floor should be blocked
         allowed, reason = engine.check_version_allowed("test-package", "0.9.0")
         assert allowed is False
+        assert reason is not None
         assert "floor" in reason.lower()
 
         # Version at or above floor should be allowed
@@ -190,6 +192,7 @@ class TestPolicyEngine:
         # Blocked versions should not be allowed
         allowed, reason = engine.check_version_allowed("test-package", "1.5.0")
         assert allowed is False
+        assert reason is not None
         assert "blocked" in reason.lower()
 
         allowed, _ = engine.check_version_allowed("test-package", "1.5.1")
@@ -202,20 +205,22 @@ class TestPolicyEngine:
 
         # Single major version jump should be allowed
         violations = engine.check_upgrade_allowed("test-package", "1.0.0", "2.0.0")
-        major_jump_violations = [v for v in violations if v.violation_type == "major_version_jump"]
+        major_jump_violations = [
+            v for v in violations if v.violation_type == "major_version_jump"
+        ]
         assert len(major_jump_violations) == 0
 
         # Multiple major version jumps should create violations
         violations = engine.check_upgrade_allowed("test-package", "1.0.0", "3.0.0")
-        major_jump_violations = [v for v in violations if v.violation_type == "major_version_jump"]
+        major_jump_violations = [
+            v for v in violations if v.violation_type == "major_version_jump"
+        ]
         assert len(major_jump_violations) > 0
 
     def test_check_upgrade_allowed_with_denied_package(self) -> None:
         """Test upgrade checking for denied package."""
         blocked_pkg = PackagePolicy(
-            name="blocked-package",
-            allowed=False,
-            reason="Security vulnerability"
+            name="blocked-package", allowed=False, reason="Security vulnerability"
         )
         policy = DependencyPolicy()
         policy.denylist["blocked-package"] = blocked_pkg
@@ -360,7 +365,6 @@ class TestConstraintsGenerator:
     def test_generate_with_pip_tools(
         self, mock_run: MagicMock, mock_which: MagicMock, tmp_path: Path
     ) -> None:
-    def test_generate_with_pip_tools(self, mock_run: MagicMock, tmp_path: Path) -> None:
         """Test constraints generation with pip-tools."""
         # Mock pip-compile being available
         mock_which.return_value = "/usr/bin/pip-compile"

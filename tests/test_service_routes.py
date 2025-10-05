@@ -70,6 +70,7 @@ def test_build_wheelhouse_invokes_subprocess(
 
     # Mock at the service routes api level where run_subprocess is imported
     import chiron.service.routes.api
+
     monkeypatch.setattr(chiron.service.routes.api, "run_subprocess", fake_run)
 
     response = service_client.post(
@@ -115,6 +116,7 @@ def test_create_airgap_bundle_success(
 
     # Mock at the service routes api level where run_subprocess is imported
     import chiron.service.routes.api
+
     monkeypatch.setattr(chiron.service.routes.api, "run_subprocess", fake_run)
     monkeypatch.setattr(tempfile, "TemporaryDirectory", lambda: FakeTempDir())
 
