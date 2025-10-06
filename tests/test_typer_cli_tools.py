@@ -351,6 +351,84 @@ def test_tools_refactor_analyze_json_output_is_sorted(monkeypatch: MonkeyPatch) 
     assert severities == ["critical", "info"]
 
 
+def test_tools_refactor_hotspots_outputs_summary(monkeypatch: MonkeyPatch) -> None:
+    from chiron.dev_toolbox import HotspotEntry, HotspotReport
+
+    entry1 = HotspotEntry(
+        path=Path("src/chiron/complex.py"),
+        complexity_score=500,
+        churn_count=10,
+        hotspot_score=5000,
+    )
+    entry2 = HotspotEntry(
+        path=Path("src/chiron/simple.py"),
+        complexity_score=50,
+        churn_count=5,
+        hotspot_score=250,
+    )
+    report = HotspotReport(entries=(entry1, entry2))
+
+    monkeypatch.setattr(
+        "chiron.typer_cli.analyze_hotspots",
+        lambda **kwargs: report,
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "tools",
+            "refactor",
+            "hotspots",
+            "--limit",
+            "5",
+        ],
+        catch_exceptions=False,
+        prog_name="chiron",
+    )
+
+    assert result.exit_code == 0
+    assert "complex.py" in result.stdout
+    assert "hotspot=5000" in result.stdout
+
+
+def test_tools_refactor_hotspots_json_output(monkeypatch: MonkeyPatch) -> None:
+    from chiron.dev_toolbox import HotspotEntry, HotspotReport
+
+    entry = HotspotEntry(
+        path=Path("src/chiron/test.py"),
+        complexity_score=100,
+        churn_count=20,
+        hotspot_score=2000,
+    )
+    report = HotspotReport(entries=(entry,))
+
+    monkeypatch.setattr(
+        "chiron.typer_cli.analyze_hotspots",
+        lambda **kwargs: report,
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "tools",
+            "refactor",
+            "hotspots",
+            "--json",
+        ],
+        catch_exceptions=False,
+        prog_name="chiron",
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert "entries" in payload
+    assert len(payload["entries"]) == 1
+    assert payload["entries"][0]["path"] == "src/chiron/test.py"
+    assert payload["entries"][0]["hotspot_score"] == 2000
+
+
 def test_tools_refactor_analyze_forwards_thresholds(monkeypatch: MonkeyPatch) -> None:
     captured: dict[str, object] = {}
 
