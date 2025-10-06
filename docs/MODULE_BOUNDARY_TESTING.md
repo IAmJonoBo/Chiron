@@ -308,11 +308,10 @@ DependencyDriftReport:
 
 ## References
 
-- [GAP_ANALYSIS.md](docs/GAP_ANALYSIS.md) - Original gap analysis
-- [DEPS_MODULES_STATUS.md](docs/DEPS_MODULES_STATUS.md) - Deps modules status
-- [QUALITY_GATES.md](docs/QUALITY_GATES.md) - Quality gates
+- [GAP_ANALYSIS.md](GAP_ANALYSIS.md) - Original gap analysis
+- [DEPS_MODULES_STATUS.md](DEPS_MODULES_STATUS.md) - Deps modules status
+- [QUALITY_GATES.md](QUALITY_GATES.md) - Quality gates
 - [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - Implementation summary
-- [COVERAGE_IMPLEMENTATION_SUMMARY.md](COVERAGE_IMPLEMENTATION_SUMMARY.md) - Coverage details
 
 ## Conclusion
 

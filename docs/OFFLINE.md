@@ -1,0 +1,290 @@
+# Offline Installation Guide
+
+This guide provides instructions for installing Chiron and its dependencies in air-gapped or offline environments.
+
+## Prerequisites
+
+- Python 3.9 or higher installed on the target system
+- Airgap bundle (`chiron-airgap-*.tar.gz`) transferred to the offline environment
+
+## Installation Steps
+
+### 1. Extract the Airgap Bundle
+
+```bash
+tar -xzf chiron-airgap-YYYYMMDD-HHMMSS.tar.gz
+cd chiron-airgap-YYYYMMDD-HHMMSS
+```
+
+### 2. Install from Wheelhouse
+
+Install Chiron and all dependencies from the included wheelhouse:
+
+```bash
+pip install --no-index --find-links=wheelhouse "chiron[all]"
+```
+
+Or install specific packages:
+
+```bash
+pip install --no-index --find-links=wheelhouse -r requirements.txt
+```
+
+### 3. Verify Installation
+
+Verify that Chiron is installed correctly:
+
+```bash
+python -c "import chiron; print(chiron.__version__)"
+```
+
+Test the CLI:
+
+```bash
+chiron doctor
+```
+
+### Refreshing the Vendored Wheelhouse
+
+When developing or preparing artefacts for upstream CI, regenerate the local wheelhouse before running tests:
+
+```bash
+uv run chiron wheelhouse  # defaults to dev+test extras
+```
+
+The command downloads wheels into `vendor/wheelhouse`, writes `requirements.txt`, `manifest.json`, and `wheelhouse.sha256`, and optionally signs/SBOMs the bundle. The repository ships with a `sitecustomize.py` hook that automatically sets `PIP_FIND_LINKS` (and `PIP_NO_INDEX` when the manifest confirms dev+test coverage), so plain `pip install -e "[dev,test]"` runs against the vendored assets with no extra flags.
+
+## Using Chiron in Offline Mode
+
+### Start the Service
+
+Start the Chiron service:
+
+```bash
+chiron serve --host 0.0.0.0 --port 8000
+```
+
+Or using uvicorn directly:
+
+```bash
+uvicorn chiron.service.app:create_app --host 0.0.0.0 --port 8000
+```
+
+The API will be available at `http://localhost:8000`. Visit `http://localhost:8000/docs` for interactive API documentation.
+
+### CLI Operations
+
+All CLI operations work offline:
+
+```bash
+# Health check
+chiron doctor
+
+# Process data
+chiron process --input data.json
+
+# Build local packages
+chiron build
+
+# Generate SBOM (requires syft)
+chiron sbom generate
+```
+
+## Creating Your Own Airgap Bundle
+
+On a connected system, create a custom airgap bundle:
+
+```bash
+# Using the CLI
+chiron airgap pack --output custom-bundle.tar.gz
+
+# Or using make
+make airgap
+
+# Or manually
+uv run chiron wheelhouse --include-all-extras --with-sbom
+syft vendor/wheelhouse -o cyclonedx-json=vendor/wheelhouse/sbom.json
+tar -czf chiron-airgap-custom.tar.gz vendor/wheelhouse vendor/wheelhouse/requirements.txt vendor/wheelhouse/sbom.json
+```
+
+## Verification and Security
+
+### Verify Bundle Integrity
+
+Always verify checksums and signatures:
+
+```bash
+# Verify checksums
+sha256sum -c wheelhouse.sha256
+
+# Verify signatures (if cosign is available)
+cosign verify-blob --bundle chiron-airgap.tar.gz.sigstore.json chiron-airgap.tar.gz
+```
+
+### SBOM and Vulnerability Scanning
+
+Check the Software Bill of Materials and vulnerability reports:
+
+```bash
+# View SBOM
+cat sbom.json | jq .
+
+# Scan for vulnerabilities (if grype is available)
+grype sbom.json
+```
+
+## Advanced Configuration
+
+### Environment Variables
+
+Configure Chiron for offline operation:
+
+```bash
+export CHIRON_OFFLINE_MODE=true
+export CHIRON_TELEMETRY_ENABLED=false
+export CHIRON_SECURITY_ENABLED=true
+```
+
+### Configuration File
+
+Create a `chiron.json` configuration for offline use:
+
+```json
+{
+  "service_name": "chiron-offline",
+  "offline_mode": true,
+  "telemetry": {
+    "enabled": false,
+    "export_endpoint": null
+  },
+  "security": {
+    "enabled": true,
+    "audit_logging": true,
+    "input_validation": true
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "json",
+    "output": "file",
+    "file_path": "/var/log/chiron.log"
+  }
+}
+```
+
+## Troubleshooting
+
+### Missing Dependencies
+
+If you encounter missing dependencies:
+
+1. On a connected system, download the missing package:
+
+   ```bash
+   uv pip download -d wheelhouse <package-name>
+   ```
+
+2. Transfer the wheel file to your offline environment
+
+3. Install with:
+
+   ```bash
+   pip install --no-index --find-links=wheelhouse <package-name>
+   ```
+
+### Version Conflicts
+
+If you have version conflicts:
+
+1. Check installed versions:
+
+   ```bash
+   pip list
+   ```
+
+2. Uninstall conflicting packages:
+
+   ```bash
+   pip uninstall <package-name>
+   ```
+
+3. Reinstall from wheelhouse:
+
+   ```bash
+   pip install --no-index --find-links=wheelhouse <package-name>
+   ```
+
+### Service Issues
+
+If the service fails to start:
+
+1. Check configuration:
+
+   ```bash
+   chiron doctor
+   ```
+
+2. Run in debug mode:
+
+   ```bash
+   chiron serve --debug --log-level debug
+   ```
+
+3. Check logs:
+
+   ```bash
+   tail -f /var/log/chiron.log
+   ```
+
+## Security Considerations
+
+- Always verify checksums and signatures of airgap bundles before installation
+- Review the SBOM (Software Bill of Materials) included in release artifacts
+- Check vulnerability reports generated by Grype before deploying
+- Use dedicated service accounts with minimal privileges
+- Enable audit logging for compliance requirements
+- Regularly update airgap bundles to include security patches
+
+## Enterprise Deployment
+
+### Internal PyPI Mirror
+
+Set up an internal PyPI mirror using the wheelhouse:
+
+```bash
+# Install devpi (if available in wheelhouse)
+pip install --no-index --find-links=wheelhouse devpi-server
+
+# Start devpi server
+devpi-server --start --host 0.0.0.0 --port 3141
+
+# Upload packages
+devpi upload wheelhouse/*.whl
+```
+
+### Container Deployment
+
+Deploy Chiron in containers using the airgap bundle:
+
+```dockerfile
+FROM python:3.12-slim
+
+COPY chiron-airgap.tar.gz /tmp/
+RUN cd /tmp && tar -xzf chiron-airgap.tar.gz
+RUN pip install --no-index --find-links=/tmp/wheelhouse chiron[service]
+
+EXPOSE 8000
+CMD ["chiron", "serve", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+## Support
+
+For issues or questions:
+
+1. Check the troubleshooting section above
+2. Review logs and use the `chiron doctor` command
+3. Consult the main README.md for additional documentation
+4. Open an issue on GitHub (from a connected system) with:
+   - Airgap bundle version
+   - Python version
+   - Error messages and logs
+   - System information

@@ -272,5 +272,5 @@ This implementation follows industry best practices:
 ## See Also
 
 - [Quality Gates](QUALITY_GATES.md) - Enforce standards in CI/CD
-- [Next Steps.md](../Next Steps.md) - Full refactoring methodology
+- Next Steps: See `Next_Steps.md` in repository root for full refactoring methodology
 - [Testing Guide](tutorials/first-run.md) - Writing characterization tests

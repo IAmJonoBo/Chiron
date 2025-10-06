@@ -430,7 +430,8 @@ When adding tests to deps modules:
 
 ## References
 
-- [subprocess_utils module](../src/chiron/subprocess_utils.py)
-- [IMPLEMENTATION_SUMMARY.md](../IMPLEMENTATION_SUMMARY.md)
-- [CHIRON_UPGRADE_PLAN.md](../CHIRON_UPGRADE_PLAN.md)
-- [Quality Gates Workflow](../.github/workflows/quality-gates.yml)
+- subprocess_utils module: `src/chiron/subprocess_utils.py`
+- [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)
+- [CHIRON_UPGRADE_PLAN.md](CHIRON_UPGRADE_PLAN.md)
+- [Quality Gates Documentation](QUALITY_GATES.md)
+- [CI/CD Workflows](CI_WORKFLOWS.md)
