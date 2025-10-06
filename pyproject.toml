@@ -255,6 +255,11 @@ module = "chiron.cli.main"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
+module = "chiron.typer_cli"
+# TODO: Fix type annotations for Typer decorators
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
 module = "chiron.doctor.*"
 # Doctor module scripts - used by typer_cli
 ignore_errors = true

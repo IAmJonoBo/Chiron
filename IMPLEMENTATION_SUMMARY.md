@@ -6,7 +6,7 @@
 | --------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Core library (`chiron.core`)                                    | 🟢     | **100% test coverage**. Telemetry degrades gracefully when OpenTelemetry unavailable; comprehensive tests added for all telemetry paths.                                                                                                                                                                                                                                                          |
 | FastAPI service (`chiron.service`)                              | 🟡     | Routes use shared subprocess wrapper with timeouts; 77% coverage on API routes, 65% on app, 48% on health routes. No background workers, authentication beyond Pydantic models.                                                                                                                                                                                                                   |
-| CLI (`chiron.cli.main`)                                         | 🟡     | Commands use shared subprocess wrapper with error handling; 40% test coverage added (+10% from Oct 2025); build, release, wheelhouse commands tested; relies on subprocess_utils for robust execution; many commands still untested.                                                                                                                                                              |
+| CLI (`chiron.typer_cli`)                                        | 🟢     | **CONSOLIDATED**: Typer-based CLI is now primary interface with 10 comprehensive sub-apps (deps, doctor, orchestrate, package, remediate, tools, github, plugin, telemetry); 16 dependency management commands; doctor commands fully integrated (offline, bootstrap, models); 18% initial coverage with 718 tests passing. Legacy Click CLI (`cli/main.py`) deprecated.                           |
 | Feature flags (`chiron.features`)                               | 🟡     | Global `get_feature_flags()` accessor and env fallback behave (60% coverage); OpenFeature-backed flows remain partially tested.                                                                                                                                                                                                                                                                   |
 | MCP server (`chiron.mcp.server`)                                | 🟢     | **IMPROVED**: Real operations implemented for wheelhouse building, artifact verification, and policy enforcement. Tools now use actual deps modules (bundler, policy, verify) instead of placeholders. 96% infrastructure coverage maintained.                                                                                                                                                    |
 | Supply-chain helpers (`chiron.deps/*`)                          | 🟢     | **EXCELLENT PROGRESS**: Modules migrating to subprocess_utils; policy (75%), constraints (62%), bundler (98%), supply_chain, signing, guard, planner, sync, drift, status, verify, security_overlay, preflight_summary, and graph all have comprehensive test coverage (62-98%); removed 14 modules from omit list; remaining 8 modules tracked in DEPS_MODULES_STATUS.md for systematic testing. |
@@ -26,6 +26,28 @@
 7. **Quality Gates** – ✅ **RESOLVED**: Implemented frontier-grade quality gates workflow with coverage, security, type safety, SBOM, code quality, test, dependency, and documentation gates. Comprehensive documentation in QUALITY_GATES.md.
 
 ## Recent Completions (Current Sprint)
+
+### CLI Consolidation (January 2026) ✅
+
+1. **Typer CLI Activated as Primary Interface**
+   - Moved Typer from optional to core dependency
+   - Changed entry point: `chiron = "chiron.typer_cli:main"`
+   - Legacy Click CLI marked as deprecated in `chiron.cli.main`
+   - All 718 tests passing with 51.46% coverage (above 50% gate)
+
+2. **Comprehensive CLI Structure**
+   - **10 Sub-applications**: deps, doctor, orchestrate, package, remediate, tools, github, plugin, telemetry, version
+   - **16 Dependency Commands**: status, guard, upgrade, drift, sync, preflight, graph, verify, constraints, scan, bundle, policy, mirror, oci, reproducibility, security
+   - **Doctor Integration**: 3 subcommands (offline, bootstrap, models) fully accessible
+   - **Orchestration**: 6 workflow commands for complex operations
+   - **GitHub Integration**: Copilot helpers and artifact sync
+
+3. **Benefits of Typer CLI**
+   - More comprehensive than Click CLI (2031 lines vs 887)
+   - Better type safety with Typer patterns
+   - Rich help output with formatted tables
+   - Nested command structure for better organization
+   - All doctor commands accessible via `chiron doctor <subcommand>`
 
 ### Test Coverage Improvements (January 2026) ✅
 

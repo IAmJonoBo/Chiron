@@ -84,17 +84,34 @@ uv sync --all-extras --dev
 
 ## 🛠️ CLI Commands
 
-Chiron provides a comprehensive CLI for all operations:
+Chiron provides a comprehensive Typer-based CLI with rich formatting and nested commands:
 
 ```bash
-chiron init         # Initialize project with config
-chiron build        # Build with cibuildwheel
-chiron release      # Create semantic release
-chiron wheelhouse   # Bundle with SBOM and signatures
-chiron airgap pack  # Create offline bundle
-chiron verify       # Verify signatures and provenance
-chiron doctor       # Health check and policy validation
-chiron serve        # Start the service
+# Core commands
+chiron version                    # Display version
+chiron init                       # Initialize project
+
+# Dependency management (16 subcommands)
+chiron deps status                # Show dependency health
+chiron deps guard                 # Run dependency checks
+chiron deps sync                  # Synchronize manifests
+chiron deps bundle                # Create wheelhouse bundle
+chiron deps scan                  # Vulnerability scanning
+
+# Doctor diagnostics
+chiron doctor offline             # Check offline readiness
+chiron doctor bootstrap           # Bootstrap from wheelhouse
+chiron doctor models              # Download model artifacts
+
+# Orchestration workflows
+chiron orchestrate full-dependency    # Full dependency workflow
+chiron orchestrate air-gapped-prep    # Air-gapped preparation
+
+# GitHub integration
+chiron github copilot prepare     # Prepare Copilot environment
+chiron github sync                # Sync artifacts
+
+# And many more - run `chiron --help` for full list
 ```
 
 ## 🏗️ Architecture
