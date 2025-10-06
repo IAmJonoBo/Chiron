@@ -12,15 +12,151 @@ import ast
 import json
 import sys
 from collections import defaultdict
+from collections.abc import Iterable
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+DEFAULT_EXCLUDE_PATTERNS: tuple[str, ...] = (
+    "vendor",
+    ".venv",
+    "tmpreposim2",
+    "__pycache__",
+    ".git",
+    "tests",
+)
 
-def parse_imports(file_path: Path, repo_root: Path) -> list[str]:
+DEFAULT_MODULE_NAMESPACES: tuple[str, ...] = (
+    "ingestion",
+    "retrieval",
+    "reasoning",
+    "decision",
+    "execution",
+    "monitoring",
+    "common",
+    "model",
+    "security",
+    "governance",
+    "observability",
+    "api",
+    "chiron",
+    "scripts",
+    "sdk",
+)
+
+
+def _has_python_files(directory: Path) -> bool:
+    """Return True when the directory tree contains Python files."""
+
+    try:
+        next(directory.rglob("*.py"))
+    except (StopIteration, OSError):
+        return False
+    return True
+
+
+def _is_excluded(path: Path, patterns: Iterable[str]) -> bool:
+    """Return True if any of the patterns appear in the path."""
+
+    path_str = str(path)
+    return any(pattern in path_str for pattern in patterns)
+
+
+@lru_cache(maxsize=1)
+def discover_modules(repo_root: Path) -> set[str]:
+    """Return the known module namespaces for the repository."""
+
+    modules: set[str] = set(DEFAULT_MODULE_NAMESPACES)
+
+    # Include top-level python-bearing directories.
+    for entry in repo_root.iterdir():
+        if not entry.is_dir():
+            continue
+        if _is_excluded(entry, DEFAULT_EXCLUDE_PATTERNS):
+            continue
+        if _has_python_files(entry):
+            modules.add(entry.name)
+
+    # Detect src-layout namespaces like src/chiron/<module>.
+    src_root = repo_root / "src"
+    if src_root.is_dir():
+        for namespace_dir in src_root.iterdir():
+            if not namespace_dir.is_dir():
+                continue
+            if _is_excluded(namespace_dir, DEFAULT_EXCLUDE_PATTERNS):
+                continue
+            namespace = namespace_dir.name
+            if not _has_python_files(namespace_dir):
+                continue
+
+            modules.add(namespace)
+
+            for module_dir in namespace_dir.iterdir():
+                if not module_dir.is_dir():
+                    continue
+                if module_dir.name.startswith("__"):
+                    continue
+                if _is_excluded(module_dir, DEFAULT_EXCLUDE_PATTERNS):
+                    continue
+                if _has_python_files(module_dir):
+                    modules.add(f"{namespace}.{module_dir.name}")
+
+    return modules
+
+
+def _resolve_module(file_path: Path, repo_root: Path, modules: set[str]) -> str | None:
+    """Resolve the module namespace for a given file."""
+
+    try:
+        relative = file_path.relative_to(repo_root)
+    except ValueError:
+        return None
+
+    parts = relative.parts
+    if not parts:
+        return None
+
+    if parts[0] == "src":
+        if len(parts) < 2:
+            return None
+
+        namespace = parts[1]
+        candidate = namespace
+        if len(parts) >= 3 and parts[2] != "__init__.py":
+            candidate = f"{namespace}.{parts[2]}"
+
+        if candidate in modules:
+            return candidate
+        if namespace in modules:
+            return namespace
+        return None
+
+    candidate = parts[0]
+    if candidate in modules:
+        return candidate
+    return None
+
+
+def _match_known_module(import_path: str, modules: set[str]) -> str | None:
+    """Return the longest namespace match for the import path."""
+
+    segments = import_path.split(".")
+    for index in range(len(segments), 0, -1):
+        candidate = ".".join(segments[:index])
+        if candidate in modules:
+            return candidate
+    return None
+
+
+def parse_imports(
+    file_path: Path, repo_root: Path, modules: set[str] | None = None
+) -> list[str]:
     """Extract import statements from a Python file.
 
     Only considers absolute imports, not relative imports within the same module.
     """
+    modules = modules or discover_modules(repo_root)
+
     try:
         with open(file_path, encoding="utf-8") as f:
             tree = ast.parse(f.read(), filename=str(file_path))
@@ -28,53 +164,43 @@ def parse_imports(file_path: Path, repo_root: Path) -> list[str]:
         return []
 
     # Determine the module this file belongs to
-    try:
-        relative = file_path.relative_to(repo_root)
-        current_module = str(relative.parts[0])
-    except (ValueError, IndexError):
-        current_module = None
+    current_module = _resolve_module(file_path, repo_root, modules)
 
-    imports = []
+    imports: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
-                imports.append(alias.name.split(".")[0])
+                match = _match_known_module(alias.name, modules)
+                if match and match != current_module:
+                    imports.add(match)
+                elif not match:
+                    imports.add(alias.name.split(".")[0])
         elif isinstance(node, ast.ImportFrom):
             # Skip relative imports (e.g., from .base import ...)
             if node.level > 0:
                 continue
             if node.module:
-                module_root = node.module.split(".")[0]
-                # Skip imports from the same module (e.g., common.contracts importing from common.events)
-                if module_root != current_module:
-                    imports.append(module_root)
-    return list(set(imports))
+                match = _match_known_module(node.module, modules)
+                if match and match != current_module:
+                    imports.add(match)
+                elif not match:
+                    module_root = node.module.split(".")[0]
+                    if module_root != current_module:
+                        imports.add(module_root)
+    return sorted(imports)
 
 
 def analyze_dependencies(
-    repo_root: Path, exclude_patterns: list[str] | None = None
+    repo_root: Path,
+    exclude_patterns: list[str] | None = None,
+    modules: set[str] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Analyze dependencies across all Python files in the repository."""
     if exclude_patterns is None:
-        exclude_patterns = ["vendor", ".venv", "tmpreposim2", "__pycache__", ".git"]
+        exclude_patterns = list(DEFAULT_EXCLUDE_PATTERNS)
 
-    modules = [
-        "ingestion",
-        "retrieval",
-        "reasoning",
-        "decision",
-        "execution",
-        "monitoring",
-        "common",
-        "model",
-        "security",
-        "governance",
-        "observability",
-        "api",
-        "chiron",
-        "scripts",
-        "sdk",
-    ]
+    exclude_set = set(exclude_patterns)
+    modules = modules or discover_modules(repo_root)
 
     graph: dict[str, dict[str, Any]] = defaultdict(
         lambda: {"internal_deps": set(), "external_deps": set(), "files": []}
@@ -82,20 +208,20 @@ def analyze_dependencies(
 
     for py_file in repo_root.rglob("*.py"):
         # Skip excluded patterns
-        if any(pattern in str(py_file) for pattern in exclude_patterns):
+        if _is_excluded(py_file, exclude_set):
             continue
 
         # Determine which module this file belongs to
         try:
             relative = py_file.relative_to(repo_root)
-            module_name = str(relative.parts[0])
-        except (ValueError, IndexError):
+        except ValueError:
             continue
 
-        if module_name not in modules:
+        module_name = _resolve_module(py_file, repo_root, modules)
+        if not module_name:
             continue
 
-        imports = parse_imports(py_file, repo_root)
+        imports = parse_imports(py_file, repo_root, modules)
         graph[module_name]["files"].append(str(relative))
 
         for imp in imports:

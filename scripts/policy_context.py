@@ -7,8 +7,8 @@ import datetime as _dt
 import json
 import os
 import subprocess
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Iterable, List, Sequence
 
 DEPENDENCY_FILES: Sequence[str] = (
     "pyproject.toml",
@@ -34,18 +34,17 @@ class FileStatus:
         }
         if self.exists and self.mtime is not None:
             payload["mtime"] = _dt.datetime.fromtimestamp(
-                self.mtime, tz=_dt.timezone.utc
+                self.mtime, tz=_dt.UTC
             ).isoformat()
         return payload
 
 
-def _git_diff_names(args: Iterable[str]) -> List[str]:
+def _git_diff_names(args: Iterable[str]) -> list[str]:
     try:
         result = subprocess.run(
             ("git", "diff", "--name-only", *args),
             check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
         )
     except FileNotFoundError:
@@ -69,7 +68,7 @@ def baseline_diff_paths() -> set[str]:
     inferred = base_ref or "origin/main"
 
     # Attempt a three-dot diff if base exists; otherwise fall back to HEAD^ for merge commits.
-    candidates: List[Sequence[str]] = []
+    candidates: list[Sequence[str]] = []
 
     if inferred:
         if not inferred.startswith("origin/"):
@@ -86,8 +85,8 @@ def baseline_diff_paths() -> set[str]:
     return set()
 
 
-def collect_status(paths: Sequence[str], staged: set[str]) -> List[FileStatus]:
-    statuses: List[FileStatus] = []
+def collect_status(paths: Sequence[str], staged: set[str]) -> list[FileStatus]:
+    statuses: list[FileStatus] = []
     for path in paths:
         exists = os.path.exists(path)
         mtime = os.path.getmtime(path) if exists else None
@@ -101,7 +100,7 @@ def compute_payload() -> dict:
     dependency_statuses = collect_status(DEPENDENCY_FILES, staged)
 
     sbom_statuses = collect_status(SBOM_FILES, staged)
-    now = _dt.datetime.now(tz=_dt.timezone.utc)
+    now = _dt.datetime.now(tz=_dt.UTC)
 
     dependency_mtimes = [
         status.mtime for status in dependency_statuses if status.exists and status.mtime
@@ -132,7 +131,7 @@ def compute_payload() -> dict:
     freshness_window = _dt.timedelta(days=7)
     for status in sbom_statuses:
         if status.exists and status.mtime is not None:
-            generated_at = _dt.datetime.fromtimestamp(status.mtime, tz=_dt.timezone.utc)
+            generated_at = _dt.datetime.fromtimestamp(status.mtime, tz=_dt.UTC)
             stale = now - generated_at > freshness_window
             if stale:
                 sbom_info["fresh_within_days"] = False

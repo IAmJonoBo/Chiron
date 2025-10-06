@@ -17,6 +17,8 @@ from opentelemetry.sdk.metrics.export import (
 )
 from opentelemetry.sdk.resources import Resource
 
+from chiron import __version__
+
 LOGGER = logging.getLogger(__name__)
 
 _METRICS_CONFIGURED = False
@@ -83,7 +85,7 @@ def configure_metrics(
             "service.name": service_name or namespace,
             "service.namespace": "chiron",
             "service.instance.id": os.getenv("HOSTNAME", "local"),
-            "service.version": os.getenv("CHIRON_VERSION", "0.1.0"),
+            "service.version": os.getenv("CHIRON_VERSION", __version__),
             "deployment.environment": os.getenv("CHIRON_ENV", "development"),
         }
         if resource_attributes:

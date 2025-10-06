@@ -13,6 +13,8 @@ from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
 
+from chiron import __version__
+
 console = Console()
 
 
@@ -47,7 +49,7 @@ class ChironWizard:
         console.print("[bold]Basic Settings[/bold]")
         service_name = Prompt.ask("Service name", default="chiron-service")
 
-        version = Prompt.ask("Version", default="0.1.0")
+        version = Prompt.ask("Version", default=__version__)
 
         # Telemetry settings
         console.print("\n[bold]Telemetry Settings[/bold]")

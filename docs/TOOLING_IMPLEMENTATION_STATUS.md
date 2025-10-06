@@ -155,12 +155,15 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 
 **Purpose**: Emit v1.0 attestation artifacts for every build, aligning with SLSA L3+ expectations.
 
-### ❌ LLM-powered Contract Tests
-**Status**: NOT IMPLEMENTED
+### ✅ LLM-powered Contract Tests
+**Status**: IMPLEMENTED
 
-**Current State**: MCP tooling exists in `src/chiron/mcp/`, OpenFeature flags are configured
+**Evidence**:
+- `src/chiron/mcp/llm_contracts.py` introduces deterministic LLM clients and a contract runner
+- `tests/test_mcp_llm_contracts.py` exercises default scenarios against the MCP server
+- `run_default_contracts()` integrates with CI-friendly deterministic responses
 
-**Recommendation**: Extend MCP tooling to drive smoke scenarios via natural language, using OpenFeature flags for safe rollout.
+**Purpose**: Validate MCP tool contracts via natural-language prompts, ensuring tool metadata and responses remain consistent as new capabilities ship.
 
 ### ✅ Observability Sandbox (Docker Compose)
 **Status**: FULLY IMPLEMENTED
@@ -206,7 +209,7 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 
 ### Future Enhancements (Not Critical)
 
-1. **LLM-powered Contract Tests**: MCP tooling exists but natural language-driven smoke tests not yet implemented
+1. **LLM-powered Contract Tests**: ✅ Implemented with deterministic LLM client and automated contracts
 
 ## Code/Doc Parity Issues
 

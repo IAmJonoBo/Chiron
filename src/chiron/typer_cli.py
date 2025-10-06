@@ -996,6 +996,42 @@ def tools_format_yaml(ctx: click.Context) -> None:
         raise typer.Exit(exit_code)
 
 
+@tools_app.command("benchmark")
+def tools_benchmark(
+    iterations: int = typer.Option(50, "--iterations", "-n", help="Iterations per case"),
+    warmup: int = typer.Option(5, "--warmup", help="Warmup executions per case"),
+    json_output: bool = typer.Option(False, "--json", help="Emit JSON summary"),
+) -> None:
+    """Run the built-in performance benchmarking suite."""
+
+    from chiron import benchmark
+
+    suite = benchmark.default_suite()
+    for case in suite.cases():
+        case.iterations = iterations
+        case.warmup = warmup
+
+    summary = suite.summary()
+
+    if json_output:
+        typer.echo(json.dumps(summary, indent=2))
+        return
+
+    typer.echo("🏎️  Chiron benchmark results")
+    for result in summary["results"]:
+        typer.echo(
+            "  • {name}: {avg:.3f} ms avg ({throughput:.1f}/s)".format(
+                name=result["name"],
+                avg=result["avg_time"] * 1000,
+                throughput=result["throughput"],
+            )
+        )
+
+    total = summary["aggregate"]["total_time"]
+    case_count = summary["aggregate"]["cases"]
+    typer.echo(f"Total elapsed: {total:.3f}s across {case_count} cases")
+
+
 # ============================================================================
 # Remediation Commands
 # ============================================================================
