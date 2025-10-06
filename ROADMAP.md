@@ -313,24 +313,9 @@ This roadmap tracks the implementation progress of features specified in [CHIRON
 - Feature flags via OpenFeature enable safe operational toggles
 - Observability dashboard templates provided for Grafana with OpenTelemetry metrics
 
-Last Updated: 2025-01-25
+## Additional Resources
 
-DELETE THE THIS AND THE BELOW AFTER IMPLEMENTATION< INTEGRATION AND TESTING
-tooling opportunities 🚀
-Immediate wins (next sprint)
-Conftest + OPA bundle: enforce dependency and workflow policies (e.g., SBOM freshness, required signing steps) directly in CI and pre-commit, giving concrete shape to the policy-as-code requirement that’s currently only documented.
-pytest-xdist & pytest-randomly: speed up the 3x OS matrix and surface order-dependent flake risks; integrate via uv extra and Makefile targets.
-Deptry (or uv’s built-in dep check): complement the sync_env_deps.py script by catching unused/undeclared dependencies automatically in quality gates.
-Vale for docs linting: add a doc-style gate alongside MkDocs builds to keep the Diátaxis docs crisp as they grow.
-Near-term upgrades (1–2 quarters)
-Mutation testing (mutmut or cosmic-ray): quantify test rigor for the big chiron.deps modules that still lag in coverage; wire into quality gates on a weekly cadence.
-Coverage-on-diff gate (diff-cover or coverage comment bot): require 80 %+ on touched lines even while the overall gate remains at 65 %, accelerating the march to the frontier target.
-CodeQL workflow: layer GitHub’s SAST on top of Bandit/Semgrep for defense-in-depth; reuse existing CI caching via actions/cache.
-Trivy container scanning: extend SBOM coverage to base images used in airgap and container-build flows.
-Sigstore policy-controller / cosign verify-step: automate attestation verification in CI before release uploads.
-Strategic / frontier experiments
-Reprotest + diffoscope harness: continuously validate the “reproducible wheels” claim with actual rebuild diffs.
-In-toto/SLSA provenance generator: emit v1.0 attestation artifacts for every build, aligning with SLSA L3+ expectations.
-LLM-powered contract tests: extend the MCP tooling to drive smoke scenarios via natural language, using OpenFeature flags for safe rollout.
-Observability sandbox: ship a docker-compose bundle with the OpenTelemetry Collector + Grafana Agent so contributors can visualize traces/metrics locally.
-Chaos & load automation (k6 or Locust plus chaostoolkit): rehearse failure scenarios for FastAPI routes and dependency workflows before enterprise adoption.>
+For detailed information about advanced tooling integrations and future enhancements, see:
+- [Tooling Implementation Status](docs/TOOLING_IMPLEMENTATION_STATUS.md) - Status of quality tools and strategic enhancements
+
+Last Updated: 2025-01-25

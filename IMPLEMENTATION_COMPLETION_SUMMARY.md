@@ -179,6 +179,7 @@ TOTAL                                      2546   1111    56%
 - [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - Overall implementation status
 - [DOCUMENTATION_CLEANUP_SUMMARY.md](DOCUMENTATION_CLEANUP_SUMMARY.md) - Documentation cleanup
 - [docs/QUALITY_GATES.md](docs/QUALITY_GATES.md) - Quality gates documentation
+- [docs/TOOLING_IMPLEMENTATION_STATUS.md](docs/TOOLING_IMPLEMENTATION_STATUS.md) - Tooling implementation status
 - [docs/DEPS_MODULES_STATUS.md](docs/DEPS_MODULES_STATUS.md) - Supply-chain modules status
 - [.github/workflows/quality-gates.yml](.github/workflows/quality-gates.yml) - Quality gates workflow
 

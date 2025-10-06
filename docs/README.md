@@ -20,6 +20,7 @@ Welcome to Chiron's documentation! This directory contains comprehensive guides 
 ### Quality & Standards
 
 - [Quality Gates](QUALITY_GATES.md) - **Frontier-grade quality standards and enforcement**
+- [Tooling Implementation Status](TOOLING_IMPLEMENTATION_STATUS.md) - **Status of advanced tooling integrations**
 - [Environment Sync](ENVIRONMENT_SYNC.md) - Dev/CI environment synchronization
 
 ### Supply Chain & Dependencies
