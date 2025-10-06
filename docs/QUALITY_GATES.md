@@ -285,6 +285,103 @@ uv run mkdocs build --strict
 - `/docs/index.md` - Documentation homepage
 - API docs - Auto-generated from docstrings
 
+## Additional Quality Tools
+
+### Policy-as-Code Enforcement (OPA/Conftest)
+
+**Status**: ✅ IMPLEMENTED
+
+**Purpose**: Enforce dependency and workflow policies directly in CI and pre-commit.
+
+**Tools**:
+- **OPA (Open Policy Agent)**: Policy engine for declarative policy enforcement
+- **Conftest**: Tool for testing configuration files against OPA policies
+
+**Integration Points**:
+- Pre-commit hook: Runs on every commit via `.pre-commit-config.yaml`
+- CI workflow: Policy gate in `.github/workflows/quality-gates.yml`
+- Manual execution: `make policy-check` or `scripts/run_policy_checks.sh`
+
+**Usage**:
+
+```bash
+# Run policy checks locally
+make policy-check
+
+# Build reusable policy bundle
+make policy-bundle
+
+# Install conftest
+bash scripts/install_conftest.sh
+```
+
+**Policy Examples**:
+- SBOM freshness requirements
+- Required signing steps for releases
+- Dependency constraint validation
+- Workflow configuration compliance
+
+### Dependency Integrity (Deptry)
+
+**Status**: ✅ IMPLEMENTED
+
+**Purpose**: Detect unused and undeclared dependencies automatically.
+
+**Integration Points**:
+- Pre-commit hook: Runs when dependencies change
+- Manual execution: `make deptry`
+
+**Usage**:
+
+```bash
+# Check for unused/undeclared dependencies
+make deptry
+
+# Or run directly
+uv run deptry --config pyproject.toml src/chiron tests
+```
+
+**What it Checks**:
+- Unused dependencies declared in `pyproject.toml`
+- Undeclared dependencies imported in code
+- Transitive dependency issues
+
+**Configuration**: See `[tool.deptry]` section in `pyproject.toml`
+
+### Test Execution Optimization
+
+**Status**: ✅ IMPLEMENTED
+
+**Tools**:
+
+1. **pytest-xdist**: Parallel test execution
+   - Speeds up test suite with `-n=auto` flag
+   - Uses work-stealing distribution (`--dist=worksteal`)
+   - Critical for 3x OS matrix in CI
+
+2. **pytest-randomly**: Test order randomization
+   - Surfaces order-dependent test flakes
+   - Uses random seed for reproducibility
+   - Configured in `pyproject.toml`
+
+**Usage**:
+
+```bash
+# Parallel test execution (automatic in test runs)
+uv run pytest  # Uses -n=auto by default
+
+# Run with specific seed for reproducibility
+PYTEST_RANDOMLY_SEED=12345 uv run pytest
+
+# View current test execution stats
+make test-all
+```
+
+**Benefits**:
+- 3-4x faster test execution with parallel workers
+- Early detection of test interdependencies
+- Reproducible test failures via seed tracking
+
 ## Quality Gate Workflow
 
 The quality gates run in parallel on GitHub Actions:
