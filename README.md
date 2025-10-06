@@ -33,6 +33,7 @@
 - 📊 **Observability Sandbox**: Complete local observability stack
 - 🔥 **Chaos Testing**: Chaos Toolkit for resilience validation
 - 🧾 **Documentation Parity**: Auto-sync quality suite docs via `chiron tools qa --sync-docs`
+- 🔧 **Refactoring Tools**: Hotspot analysis (complexity × churn) and code quality insights for prioritizing improvements
 
 ## 🚀 Quick Start
 
@@ -165,6 +166,10 @@ chiron tools coverage focus src/chiron/deps/verify.py --lines 5
 # Inspect refactor opportunities with structural heuristics and coverage overlays
 chiron tools refactor analyze --json
 # → flags long functions, deep complexity, parameter pressure, missing docstrings, TODO markers, and low coverage
+
+# Identify code hotspots by combining complexity and git churn (prioritize refactoring)
+chiron tools refactor hotspots --limit 10 --since "6 months ago"
+# → ranks files by hotspot score (complexity × churn) to find the best refactoring candidates
 ```
 
 Interactive runs stream rich progress bars and colour-coded panels, letting you
