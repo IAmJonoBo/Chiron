@@ -1,0 +1,241 @@
+# Refactoring CI Partial Workflow
+# 
+# This is a partial workflow to be manually merged into .github/workflows/ci.yml
+# or used as a standalone workflow for refactoring analysis.
+#
+# All gates are ADVISORY (warn-only) initially. Remove `continue-on-error: true`
+# to enforce gates after validating they work for your project.
+
+name: Refactoring Analysis
+
+on:
+  # Run on schedule (weekly)
+  schedule:
+    - cron: '0 0 * * 0'  # Sunday at midnight UTC
+  
+  # Manual trigger
+  workflow_dispatch:
+  
+  # Optional: Run on PRs with refactoring label
+  pull_request:
+    types: [labeled]
+
+jobs:
+  refactor-analyse:
+    name: Refactor Hotspot Analysis
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'refactoring')
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for churn analysis
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+      
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras --dev
+      
+      - name: Run Hotspot Analysis (CLI)
+        run: |
+          uv run chiron tools refactor hotspots --json > hotspots.json
+          uv run chiron tools refactor hotspots --limit 20
+        continue-on-error: true  # Advisory only
+      
+      - name: Run Refactor Analysis (CLI)
+        run: |
+          uv run chiron tools refactor analyze --json > opportunities.json
+          uv run chiron tools refactor analyze
+        continue-on-error: true  # Advisory only
+      
+      - name: Upload Hotspot Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: refactor-hotspots
+          path: |
+            hotspots.json
+            opportunities.json
+          retention-days: 30
+
+  refactor-analyse-standalone:
+    name: Refactor Analysis (Standalone Scripts)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for churn analysis
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+      
+      - name: Install radon
+        run: uv pip install radon
+      
+      - name: Run Git Churn Analysis
+        run: |
+          bash dev-toolkit/refactoring/scripts/analyse/git_churn.sh "12 months ago"
+        continue-on-error: true  # Advisory only
+      
+      - name: Run Hotspot Analysis (Radon)
+        run: |
+          uv run python dev-toolkit/refactoring/scripts/analyse/hotspots_py.py src/chiron
+        continue-on-error: true  # Advisory only
+      
+      - name: Upload Analysis Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: refactor-analysis-standalone
+          path: |
+            dev-toolkit/refactoring/output/*.txt
+            dev-toolkit/refactoring/output/*.csv
+          retention-days: 30
+
+  refactor-gates:
+    name: Refactoring Quality Gates (Advisory)
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.labels.*.name == 'refactoring'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+      
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras --dev
+      
+      - name: Lint (Ruff)
+        run: |
+          uv run ruff check src/ tests/
+        continue-on-error: true  # Advisory only
+      
+      - name: Type Check (MyPy)
+        run: |
+          uv run mypy src/
+        continue-on-error: true  # Advisory only
+      
+      - name: Complexity Check (Radon)
+        run: |
+          uv pip install radon
+          uv run radon cc src/chiron -n B
+        continue-on-error: true  # Advisory only
+      
+      - name: Cyclomatic Complexity (Xenon)
+        run: |
+          uv pip install xenon
+          uv run xenon --max-average A --max-modules B --max-absolute B src/chiron
+        continue-on-error: true  # Advisory only
+      
+      - name: Security Scan (Bandit)
+        run: |
+          uv run bandit -r src/
+        continue-on-error: true  # Advisory only
+      
+      - name: Test Suite
+        run: |
+          uv run pytest --cov --cov-report=xml
+        continue-on-error: true  # Advisory only
+      
+      - name: Coverage Check
+        run: |
+          uv run coverage report --fail-under=80
+        continue-on-error: true  # Advisory only
+
+  refactor-mutation-testing:
+    name: Mutation Testing (Weekly)
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 0 * * 0'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+      
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras --dev
+      
+      - name: Run Mutation Tests
+        run: |
+          uv run mutmut run --paths-to-mutate src/chiron
+        continue-on-error: true  # Advisory only
+        timeout-minutes: 60
+      
+      - name: Generate Report
+        if: always()
+        run: |
+          uv run mutmut results > mutation-results.txt
+          uv run mutmut html
+        continue-on-error: true
+      
+      - name: Upload Mutation Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mutation-testing-report
+          path: |
+            mutation-results.txt
+            html/
+          retention-days: 30
+
+# ============================================================================
+# INTEGRATION NOTES
+# ============================================================================
+#
+# To integrate into existing .github/workflows/ci.yml:
+#
+# 1. Copy the jobs you want to use
+# 2. Adjust triggers to match your workflow
+# 3. Remove `continue-on-error: true` when ready to enforce gates
+# 4. Ensure artifact paths match your project structure
+# 5. Add to existing matrix builds if needed
+#
+# To use as standalone workflow:
+#
+# 1. Copy to .github/workflows/refactoring.yml
+# 2. Customize schedule and triggers
+# 3. Enable repository actions if not already enabled
+#
+# ADVISORY MODE:
+#
+# All jobs have `continue-on-error: true` initially. This means:
+# - Failures don't block CI
+# - You can monitor failures and adjust thresholds
+# - Remove the flag when ready to enforce
+#
+# ARTIFACTS:
+#
+# Analysis results are uploaded as artifacts with 30-day retention.
+# Download from Actions tab → Workflow run → Artifacts
