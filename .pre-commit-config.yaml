@@ -26,6 +26,12 @@ repos:
       - id: commitizen
         stages: [commit-msg]
 
+  - repo: https://github.com/fpgmaas/deptry
+    rev: 0.16.0
+    hooks:
+      - id: deptry
+        args: ["--config=pyproject.toml"]
+
   - repo: local
     hooks:
       - id: cleanup-apple-metadata
@@ -117,3 +123,10 @@ repos:
         files: pyproject.toml|\.devcontainer/.*|\.github/workflows/(ci|wheels|airgap)\.yml
         pass_filenames: false
         stages: [pre-commit]
+
+      - id: opa-policy-check
+        name: OPA policy enforcement
+        entry: scripts/run_policy_checks.sh
+        language: system
+        pass_filenames: false
+        stages: [pre-commit, pre-push]

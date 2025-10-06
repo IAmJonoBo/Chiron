@@ -108,8 +108,12 @@ dev = [
   "ruff>=0.13.3,<0.14",
   "pre-commit>=4.3.0",
   "uv>=0.8.22",
+  "pytest-xdist>=3.6.1",
+  "pytest-randomly>=3.16.0",
+  "deptry>=0.16.0",
 ]
 test = ["pact-python>=2.3.3", "httpx>=0.28.1", "pytest-benchmark>=5.1.0"]
+"test-speed" = ["pytest-xdist>=3.6.1", "pytest-randomly>=3.16.0"]
 all = [
   "typer>=0.19.2",
   "jsonschema>=4.20.0",
@@ -155,6 +159,9 @@ all = [
   "ruff>=0.13.3,<0.14",
   "pre-commit>=4.3.0",
   "uv>=0.8.22",
+  "pytest-xdist>=3.6.1",
+  "pytest-randomly>=3.16.0",
+  "deptry>=0.16.0",
   "pact-python>=2.3.3",
   "httpx>=0.28.1",
   "pytest-benchmark>=5.1.0",
@@ -171,6 +178,9 @@ dev = [
   "ruff>=0.13.3,<0.14",
   "pre-commit>=4.3.0",
   "uv>=0.8.22",
+  "pytest-xdist>=3.6.1",
+  "pytest-randomly>=3.16.0",
+  "deptry>=0.16.0",
 ]
 test = ["pact-python>=2.3.3", "httpx>=0.28.1", "pytest-benchmark>=5.1.0"]
 
@@ -211,6 +221,9 @@ python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = [
+  "-n=auto",
+  "--dist=worksteal",
+  "--maxfail=1",
   "--strict-config",
   "--strict-markers",
   "--cov=chiron",
@@ -219,6 +232,8 @@ addopts = [
   "--cov-report=xml",
   "--cov-fail-under=50",
 ]
+required_plugins = ["pytest-cov", "pytest-xdist", "pytest-randomly"]
+randomly-dont-reorganize = true
 filterwarnings = ["error::pytest.PytestReturnNotNoneWarning"]
 markers = [
   "slow: marks tests as slow",
@@ -287,6 +302,10 @@ ignore_missing_imports = true
 [tool.ruff]
 target-version = "py312"
 line-length = 88
+
+[tool.deptry]
+pep621-dev-dependency-groups = ["dev", "test", "test-speed"]
+extend-exclude = ["docs", "tests/fixtures", "site", "airgap-bundles"]
 
 [tool.ruff.lint]
 select = [

@@ -18,6 +18,22 @@ env:
   FRONTIER_COVERAGE: "80"
 
 jobs:
+  policy-gate:
+    name: Policy Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install conftest
+        run: |
+          bash scripts/install_conftest.sh
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+
+      - name: Run OPA policies
+        run: |
+          scripts/run_policy_checks.sh
+
   # Coverage Quality Gate
   coverage-gate:
     name: Coverage Quality Gate
@@ -36,11 +52,13 @@ jobs:
         run: uv python install 3.12
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --group dev --group test --extra test-speed
 
       - name: Run tests with coverage
+        env:
+          PYTEST_RANDOMLY_SEED: ${{ github.run_id }}
         run: |
-          uv run pytest --cov=chiron --cov-report=xml --cov-report=term-missing --cov-fail-under=${{ env.MINIMUM_COVERAGE }}
+          uv run pytest --cov-fail-under=${{ env.MINIMUM_COVERAGE }}
 
       - name: Check coverage improvement target
         run: |
@@ -79,7 +97,7 @@ jobs:
         run: uv python install 3.12
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --group dev --group test --extra test-speed
 
       - name: Run Bandit security scan
         run: |
@@ -270,6 +288,8 @@ jobs:
         run: uv sync
 
       - name: Run tests
+        env:
+          PYTEST_RANDOMLY_SEED: ${{ github.run_id }}
         run: |
           uv run pytest --json-report --json-report-file=test-report.json
 
@@ -310,13 +330,17 @@ jobs:
 
       - name: Check for dependency conflicts
         run: |
-          uv sync --locked
+          uv sync --locked --group dev --group test --extra test-speed
           echo "✅ DEPENDENCY GATE PASSED: No dependency conflicts"
 
       - name: Validate pyproject.toml
         run: |
           python3 -c "import tomllib; tomllib.load(open('pyproject.toml', 'rb'))"
           echo "✅ pyproject.toml is valid TOML"
+
+      - name: Run Deptry analysis
+        run: |
+          uv run deptry --config pyproject.toml
 
   # Documentation Quality Gate
   docs-gate:
@@ -349,6 +373,7 @@ jobs:
     name: Quality Gate Summary
     runs-on: ubuntu-latest
     needs:
+      - policy-gate
       - coverage-gate
       - security-gate
       - type-safety-gate
@@ -363,6 +388,7 @@ jobs:
         run: |
           echo "Quality Gate Results:"
           echo "===================="
+          echo "Policy Gate: ${{ needs.policy-gate.result }}"
           echo "Coverage Gate: ${{ needs.coverage-gate.result }}"
           echo "Security Gate: ${{ needs.security-gate.result }}"
           echo "Type Safety Gate: ${{ needs.type-safety-gate.result }}"
@@ -374,6 +400,7 @@ jobs:
 
           # Count failures
           FAILED=0
+          [[ "${{ needs.policy-gate.result }}" == "failure" ]] && ((FAILED++))
           [[ "${{ needs.coverage-gate.result }}" == "failure" ]] && ((FAILED++))
           [[ "${{ needs.security-gate.result }}" == "failure" ]] && ((FAILED++))
           [[ "${{ needs.type-safety-gate.result }}" == "failure" ]] && ((FAILED++))

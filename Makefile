@@ -1,6 +1,10 @@
 # Makefile for Chiron development
 
-.PHONY: help install dev test lint format security build clean release wheelhouse airgap verify doctor serve docs
+.PHONY: help install dev test lint format security build clean release wheelhouse airgap verify doctor serve docs deptry
+.PHONY: policy-check policy-bundle
+
+PYTEST_SEED ?= $(shell date +%s)
+PYTEST_CMD = PYTEST_RANDOMLY_SEED=$(PYTEST_SEED) uv run pytest
 
 # Default target
 help: ## Show this help message
@@ -16,10 +20,10 @@ dev: install ## Set up development environment
 	@echo "✅ Development environment ready!"
 
 test: ## Run tests
-	uv run pytest --cov=chiron --cov-report=term-missing
+	$(PYTEST_CMD)
 
 test-all: ## Run all tests including slow ones
-	uv run pytest --cov=chiron --cov-report=html --cov-report=xml -m ""
+	$(PYTEST_CMD) --cov-report=html --cov-report=xml -m ""
 
 lint: ## Run linting
 	uv run pre-commit run --all-files
@@ -65,9 +69,15 @@ serve: ## Start development server
 docs: ## Start documentation server
 	uv run mkdocs serve
 
+policy-check: ## Evaluate OPA/conftest policies locally
+	scripts/run_policy_checks.sh
+
+policy-bundle: ## Build reusable OPA policy bundle
+	scripts/build_opa_bundle.sh
+
 # CI/CD helpers
 ci-test: ## Run CI tests
-	uv run pytest --cov=chiron --cov-report=xml
+	$(PYTEST_CMD) --cov-report=xml
 
 ci-security: ## Run CI security scans
 	uv run bandit -r src/ -f json -o bandit-report.json
@@ -87,7 +97,7 @@ container-run: ## Run container
 
 # Development shortcuts
 quick-test: ## Run quick tests only
-	uv run pytest -x --ff
+	$(PYTEST_CMD) -x --ff
 
 watch-test: ## Run tests in watch mode
 	uv run pytest-watch
@@ -95,8 +105,11 @@ watch-test: ## Run tests in watch mode
 mypy: ## Run type checking
 	uv run mypy src/
 
+deptry: ## Detect unused and undeclared dependencies
+	uv run deptry --config pyproject.toml src/chiron tests
+
 coverage: ## Generate coverage report
-	uv run pytest --cov=chiron --cov-report=html
+	$(PYTEST_CMD) --cov-report=html
 	@echo "Coverage report generated in htmlcov/"
 
 benchmark: ## Run performance benchmarks

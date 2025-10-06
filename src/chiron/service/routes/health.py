@@ -44,7 +44,7 @@ async def health_check(core: ChironCore = Depends(get_core)) -> HealthResponse:
 
 
 @router.get("/ready", response_model=HealthResponse, summary="Readiness check")
-async def readiness_check(core: ChironCore = Depends(get_core)) -> HealthResponse:
+async def readiness_check(core: ChironCore = Depends(get_core)) -> HealthResponse:  # type: ignore[no-untyped-def]
     """Readiness check for Kubernetes/load balancer probes."""
     try:
         # Perform more thorough checks
@@ -75,7 +75,7 @@ async def readiness_check(core: ChironCore = Depends(get_core)) -> HealthRespons
         raise HTTPException(status_code=503, detail="Service not ready") from e
 
 
-@router.get("/live", summary="Liveness check")
+@router.get("/live", response_model=dict, summary="Liveness check")
 async def liveness_check() -> dict[str, str]:
     """Liveness check for Kubernetes probes."""
     return {"status": "alive"}

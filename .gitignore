@@ -151,6 +151,9 @@ __MACOSX/
 airgap-bundles/
 *.tar.gz
 
+# Local tooling
+bin/
+
 # uv
 .uv/
 uv/

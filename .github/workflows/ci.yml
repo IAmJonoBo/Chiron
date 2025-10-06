@@ -15,6 +15,22 @@ env:
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 jobs:
+  policy:
+    name: Policy Enforcement
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install conftest
+        run: |
+          bash scripts/install_conftest.sh
+          echo "$(pwd)/bin" >> "$GITHUB_PATH"
+
+      - name: Run OPA policies
+        run: |
+          scripts/run_policy_checks.sh
+
   test:
     name: Test / Python ${{ matrix.python-version }} / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -39,15 +55,17 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync
+          uv sync --group dev --group test --extra test-speed
 
       - name: Run pre-commit hooks
         run: |
           uv run pre-commit run --all-files
 
       - name: Run tests
+        env:
+          PYTEST_RANDOMLY_SEED: ${{ github.run_id }}
         run: |
-          uv run pytest --cov=chiron --cov-report=xml --cov-report=term-missing
+          uv run pytest
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.12' && matrix.os == 'ubuntu-latest'
@@ -143,7 +161,7 @@ jobs:
   build:
     name: Build distribution
     runs-on: ubuntu-latest
-    needs: [test, security]
+    needs: [test, security, policy]
 
     steps:
       - name: Checkout code
@@ -178,7 +196,7 @@ jobs:
   build-wheels:
     name: Build wheels
     runs-on: ${{ matrix.os }}
-    needs: [test, security]
+    needs: [test, security, policy]
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]

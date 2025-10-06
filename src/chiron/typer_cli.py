@@ -33,9 +33,14 @@ from chiron.github import (
 
 logger = logging.getLogger(__name__)
 
+VERBOSE_HELP = "Verbose output"
+DRY_RUN_HELP = "Dry run mode"
+
 # ============================================================================
 # Main Chiron CLI
 # ============================================================================
+
+VALIDATE_OPTION = "--validate/--no-validate"
 
 app = typer.Typer(
     add_completion=False,
@@ -1044,13 +1049,13 @@ def remediate_auto(
     auto_apply: bool = typer.Option(
         False,
         "--auto-apply",
-        help="Automatically apply high-confidence fixes",
+        help="Auto-apply remediation actions",
     ),
     verbose: bool = typer.Option(
         False,
         "--verbose",
         "-v",
-        help="Verbose output",
+        help=VERBOSE_HELP,
     ),
 ) -> None:
     """Intelligent autoremediation for common failures.
@@ -1231,7 +1236,7 @@ def orchestrate_full_dependency(
     dry_run: bool = typer.Option(
         False,
         "--dry-run",
-        help="Dry run mode",
+        help=DRY_RUN_HELP,
     ),
     verbose: bool = typer.Option(
         False,
@@ -1359,11 +1364,11 @@ def orchestrate_full_packaging(
 def orchestrate_sync_remote(
     artifact_dir: Path = typer.Argument(
         ...,
-        help="Directory containing remote artifacts",
+        help="Directory containing remote artifacts to sync",
     ),
     validate: bool = typer.Option(
         True,
-        "--validate/--no-validate",
+        VALIDATE_OPTION,
         help="Validate after sync",
     ),
     dry_run: bool = typer.Option(
@@ -1417,7 +1422,7 @@ def orchestrate_air_gapped_prep(
     ),
     validate: bool = typer.Option(
         True,
-        "--validate/--no-validate",
+        VALIDATE_OPTION,
         help="Validate complete package",
     ),
     dry_run: bool = typer.Option(
@@ -1747,11 +1752,11 @@ def github_sync(
     merge: bool = typer.Option(
         False,
         "--merge",
-        help="Merge with existing content (default: replace)",
+        help="Merge artifacts when syncing",
     ),
     validate: bool = typer.Option(
         True,
-        "--validate/--no-validate",
+        VALIDATE_OPTION,
         help="Validate artifacts after download",
     ),
     verbose: bool = typer.Option(
