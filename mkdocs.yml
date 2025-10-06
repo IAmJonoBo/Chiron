@@ -90,6 +90,7 @@ nav:
       - "MCP Integration Testing": MCP_INTEGRATION_TESTING.md
       - "Refactoring Guide": REFACTORING_GUIDE.md
   - Reference:
+      - "Quality Status Dashboard": QUALITY_STATUS.md
       - "Project Standards": PROJECT_STANDARDS.md
       - "Badge Management": BADGE_MANAGEMENT.md
       - "Dependency Module Status": DEPS_MODULES_STATUS.md
