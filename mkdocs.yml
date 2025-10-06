@@ -82,6 +82,7 @@ nav:
   - Tutorials:
       - "First Run with Chiron": tutorials/first-run.md
   - How-to Guides:
+      - "Automation Guide": AUTOMATION_GUIDE.md
       - "Quality Gate Automation": QUALITY_GATES.md
       - "Environment Sync Parity": ENVIRONMENT_SYNC.md
       - "Observability Sandbox": OBSERVABILITY_SANDBOX.md
@@ -89,6 +90,8 @@ nav:
       - "MCP Integration Testing": MCP_INTEGRATION_TESTING.md
       - "Refactoring Guide": REFACTORING_GUIDE.md
   - Reference:
+      - "Project Standards": PROJECT_STANDARDS.md
+      - "Badge Management": BADGE_MANAGEMENT.md
       - "Dependency Module Status": DEPS_MODULES_STATUS.md
       - "Implementation Summary": IMPLEMENTATION_SUMMARY.md
       - "CI/CD Workflows": CI_WORKFLOWS.md
