@@ -16,13 +16,13 @@
 - 📊 **Observability**: OpenTelemetry instrumentation with structured logging
 - 🚀 **Service Mode**: FastAPI with auto-generated OpenAPI documentation
 - 🛡️ **Supply Chain Security**: SLSA provenance and reproducible builds
-- 🔧 **Developer Experience**: uv, pre-commit, dev containers
+- 🔧 **Developer Experience**: uv, pre-commit, dev containers, profile-driven `chiron tools qa`
 - 🔄 **Environment Sync**: Automatic synchronization between dev and CI environments
 - 📦 **Reproducible Builds**: Binary reproducibility verification and rebuild workflows
 - 🐳 **Offline Deployment**: Container image caching for air-gapped environments
 - 🔐 **TUF Integration**: Multi-backend key storage (AWS, Azure, Vault, keyring)
 - ✅ **Quality Gates**: 8 comprehensive quality gates enforcing frontier standards
-- 🎯 **87.11% Test Coverage**: Surpasses the 80% gate with healthy headroom, now including dynamic module graph detection and hardened contract scaffolding
+- 🎯 **89.10% Test Coverage**: Surpasses the 80% gate with healthy headroom, now covering dependency policy enforcement, constraints generation, security overlay ingestion, and the upgraded developer toolbox with profile-aware planning
 - 📝 **Documentation Linting**: Vale integration for style consistency
 - 🔍 **CodeQL Analysis**: Comprehensive SAST with security-extended queries
 - 📈 **Coverage on Diff**: 80% threshold for changed lines
@@ -122,6 +122,36 @@ chiron github sync                # Sync artifacts
 
 # And many more - run `chiron --help` for full list
 ```
+
+All delegated script commands now share hardened exit-code handling, ensuring
+consistent error messaging and reliable propagation of failures from the
+underlying tooling.
+
+### QA & Coverage Toolbox
+
+Curate local quality gates and inspect coverage gaps without juggling multiple
+commands:
+
+```bash
+# Discover and preview quality profiles before running them
+chiron tools qa --list-profiles
+chiron tools qa --profile fast --explain --dry-run
+
+# Run the full suite (tests, lint, typing, security, build) and archive results
+chiron tools qa --profile full --save-report reports/qa.json
+
+# Produce machine-readable output or trim to focused gates
+chiron tools qa --profile verify --no-security --json
+
+# Surface under-tested modules and enforce coverage thresholds
+chiron tools coverage hotspots --threshold 85 --limit 5
+chiron tools coverage gaps --min-statements 40 --limit 3
+chiron tools coverage guard --threshold 90
+chiron tools coverage focus src/chiron/deps/verify.py --lines 5
+```
+
+Use these helpers to align with CI, quickly identify hotspots, and plan test
+backfills while keeping automated quality gates green.
 
 ## 🏗️ Architecture
 
@@ -271,7 +301,7 @@ uv run pytest -m security
 uv run pytest -m contract
 ```
 
-**Test Coverage**: 87.11% (739 tests passing, 4 skipped)
+**Test Coverage**: 89.10% (705 tests passing)
 
 - Minimum gate: 50% ✅
 - Target: 65% 🎯 (approaching)
@@ -323,11 +353,11 @@ Chiron is actively developed and maintained. We follow semantic versioning and m
 
 ### Quality Status
 
-- ✅ **Test Coverage**: 87.11% (exceeds the 80% frontier gate with margin)
+- ✅ **Test Coverage**: 89.10% (exceeds the 80% frontier gate with margin)
 - ✅ **Security Gate**: Zero critical vulnerabilities
 - ✅ **Type Safety**: Strict MyPy checking passes
 - ✅ **Code Quality**: Ruff linting passes
-- ✅ **All Tests Passing**: 739 tests (4 skipped)
+- ✅ **All Tests Passing**: 705 tests
 
 ### Feature Status
 

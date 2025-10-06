@@ -37,6 +37,7 @@ dependencies = [
   "structlog>=25.4.0",
   "rich>=13.5.2",
   "jsonschema>=4.20.0",
+  "defusedxml>=0.7.1",
 ]
 
 [project.optional-dependencies]
@@ -282,11 +283,6 @@ module = "tests.*"
 disallow_untyped_defs = false
 
 [[tool.mypy.overrides]]
-module = "chiron.cli.main"
-# Deprecated Click-based CLI - use typer_cli instead
-ignore_errors = true
-
-[[tool.mypy.overrides]]
 module = "chiron.typer_cli"
 # TODO: Fix type annotations for Typer decorators
 disallow_untyped_decorators = false
@@ -369,7 +365,6 @@ known-first-party = ["chiron"]
 source = ["src/chiron"]
 omit = [
   "src/chiron/__main__.py",
-  "src/chiron/cli/main.py",
   "src/chiron/typer_cli.py",
   "src/chiron/doctor/*",
   "src/chiron/remediation/*",

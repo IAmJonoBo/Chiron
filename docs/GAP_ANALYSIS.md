@@ -3,7 +3,8 @@
 ## Executive Summary
 
 - The repository mixes production-ready claims with prototype-level code; several subsystems (CLI/service subprocess flows, supply-chain helpers, MCP tooling) remain skeletal.
-- Latest pytest run (`uv run --extra dev --extra test pytest --cov=src/chiron`) finishes with **739 passed / 0 failed / 4 skipped** and overall coverage of **87.11%**, comfortably clearing the tightened 80% gate while exercising the new benchmarking, MCP flows, and the freshly validated drift analysis plus module-boundary graph coverage.
+- Latest pytest run (`uv run --extra dev --extra test pytest --cov=src/chiron`) finishes with **705 passed / 0 failed** and overall coverage of **89.10%**, comfortably clearing the tightened 80% gate while exercising the new benchmarking, MCP flows, dependency policy enforcement, constraints generation, and the freshly validated drift analysis plus module-boundary graph coverage alongside the upgraded developer toolbox tests.
+- `chiron tools qa` now mirrors CI locally with profile-aware planning, dry-run previews, and JSON reporting, while the expanded `chiron tools coverage` suite surfaces hotspots, gap summaries, and enforces guard thresholds for the remaining supply-chain and service coverage gaps.
 - Telemetry initialisation now degrades gracefully when OpenTelemetry is missing, but background OTLP exporters still log connection noise unless configuration disables them.
 - MCP feature-flag tooling now resolves flags correctly, yet the tools still surface `not_implemented` for most actions.
 - Pact contract tests execute against the Ruby mock (130+ pending-deprecation warnings) but remain synthetic—no real HTTP client flow has been wired in yet.
@@ -15,7 +16,7 @@
 
 | Scope                                      | Result | Notes |
 | ------------------------------------------ | ------ | ----- |
-| Unit / integration (`uv run pytest --cov`) | ✅     | 739 passed, 0 failed; coverage 87.11%; warnings dominated by Pact deprecation notices |
+| Unit / integration (`uv run pytest --cov`) | ✅     | 705 passed, 0 failed; coverage 89.10%; warnings dominated by Pact deprecation notices |
 | Contract tests (`tests/test_contracts.py`) | ⚠️     | Execute against Pact mock but remain synthetic; no real HTTP clients or contract enforcement yet |
 | Coverage gate (`--cov-fail-under=80`)      | ✅     | Gate tightened to 80%; complex dependency graph branches still need targeted tests |
 
@@ -44,7 +45,7 @@
 ### Service & CLI Workflows
 
 - API routes execute external commands (`uv pip download`, `tar`) synchronously without sandbox guards or timeouts (`src/chiron/service/routes/api.py:107-173`, `200-233`). No tests cover failure paths or filesystem effects.
-- CLI commands (`src/chiron/cli/main.py`) call `subprocess.run` heavily but the test suite does not exercise or mock these commands; coverage report shows 0% execution.
+- CLI commands now live in `src/chiron/typer_cli.py`; while `src/chiron/cli/main.py` is only a compatibility shim, the Typer command tree still shells out extensively and lacks failure-path coverage.
 
 ### Supply-Chain Modules
 
@@ -53,7 +54,7 @@
 ## Documentation Gaps
 
 - `IMPLEMENTATION_SUMMARY.md` and `ROADMAP.md` previously marked all phases ✅; several features are still skeletons or missing entry points (see MCP and feature flag issues above).
-- `TESTING_IMPLEMENTATION_SUMMARY.md` claimed "1,437 lines of tests" with ≥80% coverage; the refreshed run now reaches 87.11% coverage, yet 140+ Pact warnings persist and branch-level confidence is uneven.
+- `TESTING_IMPLEMENTATION_SUMMARY.md` claimed "1,437 lines of tests" with ≥80% coverage; the refreshed run now reaches 89.10% coverage, yet 140+ Pact warnings persist and branch-level confidence is uneven.
 - `docs/README.md` highlighted guides that assume working CI reproducibility and MCP integrations; these paths require revalidation once the underlying tooling is implemented.
 
 ## Recommendations

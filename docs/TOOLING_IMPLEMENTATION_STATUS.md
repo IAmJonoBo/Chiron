@@ -150,7 +150,7 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 - `.github/workflows/wheels.yml` includes SLSA provenance generation
 - `.github/workflows/release.yml` has dedicated SLSA provenance job
 - `src/chiron/deps/oci_packaging.py` includes provenance media type
-- `src/chiron/cli/main.py` includes `--verify-provenance` option
+- `src/chiron/cli/main.py` now simply re-exports the Typer CLI (`chiron.typer_cli`)
 - Feature flag exists for SLSA provenance requirement
 
 **Purpose**: Emit v1.0 attestation artifacts for every build, aligning with SLSA L3+ expectations.

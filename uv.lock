@@ -442,6 +442,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
+    { name = "defusedxml" },
     { name = "fastapi" },
     { name = "jsonschema" },
     { name = "opentelemetry-api" },
@@ -640,6 +641,7 @@ requires-dist = [
     { name = "cohere", marker = "extra == 'llm'", specifier = ">=5.18.0" },
     { name = "cyclonedx-bom", marker = "extra == 'all'", specifier = ">=7.1.0" },
     { name = "cyclonedx-bom", marker = "extra == 'security'", specifier = ">=7.1.0" },
+    { name = "defusedxml", specifier = ">=0.7.1" },
     { name = "deptry", marker = "extra == 'all'", specifier = ">=0.16.0" },
     { name = "deptry", marker = "extra == 'dev'", specifier = ">=0.16.0" },
     { name = "diff-cover", marker = "extra == 'all'", specifier = ">=9.0.0,<10.0.0" },

@@ -257,7 +257,7 @@ Successfully implemented comprehensive test coverage across Chiron's core module
 
 ### Challenges Overcome
 
-1. **Click testing import** - Needed `from click.testing import CliRunner`
+1. **Typer testing import** - Use `from typer.testing import CliRunner`
 2. **Mock exporters** - Used concrete classes instead of mocks for OpenTelemetry
 3. **Coverage calculation** - Understanding omit list behavior
 4. **Network timeouts** - Installing dependencies with slow PyPI

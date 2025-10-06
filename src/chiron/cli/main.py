@@ -1,19 +1,13 @@
-"""Command-line interface for Chiron.
+"""Compatibility shim bridging to the Typer-based Chiron CLI.
 
-DEPRECATED: This Click-based CLI is deprecated in favor of the Typer-based CLI
-in chiron.typer_cli. This module is kept for backwards compatibility but will
-be removed in a future version.
-
-Please use the new CLI by running `chiron` (via chiron.typer_cli) instead.
+This module previously hosted a Click command tree. The authoritative CLI now
+lives in :mod:`chiron.typer_cli`; this shim simply re-exports the Typer
+application so historical entry points keep working without a Click
+implementation.
 """
 
-# mypy: disallow-any-decorated = False
+from __future__ import annotations
 
-import hashlib
-import json
-import shutil
-import subprocess
-import sys
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -856,39 +850,18 @@ def doctor(ctx: click.Context) -> None:  # type: ignore[no-untyped-def]
         console.print(f"[red]Health check failed: {e}[/red]")
         sys.exit(1)
 
+import typer
 
-@cli.command()
-@click.option("--host", default="127.0.0.1", help="Host to bind to")
-@click.option("--port", default=8000, help="Port to bind to")
-@click.option("--reload", is_flag=True, help="Enable auto-reload")
-@click.pass_context
-def serve(
-    ctx: click.Context,
-    host: str,
-    port: int,
-    reload: bool,
-) -> None:  # type: ignore[no-untyped-def]
-    """Start the Chiron service."""
-    console.print(f"[blue]Starting Chiron service on {host}:{port}...[/blue]")
+from chiron.typer_cli import app
 
-    try:
-        import uvicorn
+__all__ = ["cli", "main"]
 
-        from chiron.service.app import create_app
-
-        app = create_app(config=ctx.obj["config"])
-        uvicorn.run(
-            app,
-            host=host,
-            port=port,
-            reload=reload,
-            log_config=None,  # Use our structured logging
-        )
-    except ImportError:
-        console.print("[red]Service dependencies not installed[/red]")
-        console.print("Install with: uv pip install chiron[service]")
-        sys.exit(1)
+# Backwards-compatible name that existing entry points import.
+cli = app
 
 
-if __name__ == "__main__":
-    cli()
+def main(argv: Sequence[str] | None = None) -> None:
+    """Invoke the Typer CLI with optional *argv* overrides."""
+
+    command = typer.main.get_command(cli)
+    command.main(args=list(argv) if argv is not None else None, prog_name="chiron")

@@ -27,26 +27,31 @@ Chiron implements 8 comprehensive quality gates that run on every push and pull 
 - **Target**: 65% (recommended for production)
 - **Frontier**: 80% (frontier-grade excellence)
 
-**Current Status**: 87.11% ✅ (exceeds frontier gate by 7.11%)
+**Current Status**: 89.10% ✅ (exceeds frontier gate by 9.10%)
 
 **How it works**:
 
 ```bash
-# Run tests with coverage
-uv run pytest --cov=chiron --cov-report=xml --cov-report=term-missing --cov-fail-under=50
+# Discover available quality profiles and preview the plan
+chiron tools qa --list-profiles
+chiron tools qa --profile fast --explain --dry-run
 
-# Check coverage against targets
-COVERAGE=$(uv run coverage report | grep TOTAL | awk '{print $NF}' | sed 's/%//')
-if (( $(echo "$COVERAGE >= 60" | bc -l) )); then
-  echo "✅ Coverage meets target"
-fi
+# Run the curated local gate suite and archive the result
+chiron tools qa --profile full --save-report reports/qa.json
+
+# Inspect hotspots and enforce the guard locally
+chiron tools coverage hotspots --threshold 85 --limit 5
+chiron tools coverage gaps --min-statements 40 --limit 3
+chiron tools coverage guard --threshold 90
 ```
 
 **Improving Coverage**:
 
 - Focus on high-impact modules first (deps, service, CLI)
-- Add unit tests for core logic
-- Add integration tests for subprocess interactions
+- Use `chiron tools coverage focus <module>` to list missing lines
+- Use `chiron tools coverage gaps` to surface files with the most missing lines
+- Configure additional gates or profiles in `[tool.chiron.dev_toolbox]` inside `pyproject.toml`
+- Add unit tests for core logic and integration tests for subprocess flows
 - See [DEPS_MODULES_STATUS.md](DEPS_MODULES_STATUS.md) for systematic plan
 
 ### 2. Security Gate
