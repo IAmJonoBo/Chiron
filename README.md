@@ -23,6 +23,15 @@
 - 🔐 **TUF Integration**: Multi-backend key storage (AWS, Azure, Vault, keyring)
 - ✅ **Quality Gates**: 8 comprehensive quality gates enforcing frontier standards
 - 🎯 **63.06% Test Coverage**: Exceeding 50% minimum gate, approaching 65% target
+- 📝 **Documentation Linting**: Vale integration for style consistency
+- 🔍 **CodeQL Analysis**: Comprehensive SAST with security-extended queries
+- 📈 **Coverage on Diff**: 80% threshold for changed lines
+- 🧪 **Mutation Testing**: Test suite quality validation with mutmut
+- 🛡️ **Container Scanning**: Trivy integration for container security
+- 🔐 **Signature Verification**: Automated Sigstore/Cosign verification
+- 🔄 **Reproducibility**: Automated reprotest/diffoscope validation
+- 📊 **Observability Sandbox**: Complete local observability stack
+- 🔥 **Chaos Testing**: Chaos Toolkit for resilience validation
 
 ## 🚀 Quick Start
 

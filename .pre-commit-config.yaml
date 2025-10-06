@@ -32,6 +32,13 @@ repos:
       - id: deptry
         args: ["--config=pyproject.toml"]
 
+  - repo: https://github.com/errata-ai/vale
+    rev: v3.10.1
+    hooks:
+      - id: vale
+        files: \.(md|rst|adoc)$
+        args: ["--config=.vale.ini"]
+
   - repo: local
     hooks:
       - id: cleanup-apple-metadata

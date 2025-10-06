@@ -111,6 +111,8 @@ dev = [
   "pytest-xdist>=3.6.1",
   "pytest-randomly>=3.16.0",
   "deptry>=0.16.0",
+  "diff-cover>=10.0.0",
+  "mutmut>=3.4.0",
 ]
 test = ["pact-python>=2.3.3", "httpx>=0.28.1", "pytest-benchmark>=5.1.0"]
 "test-speed" = ["pytest-xdist>=3.6.1", "pytest-randomly>=3.16.0"]
@@ -162,6 +164,8 @@ all = [
   "pytest-xdist>=3.6.1",
   "pytest-randomly>=3.16.0",
   "deptry>=0.16.0",
+  "diff-cover>=10.0.0",
+  "mutmut>=3.4.0",
   "pact-python>=2.3.3",
   "httpx>=0.28.1",
   "pytest-benchmark>=5.1.0",
@@ -181,6 +185,8 @@ dev = [
   "pytest-xdist>=3.6.1",
   "pytest-randomly>=3.16.0",
   "deptry>=0.16.0",
+  "diff-cover>=10.0.0",
+  "mutmut>=3.4.0",
 ]
 test = ["pact-python>=2.3.3", "httpx>=0.28.1", "pytest-benchmark>=5.1.0"]
 
@@ -443,3 +449,11 @@ repair-wheel-command = "delocate-wheel -w {dest_dir} -v {wheel}"
 archs = ["AMD64"]
 before-build = "pip install delvewheel"
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel}"
+
+# Mutation testing configuration
+[tool.mutmut]
+paths_to_mutate = "src/chiron/"
+backup = false
+runner = "pytest -x --tb=short"
+tests_dir = "tests/"
+dict_synonyms = "Struct, NamedStruct"

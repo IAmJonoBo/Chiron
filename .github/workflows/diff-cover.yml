@@ -1,0 +1,86 @@
+name: Coverage on Diff
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: "1"
+  DIFF_COVERAGE_THRESHOLD: "80"
+
+jobs:
+  diff-cover:
+    name: Coverage on Changed Lines
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --group dev --group test --extra test-speed
+
+      - name: Run tests with coverage
+        env:
+          PYTEST_RANDOMLY_SEED: ${{ github.run_id }}
+        run: |
+          uv run pytest --cov-report=xml
+
+      - name: Run diff-cover
+        run: |
+          uv run diff-cover coverage.xml \
+            --compare-branch=origin/${{ github.base_ref }} \
+            --fail-under=${{ env.DIFF_COVERAGE_THRESHOLD }} \
+            --html-report=diff-cover.html \
+            --json-report=diff-cover.json
+          
+          echo "✅ Diff coverage meets the ${DIFF_COVERAGE_THRESHOLD}% threshold"
+
+      - name: Upload diff-cover report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diff-cover-report
+          path: |
+            diff-cover.html
+            diff-cover.json
+
+      - name: Comment PR with diff-cover results
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            if (fs.existsSync('diff-cover.json')) {
+              const diffCover = JSON.parse(fs.readFileSync('diff-cover.json', 'utf8'));
+              const coverage = diffCover.total_percent_covered || 0;
+              const threshold = process.env.DIFF_COVERAGE_THRESHOLD;
+              
+              const status = coverage >= threshold ? '✅' : '❌';
+              const message = `${status} **Diff Coverage**: ${coverage.toFixed(1)}% (threshold: ${threshold}%)
+              
+              Coverage on changed lines: ${coverage >= threshold ? 'PASSED' : 'FAILED'}
+              
+              📊 [View detailed diff-cover report](../actions/runs/${{ github.run_id }})`;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: message
+              });
+            }

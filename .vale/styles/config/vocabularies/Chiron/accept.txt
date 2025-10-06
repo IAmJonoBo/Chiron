@@ -1,0 +1,32 @@
+# Chiron project-specific vocabulary
+# Add project-specific terms here to avoid false positives
+
+Chiron
+FastAPI
+OpenTelemetry
+Grafana
+Pydantic
+SBOM
+SLSA
+SARIF
+OpenFeature
+Sigstore
+Cosign
+CodeQL
+Renovate
+Semgrep
+Bandit
+Grype
+Syft
+Trivy
+Vale
+OPA
+Conftest
+pytest
+mutmut
+diff-cover
+reprotest
+diffoscope
+Chaostoolkit
+Diátaxis
+pyproject
