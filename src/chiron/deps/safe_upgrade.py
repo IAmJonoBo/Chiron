@@ -196,6 +196,7 @@ class SafeUpgradeExecutor:
         completed_at = datetime.now(UTC)
 
         # Determine final status
+        final_status: Literal["success", "partial", "failed", "rolled_back"]
         if rollback_performed:
             final_status = "rolled_back"
         else:

@@ -23,7 +23,10 @@ class GovernanceOutcome:
 
 
 def _load_summary(path: Path) -> dict[str, Any]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"Governance summary must be a JSON object: {path}")
+    payload: dict[str, Any] = dict(data)
     payload.setdefault("warnings", [])
     payload.setdefault("resource_usage", {})
     payload.setdefault("status", "success")

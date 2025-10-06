@@ -105,11 +105,11 @@ class TestChironWizard:
     ) -> None:
         """Test project initialization with security disabled."""
         mock_prompt.side_effect = [
-            "test-service",          # service name
-            "0.1.0",                 # version
-            "http://localhost:4317", # OTLP endpoint (telemetry is enabled)
-            "wheelhouse",            # wheelhouse path
-            "3.12 3.13",            # Python versions (space-separated)
+            "test-service",  # service name
+            "0.1.0",  # version
+            "http://localhost:4317",  # OTLP endpoint (telemetry is enabled)
+            "wheelhouse",  # wheelhouse path
+            "3.12 3.13",  # Python versions (space-separated)
         ]
         mock_confirm.side_effect = [
             True,  # telemetry enabled
@@ -142,11 +142,11 @@ class TestChironWizard:
     ) -> None:
         """Test saving configuration to file."""
         mock_prompt.side_effect = [
-            "test-service",          # service name
-            "0.1.0",                 # version
-            "http://localhost:4317", # OTLP endpoint (telemetry is enabled)
-            "wheelhouse",            # wheelhouse path
-            "3.12 3.13",            # Python versions (space-separated)
+            "test-service",  # service name
+            "0.1.0",  # version
+            "http://localhost:4317",  # OTLP endpoint (telemetry is enabled)
+            "wheelhouse",  # wheelhouse path
+            "3.12 3.13",  # Python versions (space-separated)
         ]
         mock_confirm.side_effect = [
             True,  # telemetry

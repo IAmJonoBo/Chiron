@@ -35,7 +35,7 @@ import importlib
 import importlib.metadata
 import logging
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -201,20 +201,14 @@ def discover_plugins(entry_point_group: str = "chiron.plugins") -> list[ChironPl
     Returns:
         List of discovered plugin instances
     """
-    plugins = []
+    plugins: list[ChironPlugin] = []
 
     try:
-        entry_points = importlib.metadata.entry_points()
-        if hasattr(entry_points, "select"):
-            # Python 3.10+
-            group = entry_points.select(group=entry_point_group)
-        else:
-            # Python 3.9
-            group = entry_points.get(entry_point_group, [])
+        group = importlib.metadata.entry_points(group=entry_point_group)
 
         for ep in group:
             try:
-                plugin_class = ep.load()
+                plugin_class = cast(type[ChironPlugin], ep.load())
                 plugin = plugin_class()
                 plugins.append(plugin)
                 logger.info(f"Discovered plugin: {ep.name}")

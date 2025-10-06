@@ -266,7 +266,7 @@ jobs:
         if: github.event_name == 'release'
         uses: actions/attest-build-provenance@v3
         with:
-          subject-path: "airgap-bundles/*.tar.gz"
+          subject-path: airgap-bundles/*.tar.gz
 
       - name: Upload airgap bundle artifacts
         uses: actions/upload-artifact@v4

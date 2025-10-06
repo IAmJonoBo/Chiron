@@ -419,7 +419,7 @@ class ReproducibilityChecker:
                         normalized_match = False
                         differences = []
                         if not is_reproducible:
-                            normalized_match = self.compare_wheels_normalized(
+                            normalized_match = self._compare_normalized(
                                 wheel, rebuilt_wheel
                             )
                             if not normalized_match:

@@ -60,8 +60,8 @@ class OCIPackager:
 
     @staticmethod
     def _run_command(
-        cmd: Sequence[str], **kwargs: object
-    ) -> subprocess.CompletedProcess:
+        cmd: Sequence[str], **kwargs: Any
+    ) -> subprocess.CompletedProcess[Any]:
         """Execute a command ensuring the executable is resolved on PATH."""
 
         if not cmd:

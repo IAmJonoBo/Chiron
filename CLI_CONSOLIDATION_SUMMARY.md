@@ -25,12 +25,14 @@ After thorough analysis, Typer was chosen as the primary CLI for the following r
 ### 2. Entry Point
 
 **Before:**
+
 ```toml
 [project.scripts]
 chiron = "chiron.cli.main:cli"
 ```
 
 **After:**
+
 ```toml
 [project.scripts]
 chiron = "chiron.typer_cli:main"
@@ -39,6 +41,7 @@ chiron = "chiron.typer_cli:main"
 ### 3. Coverage Configuration
 
 **Before:**
+
 ```toml
 omit = [
   "src/chiron/typer_cli.py",  # Omitted from coverage
@@ -47,6 +50,7 @@ omit = [
 ```
 
 **After:**
+
 ```toml
 omit = [
   "src/chiron/cli/main.py",   # Deprecated Click CLI
@@ -58,6 +62,7 @@ omit = [
 ### 4. MyPy Configuration
 
 **Before:**
+
 ```toml
 [[tool.mypy.overrides]]
 module = "chiron.typer_cli"
@@ -66,6 +71,7 @@ ignore_errors = true
 ```
 
 **After:**
+
 ```toml
 [[tool.mypy.overrides]]
 module = "chiron.cli.main"
@@ -146,12 +152,14 @@ Commands:
 ## Test Results
 
 ### Before Consolidation
+
 - **Tests Passing**: 718
 - **Coverage**: 55%
 - **CLI Coverage**: 40% (Click CLI only)
 - **Doctor**: Not accessible via CLI
 
 ### After Consolidation
+
 - **Tests Passing**: 718 ✅
 - **Coverage**: 51.46% ✅ (above 50% minimum gate)
 - **CLI Coverage**: 18% initial (typer_cli.py now included)
@@ -239,6 +247,7 @@ chiron orchestrate air-gapped-prep
 ## Conclusion
 
 The consolidation on Typer CLI was successful, providing:
+
 - Better user experience with rich output
 - Comprehensive command structure
 - Full doctor command integration

@@ -360,30 +360,30 @@ def setup_private_mirror(
         config = MirrorConfig(mirror_type=mirror_type)
 
     if mirror_type == MirrorType.DEVPI:
-        manager = DevpiMirrorManager(config)
+        devpi_manager = DevpiMirrorManager(config)
 
         # Install devpi
-        if not manager.install_devpi():
+        if not devpi_manager.install_devpi():
             return False
 
         # Initialize server
-        if not manager.init_server():
+        if not devpi_manager.init_server():
             return False
 
         # Start server
-        if not manager.start_server():
+        if not devpi_manager.start_server():
             return False
 
         # Create index
-        if not manager.create_index():
+        if not devpi_manager.create_index():
             return False
 
         # Upload wheelhouse
-        if not manager.upload_wheelhouse(wheelhouse_dir):
+        if not devpi_manager.upload_wheelhouse(wheelhouse_dir):
             return False
 
         # Generate client config
-        manager.generate_pip_conf()
+        devpi_manager.generate_pip_conf()
 
         print("\n✓ devpi mirror setup complete!")
         print(f"  Server: http://{config.host}:{config.port}")
@@ -397,8 +397,8 @@ def setup_private_mirror(
         return True
 
     elif mirror_type == MirrorType.SIMPLE_HTTP:
-        manager = SimpleHTTPMirror(config)
-        return manager.start_server(wheelhouse_dir)
+        http_manager = SimpleHTTPMirror(config)
+        return http_manager.start_server(wheelhouse_dir)
 
     else:
         print(f"Unsupported mirror type: {mirror_type}")

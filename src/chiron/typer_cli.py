@@ -599,9 +599,7 @@ def deps_policy(
                         icon = (
                             "❌"
                             if v.severity == "error"
-                            else "⚠️"
-                            if v.severity == "warning"
-                            else "ℹ️"
+                            else "⚠️" if v.severity == "warning" else "ℹ️"
                         )
                         typer.echo(f"   {icon} {v.violation_type}: {v.message}")
         else:

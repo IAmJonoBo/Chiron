@@ -54,16 +54,25 @@ class DependencyDriftReport:
 
 def load_sbom(path: Path) -> list[dict[str, Any]]:
     payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("Invalid SBOM: expected top-level JSON object")
     components = payload.get("components", [])
     if not isinstance(components, list):  # pragma: no cover - defensive
         raise ValueError("Invalid SBOM: components must be a list")
-    return components
+    result: list[dict[str, Any]] = []
+    for entry in components:
+        if isinstance(entry, dict):
+            result.append(entry)
+    return result
 
 
 def load_metadata(path: Path | None) -> dict[str, Any]:
     if path is None or not path.exists():
         return {}
-    return json.loads(path.read_text(encoding="utf-8"))
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):  # pragma: no cover - defensive
+        raise ValueError("Invalid metadata snapshot: expected JSON object")
+    return payload
 
 
 def parse_policy(raw: dict[str, Any] | None) -> DriftPolicy:

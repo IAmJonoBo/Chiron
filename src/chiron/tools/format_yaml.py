@@ -33,6 +33,7 @@ import argparse
 import ast
 import fnmatch
 import hashlib
+import importlib
 import json
 import os
 import re
@@ -44,7 +45,7 @@ import tomllib
 from collections.abc import Callable, Iterable, Mapping, MutableMapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 RESOURCE_FORK_PREFIX = "._"
 YAML_SUFFIXES = {".yml", ".yaml"}
@@ -70,6 +71,16 @@ CHECK_JSONSCHEMA_CMD = "check-jsonschema"
 CHECK_JSONSCHEMA_BUILTIN = "vendor.github-workflows"
 CHECK_JSONSCHEMA_LEGACY_SCHEMA = "github-workflows"
 REPO_ROOT = Path.cwd().resolve()
+
+
+def _import_yaml_runtime() -> tuple[Any, type[Exception]] | None:
+    try:
+        module = importlib.import_module("yaml")
+    except ModuleNotFoundError:
+        return None
+
+    error_type = cast(type[Exception], getattr(module, "YAMLError", Exception))
+    return module, error_type
 
 
 @dataclass
@@ -140,9 +151,8 @@ def _is_workflow_file(path: Path) -> bool:
 
 
 def _load_yaml_document(path: Path) -> tuple[Any | None, list[ValidationIssue]]:
-    try:
-        import yaml  # type: ignore
-    except ModuleNotFoundError:
+    runtime = _import_yaml_runtime()
+    if runtime is None:
         return None, [
             ValidationIssue(
                 "config",
@@ -153,9 +163,11 @@ def _load_yaml_document(path: Path) -> tuple[Any | None, list[ValidationIssue]]:
             )
         ]
 
+    yaml_module, yaml_error = runtime
+
     try:
         with path.open(encoding="utf-8") as handle:
-            data = yaml.safe_load(handle)
+            data = yaml_module.safe_load(handle)
     except FileNotFoundError:
         return None, [
             ValidationIssue(
@@ -172,7 +184,7 @@ def _load_yaml_document(path: Path) -> tuple[Any | None, list[ValidationIssue]]:
                 path=path,
             )
         ]
-    except yaml.YAMLError as exc:  # type: ignore[attr-defined]
+    except yaml_error as exc:
         return None, [
             ValidationIssue(
                 "config",
@@ -575,18 +587,12 @@ def load_config(config_path: Path | None) -> dict[str, Any]:
         return {}
     try:
         with target.open("rb") as handle:
-            data = tomllib.load(handle)
+            loaded = tomllib.load(handle)
     except (OSError, tomllib.TOMLDecodeError) as exc:
         print(f"Failed to read config {target}: {exc}", file=sys.stderr)
         return {}
-    if not isinstance(data, dict):
-        print(
-            f"Config {target} did not contain a TOML table at the top level.",
-            file=sys.stderr,
-        )
-        return {}
     print(f"Loaded YAML helper config from {target}")
-    return data
+    return loaded
 
 
 def _normalise_pattern_list(values: Any) -> list[str]:
@@ -621,7 +627,7 @@ def apply_glob_filters(
 
 def _decode_quoted_value(raw: str) -> str | None:
     try:
-        return ast.literal_eval(f'"{raw}"')
+        return cast(str, ast.literal_eval(f'"{raw}"'))
     except (SyntaxError, ValueError):
         return None
 
@@ -894,10 +900,11 @@ def check_literal_blocks(paths: Sequence[Path]) -> list[ValidationIssue]:
 
 
 def validate_yaml_structures(paths: Sequence[Path]) -> list[ValidationIssue]:
-    try:
-        import yaml  # type: ignore
-    except ModuleNotFoundError:
+    runtime = _import_yaml_runtime()
+    if runtime is None:
         return []
+
+    yaml_module, yaml_error = runtime
 
     errors: list[ValidationIssue] = []
     for path in paths:
@@ -914,10 +921,10 @@ def validate_yaml_structures(paths: Sequence[Path]) -> list[ValidationIssue]:
             )
             continue
         try:
-            for _ in yaml.safe_load_all(content):
+            for _ in yaml_module.safe_load_all(content):
                 # Exhaust the generator to surface parsing errors while ignoring content.
                 continue
-        except yaml.YAMLError as exc:  # type: ignore[attr-defined]
+        except yaml_error as exc:
             mark = getattr(exc, "problem_mark", None)
             if mark is not None:
                 errors.append(
