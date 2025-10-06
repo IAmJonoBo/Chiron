@@ -22,7 +22,7 @@
 - 🐳 **Offline Deployment**: Container image caching for air-gapped environments
 - 🔐 **TUF Integration**: Multi-backend key storage (AWS, Azure, Vault, keyring)
 - ✅ **Quality Gates**: 8 comprehensive quality gates enforcing frontier standards
-- 🎯 **63.06% Test Coverage**: Exceeding 50% minimum gate, approaching 65% target
+- 🎯 **87.11% Test Coverage**: Surpasses the 80% gate with healthy headroom, now including dynamic module graph detection and hardened contract scaffolding
 - 📝 **Documentation Linting**: Vale integration for style consistency
 - 🔍 **CodeQL Analysis**: Comprehensive SAST with security-extended queries
 - 📈 **Coverage on Diff**: 80% threshold for changed lines
@@ -156,6 +156,7 @@ chiron github sync                # Sync artifacts
 ## 📊 Observability
 
 - **Distributed Tracing**: OpenTelemetry with OTLP export
+- **Quiet Defaults**: OTLP exporter disabled unless `telemetry.exporter_enabled` is true and a collector is explicitly opted-in via `telemetry.assume_local_collector` or `CHIRON_ASSUME_LOCAL_COLLECTOR`
 - **Structured Logging**: JSON logs with trace correlation
 - **Metrics**: OpenTelemetry-compatible metrics
 - **Health Checks**: Kubernetes-ready endpoints (`/health`, `/ready`, `/live`)
@@ -270,7 +271,7 @@ uv run pytest -m security
 uv run pytest -m contract
 ```
 
-**Test Coverage**: 63.06% (599 tests passing)
+**Test Coverage**: 87.11% (739 tests passing, 4 skipped)
 
 - Minimum gate: 50% ✅
 - Target: 65% 🎯 (approaching)
@@ -322,11 +323,11 @@ Chiron is actively developed and maintained. We follow semantic versioning and m
 
 ### Quality Status
 
-- ✅ **Test Coverage**: 63.06% (exceeds 50% minimum gate, approaching 65% target)
+- ✅ **Test Coverage**: 87.11% (exceeds the 80% frontier gate with margin)
 - ✅ **Security Gate**: Zero critical vulnerabilities
 - ✅ **Type Safety**: Strict MyPy checking passes
 - ✅ **Code Quality**: Ruff linting passes
-- ✅ **All Tests Passing**: 599 tests (0 failures)
+- ✅ **All Tests Passing**: 739 tests (4 skipped)
 
 ### Feature Status
 
@@ -340,7 +341,7 @@ Chiron is actively developed and maintained. We follow semantic versioning and m
 - 🟡 Supply-chain modules (testing in progress)
 - 🚧 Advanced plugin system
 - 🚧 Multi-tenant support
-- 📋 Performance benchmarking suite
+- ✅ Performance benchmarking suite
 
 See [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) for detailed status.
 

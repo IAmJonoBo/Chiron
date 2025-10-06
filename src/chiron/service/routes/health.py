@@ -44,7 +44,7 @@ async def health_check(core: ChironCore = Depends(get_core)) -> HealthResponse:
 
 
 @router.get("/ready", response_model=HealthResponse, summary="Readiness check")
-async def readiness_check(core: ChironCore = Depends(get_core)) -> HealthResponse:  # type: ignore[no-untyped-def]
+async def readiness_check(core: ChironCore = Depends(get_core)) -> HealthResponse:
     """Readiness check for Kubernetes/load balancer probes."""
     try:
         # Perform more thorough checks

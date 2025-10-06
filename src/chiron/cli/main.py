@@ -206,7 +206,7 @@ def init(wizard: bool) -> None:
 
     default_config = {
         "service_name": "chiron-service",
-        "version": "0.1.0",
+        "version": __version__,
         "telemetry": {
             "enabled": True,
             "otlp_endpoint": "http://localhost:4317",

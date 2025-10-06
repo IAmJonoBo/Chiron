@@ -17,6 +17,8 @@ from opentelemetry.sdk.trace.export import (
     SpanExporter,
 )
 
+from chiron import __version__
+
 LOGGER = logging.getLogger(__name__)
 
 _TRACING_CONFIGURED = False
@@ -69,7 +71,7 @@ def configure_tracing(
     attributes: dict[str, str] = {
         "service.name": service_name,
         "service.namespace": "chiron",
-        "service.version": os.getenv("CHIRON_VERSION", "0.1.0"),
+        "service.version": os.getenv("CHIRON_VERSION", __version__),
         "deployment.environment": os.getenv("CHIRON_ENV", "development"),
     }
     if resource_attributes:

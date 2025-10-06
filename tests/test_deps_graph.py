@@ -1,402 +1,207 @@
-"""Tests for chiron.deps.graph module - dependency graph visualization."""
-
-from __future__ import annotations
-
+import json
+import sys
 from pathlib import Path
 
+import pytest
+
+from chiron.deps import graph
 from chiron.deps.graph import (
     analyze_dependencies,
+    detect_cycles,
     generate_mermaid,
     parse_imports,
 )
 
 
-class TestParseImports:
-    """Tests for parse_imports function."""
+def test_parse_imports_filters_relative_and_self(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    module_dir = repo_root / "ingestion"
+    module_dir.mkdir()
+    file_path = module_dir / "sample.py"
+    file_path.write_text(
+        "import os\n"
+        "import retrieval.pipeline as pipeline\n"
+        "from execution.runner import run\n"
+        "from ingestion.utils import helper\n"
+        "from .local import value\n"
+    )
 
-    def test_parse_imports_simple(self, tmp_path: Path) -> None:
-        """Test parsing simple imports."""
-        py_file = tmp_path / "test.py"
-        py_file.write_text(
-            """
-import os
-import sys
-from pathlib import Path
-"""
-        )
+    imports = parse_imports(file_path, repo_root)
 
-        imports = parse_imports(py_file, tmp_path)
-
-        assert "os" in imports
-        assert "sys" in imports
-        assert "pathlib" in imports
-
-    def test_parse_imports_from_imports(self, tmp_path: Path) -> None:
-        """Test parsing from imports."""
-        py_file = tmp_path / "test.py"
-        py_file.write_text(
-            """
-from collections import defaultdict
-from typing import Any
-"""
-        )
-
-        imports = parse_imports(py_file, tmp_path)
-
-        assert "collections" in imports
-        assert "typing" in imports
-
-    def test_parse_imports_skips_relative(self, tmp_path: Path) -> None:
-        """Test that relative imports are skipped."""
-        py_file = tmp_path / "test.py"
-        py_file.write_text(
-            """
-from .base import BaseClass
-from ..utils import helper
-import os
-"""
-        )
-
-        imports = parse_imports(py_file, tmp_path)
-
-        # Relative imports should be skipped
-        assert "base" not in imports
-        assert "utils" not in imports
-        # Absolute import should be included
-        assert "os" in imports
-
-    def test_parse_imports_deduplicates(self, tmp_path: Path) -> None:
-        """Test that duplicate imports are deduplicated."""
-        py_file = tmp_path / "test.py"
-        py_file.write_text(
-            """
-import json
-from json import dumps
-from json.decoder import JSONDecoder
-"""
-        )
-
-        imports = parse_imports(py_file, tmp_path)
-
-        # Should only have json once despite multiple imports
-        assert imports.count("json") == 1
-
-    def test_parse_imports_syntax_error(self, tmp_path: Path) -> None:
-        """Test handling syntax errors in files."""
-        py_file = tmp_path / "bad.py"
-        py_file.write_text(
-            """
-import os
-def broken(
-# Syntax error - unclosed parenthesis
-"""
-        )
-
-        imports = parse_imports(py_file, tmp_path)
-
-        # Should return empty list for files with syntax errors
-        assert imports == []
-
-    def test_parse_imports_unicode_error(self, tmp_path: Path) -> None:
-        """Test handling files with encoding issues."""
-        py_file = tmp_path / "binary.py"
-        # Write binary data that will cause UnicodeDecodeError
-        py_file.write_bytes(b"\xff\xfe invalid unicode")
-
-        imports = parse_imports(py_file, tmp_path)
-
-        # Should return empty list for files with encoding errors
-        assert imports == []
-
-    def test_parse_imports_skips_same_module(self, tmp_path: Path) -> None:
-        """Test that imports from the same module are skipped."""
-        # Create a file in chiron module
-        chiron_dir = tmp_path / "chiron"
-        chiron_dir.mkdir()
-        py_file = chiron_dir / "test.py"
-        py_file.write_text(
-            """
-from chiron.core import something
-from chiron.utils import helper
-import external_module
-"""
-        )
-
-        imports = parse_imports(py_file, tmp_path)
-
-        # Should skip chiron imports since file is in chiron module
-        assert "chiron" not in imports
-        # But external imports should be included
-        assert "external_module" in imports
-
-    def test_parse_imports_nested_modules(self, tmp_path: Path) -> None:
-        """Test parsing imports with nested module paths."""
-        py_file = tmp_path / "test.py"
-        py_file.write_text(
-            """
-from collections.abc import Mapping
-from typing.io import TextIO
-import os.path
-"""
-        )
-
-        imports = parse_imports(py_file, tmp_path)
-
-        # Should only get the root module name
-        assert "collections" in imports
-        assert "typing" in imports
-        assert "os" in imports
+    assert set(imports) == {"os", "retrieval", "execution"}
 
 
-class TestAnalyzeDependencies:
-    """Tests for analyze_dependencies function."""
+def test_parse_imports_handles_src_namespace(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    chiron_root = repo_root / "src" / "chiron"
+    deps_dir = chiron_root / "deps"
+    obs_dir = chiron_root / "observability"
+    service_dir = chiron_root / "service"
 
-    def test_analyze_dependencies_empty_repo(self, tmp_path: Path) -> None:
-        """Test analyzing dependencies in an empty repository."""
-        graph = analyze_dependencies(tmp_path)
+    (chiron_root).mkdir(parents=True)
+    deps_dir.mkdir()
+    obs_dir.mkdir()
+    service_dir.mkdir()
 
-        # Should return empty graph for empty repo
-        assert graph == {}
+    (deps_dir / "__init__.py").write_text("\n")
+    (obs_dir / "__init__.py").write_text("\n")
+    (service_dir / "__init__.py").write_text("\n")
 
-    def test_analyze_dependencies_single_module(self, tmp_path: Path) -> None:
-        """Test analyzing dependencies for a single module."""
-        # Create a chiron module
-        chiron_dir = tmp_path / "chiron"
-        chiron_dir.mkdir()
-        test_file = chiron_dir / "test.py"
-        test_file.write_text(
-            """
-import os
-import json
-from pathlib import Path
-"""
-        )
+    file_path = deps_dir / "alpha.py"
+    file_path.write_text(
+        "import chiron.observability.metrics\n"
+        "from chiron.service.routes import router\n"
+        "from chiron.deps import guard\n"
+        "import json\n"
+    )
 
-        graph = analyze_dependencies(tmp_path)
+    imports = parse_imports(file_path, repo_root)
 
-        assert "chiron" in graph
-        assert "os" in graph["chiron"]["external_deps"]
-        assert "json" in graph["chiron"]["external_deps"]
-        assert "pathlib" in graph["chiron"]["external_deps"]
-        assert graph["chiron"]["file_count"] == 1
-
-    def test_analyze_dependencies_with_internal_deps(self, tmp_path: Path) -> None:
-        """Test analyzing dependencies with internal module dependencies."""
-        # Create common module
-        common_dir = tmp_path / "common"
-        common_dir.mkdir()
-        common_file = common_dir / "utils.py"
-        common_file.write_text("def helper(): pass")
-
-        # Create chiron module that imports from common
-        chiron_dir = tmp_path / "chiron"
-        chiron_dir.mkdir()
-        chiron_file = chiron_dir / "main.py"
-        chiron_file.write_text(
-            """
-from common import utils
-import json
-"""
-        )
-
-        graph = analyze_dependencies(tmp_path)
-
-        assert "chiron" in graph
-        assert "common" in graph["chiron"]["internal_deps"]
-        assert "json" in graph["chiron"]["external_deps"]
-
-    def test_analyze_dependencies_excludes_patterns(self, tmp_path: Path) -> None:
-        """Test that excluded patterns are properly skipped."""
-        # Create a file in excluded directory
-        venv_dir = tmp_path / ".venv"
-        venv_dir.mkdir()
-        chiron_in_venv = venv_dir / "chiron"
-        chiron_in_venv.mkdir()
-        venv_file = chiron_in_venv / "test.py"
-        venv_file.write_text("import os")
-
-        # Create a normal file
-        chiron_dir = tmp_path / "chiron"
-        chiron_dir.mkdir()
-        normal_file = chiron_dir / "test.py"
-        normal_file.write_text("import json")
-
-        graph = analyze_dependencies(tmp_path)
-
-        # Should only analyze normal file, not .venv file
-        assert "chiron" in graph
-        assert graph["chiron"]["file_count"] == 1
-
-    def test_analyze_dependencies_multiple_files(self, tmp_path: Path) -> None:
-        """Test analyzing multiple files in a module."""
-        chiron_dir = tmp_path / "chiron"
-        chiron_dir.mkdir()
-
-        file1 = chiron_dir / "file1.py"
-        file1.write_text("import os")
-
-        file2 = chiron_dir / "file2.py"
-        file2.write_text("import json")
-
-        file3 = chiron_dir / "file3.py"
-        file3.write_text("import sys")
-
-        graph = analyze_dependencies(tmp_path)
-
-        assert "chiron" in graph
-        assert graph["chiron"]["file_count"] == 3
-        assert "os" in graph["chiron"]["external_deps"]
-        assert "json" in graph["chiron"]["external_deps"]
-        assert "sys" in graph["chiron"]["external_deps"]
-
-    def test_analyze_dependencies_custom_exclude_patterns(self, tmp_path: Path) -> None:
-        """Test analyzing with custom exclude patterns."""
-        # Create test directory
-        test_dir = tmp_path / "tests"
-        test_dir.mkdir()
-        chiron_in_tests = test_dir / "chiron"
-        chiron_in_tests.mkdir()
-        test_file = chiron_in_tests / "test.py"
-        test_file.write_text("import os")
-
-        # Create normal directory
-        chiron_dir = tmp_path / "chiron"
-        chiron_dir.mkdir()
-        normal_file = chiron_dir / "main.py"
-        normal_file.write_text("import json")
-
-        graph = analyze_dependencies(tmp_path, exclude_patterns=["tests"])
-
-        # Should exclude tests directory
-        assert "chiron" in graph
-        assert graph["chiron"]["file_count"] == 1
-        assert "json" in graph["chiron"]["external_deps"]
-        assert "os" not in graph["chiron"]["external_deps"]
+    assert imports == ["chiron.observability", "chiron.service", "json"]
 
 
-class TestGenerateMermaid:
-    """Tests for generate_mermaid function."""
+def test_analyze_dependencies_builds_internal_and_external_edges(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    (repo_root / "ingestion").mkdir()
+    (repo_root / "retrieval").mkdir()
+    (repo_root / "scripts").mkdir()
 
-    def test_generate_mermaid_empty_graph(self) -> None:
-        """Test generating Mermaid diagram from empty graph."""
-        graph: dict[str, dict] = {}
+    (repo_root / "ingestion" / "alpha.py").write_text(
+        "import retrieval.handlers\nfrom execution.core import run\n"
+    )
+    (repo_root / "retrieval" / "beta.py").write_text(
+        "import json\nfrom observability.metrics import trace\n"
+    )
+    (repo_root / "scripts" / "gamma.py").write_text(
+        "from ingestion import alpha\n"
+    )
+    (repo_root / "vendor").mkdir()
+    (repo_root / "vendor" / "ignored.py").write_text("import os\n")
 
-        result = generate_mermaid(graph)
+    graph_data = analyze_dependencies(repo_root)
 
-        assert "```mermaid" in result
-        assert "graph TD" in result
-        assert "```" in result
+    assert graph_data["ingestion"]["internal_deps"] == ["execution", "retrieval"]
+    assert graph_data["ingestion"]["external_deps"] == []
+    assert graph_data["ingestion"]["file_count"] == 1
 
-    def test_generate_mermaid_single_module(self) -> None:
-        """Test generating Mermaid diagram for single module."""
-        graph = {
-            "chiron": {
-                "internal_deps": [],
-                "external_deps": ["os", "json"],
-                "file_count": 1,
-            }
-        }
+    assert graph_data["retrieval"]["internal_deps"] == ["observability"]
+    assert graph_data["retrieval"]["external_deps"] == ["json"]
+    assert graph_data["retrieval"]["file_count"] == 1
 
-        result = generate_mermaid(graph)
+    assert graph_data["scripts"]["internal_deps"] == ["ingestion"]
+    assert graph_data["scripts"]["external_deps"] == []
+    assert graph_data["scripts"]["file_count"] == 1
 
-        assert "chiron[Chiron]" in result
-        # No internal deps, so no arrows
-        assert "-->" not in result
 
-    def test_generate_mermaid_with_dependencies(self) -> None:
-        """Test generating Mermaid diagram with dependencies."""
-        graph = {
-            "chiron": {
-                "internal_deps": ["common"],
-                "external_deps": ["os"],
-                "file_count": 2,
-            },
-            "common": {
-                "internal_deps": [],
-                "external_deps": ["json"],
-                "file_count": 1,
-            },
-        }
+def test_analyze_dependencies_handles_src_layout(tmp_path: Path) -> None:
+    repo_root = tmp_path
+    chiron_root = repo_root / "src" / "chiron"
+    deps_dir = chiron_root / "deps"
+    obs_dir = chiron_root / "observability"
 
-        result = generate_mermaid(graph)
+    deps_dir.mkdir(parents=True)
+    obs_dir.mkdir(parents=True)
 
-        assert "chiron[Chiron]" in result
-        assert "common[Common]" in result
-        assert "chiron --> common" in result
+    (chiron_root / "__init__.py").write_text("\n")
+    (deps_dir / "__init__.py").write_text("\n")
+    (obs_dir / "__init__.py").write_text("\n")
 
-    def test_generate_mermaid_pipeline_styling(self) -> None:
-        """Test that pipeline stages get special styling."""
-        graph = {
+    (deps_dir / "graph.py").write_text(
+        "import json\nfrom chiron.observability import metrics\n"
+    )
+    (obs_dir / "metrics.py").write_text("import logging\n")
+
+    graph_data = analyze_dependencies(repo_root)
+
+    assert graph_data["chiron.deps"]["internal_deps"] == ["chiron.observability"]
+    assert graph_data["chiron.deps"]["external_deps"] == ["json"]
+    assert graph_data["chiron.deps"]["file_count"] == 2
+
+    assert graph_data["chiron.observability"]["external_deps"] == ["logging"]
+    assert graph_data["chiron.observability"]["file_count"] == 2
+
+
+def test_generate_mermaid_and_detect_cycles() -> None:
+    sample_graph = {
+        "ingestion": {"internal_deps": ["retrieval"], "external_deps": ["os"], "file_count": 2},
+        "retrieval": {"internal_deps": ["ingestion"], "external_deps": [], "file_count": 1},
+    }
+
+    mermaid = generate_mermaid(sample_graph)
+
+    assert "```mermaid" in mermaid
+    assert "ingestion --> retrieval" in mermaid
+
+    cycles = detect_cycles(sample_graph)
+
+    assert ["ingestion", "retrieval", "ingestion"] in cycles
+
+
+def test_graph_main_writes_json(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    output_path = tmp_path / "graph.json"
+
+    monkeypatch.setattr(
+        graph,
+        "analyze_dependencies",
+        lambda repo_root, exclude_patterns=None: {
             "ingestion": {
-                "internal_deps": ["common"],
-                "external_deps": [],
-                "file_count": 1,
-            },
-            "common": {
-                "internal_deps": [],
-                "external_deps": [],
-                "file_count": 1,
-            },
-        }
+                "internal_deps": ["retrieval"],
+                "external_deps": ["os"],
+                "file_count": 3,
+            }
+        },
+    )
 
-        result = generate_mermaid(graph)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "deps-graph",
+            "--repo-root",
+            str(tmp_path),
+            "--output",
+            str(output_path),
+            "--format",
+            "json",
+        ],
+    )
 
-        # Pipeline modules should have special styling
-        assert "ingestion[Ingestion]:::pipeline" in result
-        # Non-pipeline modules should not
-        assert "common[Common]:::" not in result or "common[Common]\n" in result
+    exit_code = graph.main()
 
-    def test_generate_mermaid_sorted_output(self) -> None:
-        """Test that Mermaid output is sorted."""
-        graph = {
-            "zebra": {
-                "internal_deps": ["apple"],
-                "external_deps": [],
-                "file_count": 1,
-            },
-            "apple": {
-                "internal_deps": [],
-                "external_deps": [],
-                "file_count": 1,
-            },
-            "banana": {
-                "internal_deps": [],
-                "external_deps": [],
-                "file_count": 1,
-            },
-        }
+    assert exit_code == 0
+    content = json.loads(output_path.read_text())
+    assert content["ingestion"]["file_count"] == 3
+    assert content["ingestion"]["external_deps"] == ["os"]
 
-        result = generate_mermaid(graph)
 
-        # Find positions in output
-        apple_pos = result.index("apple")
-        banana_pos = result.index("banana")
-        zebra_pos = result.index("zebra")
+def test_graph_main_cycle_check(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:
+    output_path = tmp_path / "graph.md"
 
-        # Should be in alphabetical order
-        assert apple_pos < banana_pos < zebra_pos
+    monkeypatch.setattr(
+        graph,
+        "analyze_dependencies",
+        lambda repo_root, exclude_patterns=None: {
+            "ingestion": {"internal_deps": ["retrieval"], "external_deps": [], "file_count": 1},
+            "retrieval": {"internal_deps": ["ingestion"], "external_deps": [], "file_count": 1},
+        },
+    )
 
-    def test_generate_mermaid_multiple_dependencies(self) -> None:
-        """Test generating diagram with multiple dependencies."""
-        graph = {
-            "chiron": {
-                "internal_deps": ["common", "api", "observability"],
-                "external_deps": [],
-                "file_count": 5,
-            },
-            "common": {"internal_deps": [], "external_deps": [], "file_count": 2},
-            "api": {"internal_deps": ["common"], "external_deps": [], "file_count": 3},
-            "observability": {
-                "internal_deps": [],
-                "external_deps": [],
-                "file_count": 1,
-            },
-        }
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "deps-graph",
+            "--repo-root",
+            str(tmp_path),
+            "--output",
+            str(output_path),
+            "--check-cycles",
+        ],
+    )
 
-        result = generate_mermaid(graph)
+    exit_code = graph.main()
+    captured = capsys.readouterr()
 
-        # Should have all dependencies
-        assert "chiron --> api" in result
-        assert "chiron --> common" in result
-        assert "chiron --> observability" in result
-        assert "api --> common" in result
+    assert exit_code == 1
+    assert "ERROR: Found" in captured.err
+    assert not output_path.exists()

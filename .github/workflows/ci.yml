@@ -55,7 +55,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync
+          uv sync --all-extras --dev
 
       - name: Run pre-commit hooks
         run: |
@@ -92,7 +92,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync
+          uv sync --all-extras --dev
 
       - name: Run bandit security scan
         run: |
@@ -130,7 +130,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync
+          uv sync --all-extras --dev
 
       - name: Install Syft
         run: |

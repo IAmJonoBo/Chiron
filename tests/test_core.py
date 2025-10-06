@@ -166,6 +166,99 @@ class TestChironCore:
         mock_processor_cls.assert_not_called()
 
     @patch.object(ChironCore, "_resolve_opentelemetry")
+    def test_setup_telemetry_placeholder_endpoint_requires_opt_in(
+        self, mock_resolve, basic_config
+    ) -> None:
+        mock_trace = MagicMock()
+        mock_tracer = MagicMock()
+        mock_trace.get_tracer.return_value = mock_tracer
+
+        mock_exporter_cls = Mock()
+        mock_processor_cls = Mock()
+        mock_provider_cls = Mock()
+
+        mock_provider = Mock()
+        mock_provider_cls.return_value = mock_provider
+
+        mock_resolve.return_value = (
+            mock_trace,
+            mock_exporter_cls,
+            mock_provider_cls,
+            mock_processor_cls,
+        )
+
+        config = basic_config.copy()
+        config["telemetry"] = {
+            "enabled": True,
+            "otlp_endpoint": "http://localhost:4317",
+        }
+
+        core = ChironCore(config=config, enable_telemetry=True)
+
+        assert core.tracer is mock_trace.get_tracer.return_value
+        mock_exporter_cls.assert_not_called()
+        mock_processor_cls.assert_not_called()
+
+    @patch.object(ChironCore, "_resolve_opentelemetry")
+    def test_setup_telemetry_placeholder_allows_opt_in(
+        self, mock_resolve, basic_config, monkeypatch
+    ) -> None:
+        mock_trace = MagicMock()
+        mock_tracer = MagicMock()
+        mock_trace.get_tracer.return_value = mock_tracer
+
+        mock_exporter_cls = Mock()
+        mock_processor_cls = Mock()
+        mock_provider_cls = Mock()
+
+        mock_provider = Mock()
+        mock_provider_cls.return_value = mock_provider
+
+        mock_exporter = Mock()
+        mock_exporter_cls.return_value = mock_exporter
+
+        mock_processor = Mock()
+        mock_processor_cls.return_value = mock_processor
+
+        mock_resolve.return_value = (
+            mock_trace,
+            mock_exporter_cls,
+            mock_provider_cls,
+            mock_processor_cls,
+        )
+
+        config = basic_config.copy()
+        config["telemetry"] = {
+            "enabled": True,
+            "otlp_endpoint": "http://localhost:4317",
+            "assume_local_collector": True,
+        }
+
+        core = ChironCore(config=config, enable_telemetry=True)
+
+        assert core.tracer is mock_trace.get_tracer.return_value
+        mock_exporter_cls.assert_called_once_with(endpoint="http://localhost:4317")
+        mock_processor_cls.assert_called_once_with(mock_exporter)
+
+        mock_exporter_cls.reset_mock()
+        mock_processor_cls.reset_mock()
+
+        monkeypatch.setenv("CHIRON_ASSUME_LOCAL_COLLECTOR", "true")
+        config = basic_config.copy()
+        config["telemetry"] = {
+            "enabled": True,
+            "otlp_endpoint": "http://localhost:4317",
+        }
+
+        core = ChironCore(config=config, enable_telemetry=True)
+
+        assert core.tracer is mock_trace.get_tracer.return_value
+        mock_exporter_cls.assert_called_once_with(endpoint="http://localhost:4317")
+        mock_processor_cls.assert_called_once_with(mock_exporter)
+
+        monkeypatch.delenv("CHIRON_ASSUME_LOCAL_COLLECTOR")
+
+    @patch.object(ChironCore, "_resolve_opentelemetry")
     def test_setup_telemetry_disabled_via_environment(
         self, mock_resolve, basic_config, monkeypatch
     ) -> None:

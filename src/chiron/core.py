@@ -5,6 +5,7 @@ from typing import Any
 
 import structlog
 
+from chiron import __version__
 from chiron.exceptions import ChironConfigurationError, ChironError
 
 
@@ -108,10 +109,35 @@ class ChironCore:
 
         try:
             telemetry_config = self.config.get("telemetry", {})
-            endpoint = telemetry_config.get("otlp_endpoint") or self.config.get(
-                "otlp_endpoint"
-            )
             exporter_enabled = telemetry_config.get("exporter_enabled", True)
+
+            endpoint = (
+                telemetry_config.get("otlp_endpoint")
+                or self.config.get("otlp_endpoint")
+                or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+            )
+
+            placeholder_endpoints = {
+                "http://localhost:4317",
+                "http://127.0.0.1:4317",
+                "grpc://localhost:4317",
+                "grpc://127.0.0.1:4317",
+            }
+
+            assume_local_collector = telemetry_config.get(
+                "assume_local_collector",
+                os.getenv("CHIRON_ASSUME_LOCAL_COLLECTOR", "false").lower()
+                in {"1", "true", "yes", "on"},
+            )
+
+            endpoint_is_placeholder = endpoint in placeholder_endpoints if endpoint else False
+
+            if endpoint_is_placeholder and not assume_local_collector:
+                self.logger.info(
+                    "Skipping OTLP exporter due to placeholder endpoint",
+                    endpoint=endpoint,
+                )
+                endpoint = None
 
             provider = provider_cls()
             ot_trace.set_tracer_provider(provider)
@@ -173,7 +199,7 @@ class ChironCore:
         """
         status = {
             "status": "healthy",
-            "version": "0.1.0",
+            "version": __version__,
             "telemetry_enabled": self.enable_telemetry,
             "security_mode": self.security_mode,
             "timestamp": structlog.processors.TimeStamper(fmt="iso")(

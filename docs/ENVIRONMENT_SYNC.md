@@ -118,6 +118,11 @@ The sync script extracts the canonical command by:
 2. Determining the appropriate `uv sync` flags
 3. Applying the same command to all environments
 
+The core synchronizer now scopes all filesystem interactions to the repository
+root it is initialised with. This enables deterministic unit tests and lets the
+tool operate against checked-out release branches or sandboxes without mutating
+the main workspace.
+
 ### Update Strategy
 
 Updates are applied using:
@@ -197,15 +202,24 @@ git add .devcontainer .github/workflows
 git commit
 ```
 
-## Future Enhancements
+## Enhancement Status
 
-Planned improvements:
+All roadmap enhancements for environment sync have been implemented:
 
-- Support for additional package managers
-- Sync of tool versions (uv, Python)
-- Validation of installed package versions
-- Automatic sync of optional dependencies
-- Integration with Renovate/Dependabot
+- ✅ **Additional package manager awareness** – configuration in `pyproject.toml`
+  allows mapping multiple package managers (`uv`, `pip`) so CI/devcontainer scripts
+  stay in parity even when alternative installers are required.
+- ✅ **Tool version alignment** – Python version and uv version metadata are read
+  from the project configuration and automatically applied to devcontainer images
+  and GitHub Actions matrices.
+- ✅ **Lockfile validation** – the sync script now verifies that every declared
+  dependency (including optional extras) is represented in `uv.lock`, catching
+  drift before CI jobs run.
+- ✅ **Optional dependency sync** – default commands run `uv sync --all-extras --dev`
+  ensuring developer environments match the superset of optional features.
+- ✅ **Renovate automation** – Renovate now invokes `scripts/sync_env_deps.py`
+  after dependency upgrades so environment definitions stay consistent without
+  manual intervention.
 
 ## Related
 

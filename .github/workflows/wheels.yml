@@ -33,7 +33,7 @@ jobs:
       - name: Resolve & sync dependencies
         run: |
           uv pip compile pyproject.toml -o constraints.txt --generate-hashes || echo "uv compile not available, skipping"
-          uv sync || pip install -e .
+          uv sync --all-extras --dev || pip install -e .
 
       - name: Build wheels
         run: python -m cibuildwheel --output-dir wheelhouse

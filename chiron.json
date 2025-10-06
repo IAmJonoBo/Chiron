@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "telemetry": {
     "enabled": true,
-    "otlp_endpoint": "http://localhost:4317"
+    "exporter_enabled": false,
+    "otlp_endpoint": "http://localhost:4317",
+    "assume_local_collector": false
   },
   "security": {
     "enabled": true,
