@@ -2186,6 +2186,160 @@ def analyze_refactor_opportunities(
     return RefactorReport(opportunities=tuple(opportunities))
 
 
+@dataclass(frozen=True, slots=True)
+class HotspotEntry:
+    """Represents a file hotspot based on churn and complexity."""
+
+    path: Path
+    complexity_score: int
+    churn_count: int
+    hotspot_score: int
+
+    def to_payload(self) -> dict[str, object]:
+        return {
+            "path": self.path.as_posix(),
+            "complexity_score": self.complexity_score,
+            "churn_count": self.churn_count,
+            "hotspot_score": self.hotspot_score,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class HotspotReport:
+    """Report of code hotspots ranked by churn × complexity."""
+
+    entries: tuple[HotspotEntry, ...]
+    generated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    def to_payload(self) -> dict[str, object]:
+        return {
+            "generated_at": self.generated_at.isoformat(),
+            "entries": [entry.to_payload() for entry in self.entries],
+        }
+
+    def render_lines(self, *, limit: int = 20) -> Iterable[str]:
+        """Render hotspot report as human-readable lines."""
+        if not self.entries:
+            yield "No hotspots detected."
+            return
+
+        yield f"Top {min(limit, len(self.entries))} Hotspots (complexity × churn):"
+        yield ""
+        for idx, entry in enumerate(self.entries[:limit], start=1):
+            yield (
+                f"{idx:2d}. {entry.path} "
+                f"(complexity={entry.complexity_score}, "
+                f"churn={entry.churn_count}, "
+                f"hotspot={entry.hotspot_score})"
+            )
+
+
+def analyze_hotspots(
+    *,
+    since: str = "12 months ago",
+    repo_root: Path | None = None,
+    min_complexity: int = 10,
+    min_churn: int = 2,
+) -> HotspotReport:
+    """Analyze code hotspots by combining git churn with complexity metrics.
+
+    This implements the hotspot targeting strategy from Next Steps.md:
+    prioritize files that are both complex and frequently changed.
+
+    Args:
+        since: Git log time specification (e.g., "12 months ago", "6 months ago")
+        repo_root: Repository root directory (defaults to current working directory)
+        min_complexity: Minimum complexity score to include (NLOC + CCN threshold)
+        min_churn: Minimum number of changes to include
+
+    Returns:
+        HotspotReport with entries sorted by hotspot score (complexity × churn)
+    """
+    root = (repo_root or Path.cwd()).resolve()
+
+    # Step 1: Collect git churn data (past N months)
+    churn_data: dict[Path, int] = {}
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "log",
+                f"--since={since}",
+                "--name-only",
+                "--pretty=format:",
+            ],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            for line in result.stdout.splitlines():
+                line = line.strip()
+                if line and line.endswith(".py"):
+                    file_path = root / line
+                    if file_path.exists():
+                        churn_data[file_path] = churn_data.get(file_path, 0) + 1
+    except FileNotFoundError:
+        # Git not available, skip churn analysis
+        pass
+
+    # Step 2: Collect complexity data using existing analyze_refactor_opportunities
+    complexity_data: dict[Path, int] = {}
+    python_files = sorted({
+        candidate.resolve()
+        for path in [root / "src", root / "tests"]
+        if path.exists()
+        for candidate in _iter_python_files(path)
+    })
+
+    for source_path in python_files:
+        try:
+            tree = ast.parse(source_path.read_text(encoding="utf-8"))
+            # Calculate complexity score as sum of function/method lengths + class sizes
+            score = 0
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    func_lines = _node_length(node)
+                    score += max(0, func_lines - 10)  # Penalize long functions
+                elif isinstance(node, ast.ClassDef):
+                    class_methods = sum(
+                        1 for n in node.body
+                        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    )
+                    score += max(0, class_methods - 5)  # Penalize large classes
+            complexity_data[source_path] = score
+        except (SyntaxError, OSError):
+            continue
+
+    # Step 3: Combine churn and complexity to calculate hotspot scores
+    all_files = set(churn_data.keys()) | set(complexity_data.keys())
+    entries: list[HotspotEntry] = []
+
+    for file_path in all_files:
+        complexity = complexity_data.get(file_path, 0)
+        churn = churn_data.get(file_path, 0)
+
+        # Apply filters
+        if complexity < min_complexity or churn < min_churn:
+            continue
+
+        hotspot_score = complexity * churn
+        entries.append(
+            HotspotEntry(
+                path=file_path.relative_to(root) if file_path.is_relative_to(root) else file_path,
+                complexity_score=complexity,
+                churn_count=churn,
+                hotspot_score=hotspot_score,
+            )
+        )
+
+    # Sort by hotspot score (highest first)
+    entries.sort(key=lambda e: e.hotspot_score, reverse=True)
+
+    return HotspotReport(entries=tuple(entries))
+
+
 __all__ = [
     "CommandResult",
     "CoverageFocusSummary",
@@ -2193,6 +2347,8 @@ __all__ = [
     "CoverageReport",
     "DEFAULT_MONITORING_FOCUS",
     "DevToolCommandError",
+    "HotspotEntry",
+    "HotspotReport",
     "ModuleCoverage",
     "QualityConfiguration",
     "QualityGate",
@@ -2205,9 +2361,10 @@ __all__ = [
     "QualitySuiteDryRun",
     "RefactorOpportunity",
     "RefactorReport",
+    "analyze_hotspots",
+    "analyze_refactor_opportunities",
     "available_quality_gates",
     "available_quality_profiles",
-    "analyze_refactor_opportunities",
     "build_coverage_focus_summaries",
     "build_quality_suite_insights",
     "build_quality_suite_monitoring",

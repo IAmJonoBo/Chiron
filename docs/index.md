@@ -153,6 +153,7 @@ graph TB
 - [Grafana Dashboard Deployment Guide](GRAFANA_DEPLOYMENT_GUIDE.md) — Provision Grafana dashboards against the Chiron observability sandbox.
 - [MCP Integration Testing Guide](MCP_INTEGRATION_TESTING.md) — Run the MCP server end-to-end with contract validation and wheelhouse planning.
 - [Quality Gates - Frontier Standards](QUALITY_GATES.md) — Align local QA suites with CI using profile-aware planning, monitoring, and documentation sync.
+- [Refactoring Tools - Intelligent Code Modernization](REFACTORING_GUIDE.md) — Use hotspot analysis and refactoring insights to prioritize code improvements and manage large-scale changes safely.
 
 ### Reference
 

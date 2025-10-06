@@ -933,3 +933,161 @@ def test_refactor_report_payload_is_sorted(tmp_path: Path) -> None:
     assert payload["opportunities"], "Expected at least one opportunity"
     ranks = [item["severity_rank"] for item in payload["opportunities"]]
     assert ranks == sorted(ranks, reverse=True)
+
+
+def test_analyze_hotspots_combines_churn_and_complexity(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    from chiron.dev_toolbox import analyze_hotspots
+
+    # Create a simple test file structure
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+
+    complex_file = src_dir / "complex.py"
+    complex_file.write_text(
+        textwrap.dedent(
+            """
+            class LargeClass:
+                def method1(self): pass
+                def method2(self): pass
+                def method3(self): pass
+                def method4(self): pass
+                def method5(self): pass
+                def method6(self): pass
+                def method7(self): pass
+                def method8(self): pass
+
+            def very_long_function():
+                line1 = 1
+                line2 = 2
+                line3 = 3
+                line4 = 4
+                line5 = 5
+                line6 = 6
+                line7 = 7
+                line8 = 8
+                line9 = 9
+                line10 = 10
+                line11 = 11
+                line12 = 12
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    simple_file = src_dir / "simple.py"
+    simple_file.write_text(
+        textwrap.dedent(
+            """
+            def simple():
+                return 1
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    # Mock git log to return controlled churn data
+    def fake_subprocess_run(cmd, *args, **kwargs):
+        class FakeResult:
+            returncode = 0
+            stdout = f"{complex_file.relative_to(tmp_path)}\n{complex_file.relative_to(tmp_path)}\n{simple_file.relative_to(tmp_path)}\n"
+
+        if cmd[0] == "git" and cmd[1] == "log":
+            return FakeResult()
+        raise FileNotFoundError()
+
+    monkeypatch.setattr("subprocess.run", fake_subprocess_run)
+
+    report = analyze_hotspots(repo_root=tmp_path, min_complexity=0, min_churn=1)
+
+    assert len(report.entries) == 2
+    # Complex file should rank higher (more complexity * more churn)
+    assert report.entries[0].path == complex_file.relative_to(tmp_path)
+    assert report.entries[0].churn_count == 2
+    assert report.entries[0].complexity_score > 0
+    assert report.entries[1].path == simple_file.relative_to(tmp_path)
+    assert report.entries[1].churn_count == 1
+
+
+def test_analyze_hotspots_without_git(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+    from chiron.dev_toolbox import analyze_hotspots
+
+    # Create a simple test file
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+
+    test_file = src_dir / "test.py"
+    test_file.write_text(
+        textwrap.dedent(
+            """
+            def simple():
+                return 1
+            """
+        ),
+        encoding="utf-8",
+    )
+
+    # Mock subprocess to simulate git not available
+    def fake_subprocess_run(cmd, *args, **kwargs):
+        raise FileNotFoundError()
+
+    monkeypatch.setattr("subprocess.run", fake_subprocess_run)
+
+    # Should not crash when git is unavailable
+    report = analyze_hotspots(repo_root=tmp_path, min_complexity=0, min_churn=0)
+
+    # Without git, there should be no churn data, so no hotspots
+    # (since default min_churn is 2, but we set it to 0 here)
+    assert isinstance(report.entries, tuple)
+
+
+def test_hotspot_report_renders_lines() -> None:
+    from chiron.dev_toolbox import HotspotEntry, HotspotReport
+
+    entry1 = HotspotEntry(
+        path=Path("src/high.py"),
+        complexity_score=100,
+        churn_count=10,
+        hotspot_score=1000,
+    )
+    entry2 = HotspotEntry(
+        path=Path("src/low.py"),
+        complexity_score=20,
+        churn_count=2,
+        hotspot_score=40,
+    )
+
+    report = HotspotReport(entries=(entry1, entry2))
+    lines = list(report.render_lines(limit=5))
+
+    assert len(lines) > 0
+    assert "high.py" in "\n".join(lines)
+    assert "hotspot=1000" in "\n".join(lines)
+
+
+def test_hotspot_report_empty() -> None:
+    from chiron.dev_toolbox import HotspotReport
+
+    report = HotspotReport(entries=())
+    lines = list(report.render_lines())
+
+    assert "No hotspots detected" in "\n".join(lines)
+
+
+def test_hotspot_entry_payload() -> None:
+    from chiron.dev_toolbox import HotspotEntry
+
+    entry = HotspotEntry(
+        path=Path("src/test.py"),
+        complexity_score=50,
+        churn_count=5,
+        hotspot_score=250,
+    )
+
+    payload = entry.to_payload()
+    assert payload["path"] == "src/test.py"
+    assert payload["complexity_score"] == 50
+    assert payload["churn_count"] == 5
+    assert payload["hotspot_score"] == 250
+

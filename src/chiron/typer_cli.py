@@ -30,6 +30,7 @@ from chiron.dev_toolbox import (
     DiataxisEntry,
     DocumentationSyncError,
     QualitySuiteProgressEvent,
+    analyze_hotspots,
     analyze_refactor_opportunities,
     available_quality_profiles,
     build_quality_suite_monitoring,
@@ -1665,6 +1666,92 @@ def refactor_analyze(
             f"{opportunity.path}:{opportunity.line}{symbol} — "
             f"{opportunity.message}{metric_hint}"
         )
+
+
+@refactor_app.command("hotspots")
+def refactor_hotspots(
+    since: str = typer.Option(
+        "12 months ago",
+        "--since",
+        help="Git log time specification for churn analysis",
+    ),
+    limit: int = typer.Option(
+        20,
+        "--limit",
+        min=1,
+        help="Number of top hotspots to display",
+    ),
+    min_complexity: int = typer.Option(
+        10,
+        "--min-complexity",
+        min=0,
+        help="Minimum complexity score threshold",
+    ),
+    min_churn: int = typer.Option(
+        2,
+        "--min-churn",
+        min=1,
+        help="Minimum number of changes threshold",
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit machine-readable JSON report",
+    ),
+) -> None:
+    """Identify code hotspots by combining churn and complexity.
+
+    Implements hotspot targeting from Next Steps.md: prioritize files
+    that are both complex and frequently changed (complexity × churn).
+    These are the best candidates for refactoring investment.
+    """
+    report = analyze_hotspots(
+        since=since,
+        min_complexity=min_complexity,
+        min_churn=min_churn,
+    )
+
+    if json_output:
+        typer.echo(json.dumps(report.to_payload(), indent=2))
+        return
+
+    console = Console()
+    if not report.entries:
+        console.print("[green]No hotspots detected with current thresholds.[/green]")
+        return
+
+    console.print()
+    console.rule("[bold]Code Hotspots (Complexity × Churn)[/bold]")
+    console.print()
+    console.print(
+        f"Analyzed files changed since [cyan]{since}[/cyan] "
+        f"with complexity ≥ {min_complexity} and churn ≥ {min_churn}"
+    )
+    console.print()
+
+    for idx, entry in enumerate(report.entries[:limit], start=1):
+        # Color code by hotspot severity
+        if entry.hotspot_score > 1000:
+            style = "bold red"
+        elif entry.hotspot_score > 500:
+            style = "yellow"
+        else:
+            style = "cyan"
+
+        console.print(
+            f"[{style}]{idx:2d}.[/] {entry.path} "
+            f"(complexity={entry.complexity_score}, "
+            f"churn={entry.churn_count}, "
+            f"[{style}]hotspot={entry.hotspot_score}[/])"
+        )
+
+    if len(report.entries) > limit:
+        console.print()
+        console.print(
+            f"[dim]... and {len(report.entries) - limit} more. "
+            f"Use --limit to see more.[/dim]"
+        )
+
 
 
 @docs_app.command("sync-diataxis")

@@ -31,6 +31,11 @@
       "title": "Quality Gates - Frontier Standards",
       "path": "QUALITY_GATES.md",
       "summary": "Align local QA suites with CI using profile-aware planning, monitoring, and documentation sync."
+    },
+    {
+      "title": "Refactoring Tools - Intelligent Code Modernization",
+      "path": "REFACTORING_GUIDE.md",
+      "summary": "Use hotspot analysis and refactoring insights to prioritize code improvements and manage large-scale changes safely."
     }
   ],
   "reference": [
