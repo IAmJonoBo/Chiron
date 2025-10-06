@@ -10,17 +10,15 @@ This is the main CLI entry point for the Chiron subsystem. It provides commands 
 
 from __future__ import annotations
 
-import importlib
 import json
 import logging
-import sys
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal, cast
 
 import click
 
 try:
-    typer = importlib.import_module("typer")
+    import typer
 except ImportError as exc:
     raise RuntimeError("Typer must be installed to use the Chiron CLI") from exc
 
@@ -398,12 +396,24 @@ def deps_constraints(
     """
     from chiron.deps.constraints import generate_constraints
 
-    extras_list = extras.split(",") if extras else None
+    extras_list = (
+        [item.strip() for item in extras.split(",") if item.strip()] if extras else None
+    )
+
+    tool_normalized = tool.strip().lower()
+    if tool_normalized not in {"uv", "pip-tools"}:
+        typer.echo(
+            "❌ Unsupported constraints tool. Choose 'uv' or 'pip-tools'",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    tool_literal = cast(Literal["uv", "pip-tools"], tool_normalized)
 
     success = generate_constraints(
         project_root=Path.cwd(),
         output_path=output,
-        tool=tool,
+        tool=tool_literal,
         include_extras=extras_list,
     )
 
@@ -1519,9 +1529,7 @@ def orchestrate_governance(ctx: click.Context) -> None:
     """
     from chiron.orchestration import governance
 
-    exit_code = governance.main()
-    if exit_code != 0:
-        raise typer.Exit(exit_code)
+    governance.main()
 
 
 # ============================================================================
@@ -2014,16 +2022,18 @@ def telemetry_clear() -> None:
 # ============================================================================
 
 
-def main() -> int:
+def main() -> None:
     """Main CLI entry point."""
     try:
-        app()
-        return 0
+        app(standalone_mode=False)
+    except SystemExit as exc:
+        code = exc.code if exc.code is not None else 0
+        raise SystemExit(code if isinstance(code, int) else 1)
     except Exception as exc:
         logger.exception("Chiron CLI failed")
         typer.secho(f"Error: {exc}", fg=typer.colors.RED, err=True)
-        return 1
+        raise SystemExit(1) from exc
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

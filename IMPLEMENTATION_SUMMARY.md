@@ -187,22 +187,22 @@
 
 ### Environment Synchronization System ✅
 
-4. **Auto-Sync Script** (`scripts/sync_env_deps.py`)
+1. **Auto-Sync Script** (`scripts/sync_env_deps.py`)
    - Synchronizes dependency commands between devcontainer and CI
    - Validates consistency across all environments
    - Automated updates with conflict detection
 
-5. **CI Workflow** (`.github/workflows/sync-env.yml`)
+1. **CI Workflow** (`.github/workflows/sync-env.yml`)
    - Automatic PR creation for sync changes
    - Validation on pull requests
    - Prevents environment drift
 
-6. **Pre-commit Hook** (`.pre-commit-config.yaml`)
+1. **Pre-commit Hook** (`.pre-commit-config.yaml`)
    - Automatic sync before commits
    - Validates configuration files
    - Prevents accidental inconsistencies
 
-7. **Documentation** (`docs/ENVIRONMENT_SYNC.md`)
+1. **Documentation** (`docs/ENVIRONMENT_SYNC.md`)
    - Complete usage guide
    - Troubleshooting instructions
    - Integration examples

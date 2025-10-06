@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
+from packaging.tags import Tag
 from packaging.utils import InvalidWheelFilename, parse_wheel_filename
 from packaging.version import InvalidVersion, Version
 
@@ -91,20 +92,22 @@ class WheelhouseRemediator:
             if include_recommendations:
                 failure.recommendations = self._recommendations_for(failure)
 
-        summary = {
+        failures_payload: list[dict[str, object]] = []
+        for failure in failures:
+            failure_entry: dict[str, object] = {
+                "package": failure.package,
+                "requested_version": failure.requested_version,
+                "fallback_version": failure.fallback_version,
+                "reason": failure.reason,
+                "recommendations": list(failure.recommendations),
+            }
+            failures_payload.append(failure_entry)
+
+        summary: dict[str, object] = {
             "generated_at": datetime.now(UTC).isoformat(),
             "python_version": self._target.python,
             "platform": self._target.platform,
-            "failures": [
-                {
-                    "package": failure.package,
-                    "requested_version": failure.requested_version,
-                    "fallback_version": failure.fallback_version,
-                    "reason": failure.reason,
-                    "recommendations": failure.recommendations,
-                }
-                for failure in failures
-            ],
+            "failures": failures_payload,
         }
         return summary
 
@@ -132,7 +135,7 @@ class WheelhouseRemediator:
             headers={"Accept": "application/json"},
         )
         try:
-            with urllib.request.urlopen(  # type: ignore[arg-type]  # noqa: S310 - trusted host list
+            with urllib.request.urlopen(  # noqa: S310 - trusted host list
                 request,
                 timeout=20,
             ) as response:
@@ -190,8 +193,6 @@ class WheelhouseRemediator:
         self, files: Sequence[Mapping[str, object]]
     ) -> bool:
         for file_info in files:
-            if not isinstance(file_info, Mapping):
-                continue
             if str(file_info.get("packagetype")) != "bdist_wheel":
                 continue
             if file_info.get("yanked"):
@@ -220,12 +221,12 @@ class WheelhouseRemediator:
                 return True
         return False
 
-    def _tag_supports(self, tag, target: WheelTarget) -> bool:
+    def _tag_supports(self, tag: Tag, target: WheelTarget) -> bool:
         return self._interpreter_matches(tag, target) and self._platform_matches(
             tag, target
         )
 
-    def _interpreter_matches(self, tag, target: WheelTarget) -> bool:
+    def _interpreter_matches(self, tag: Tag, target: WheelTarget) -> bool:
         python = target.python
         if python is None:
             return True
@@ -242,7 +243,7 @@ class WheelhouseRemediator:
             return True
         return tag.interpreter.startswith("cp3")
 
-    def _platform_matches(self, tag, target: WheelTarget) -> bool:
+    def _platform_matches(self, tag: Tag, target: WheelTarget) -> bool:
         platform = target.platform
         if platform is None:
             return True

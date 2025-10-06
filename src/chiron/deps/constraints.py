@@ -49,11 +49,9 @@ class ConstraintsGenerator:
 
         if self.config.tool == "uv":
             return self._generate_with_uv()
-        elif self.config.tool == "pip-tools":
+        if self.config.tool == "pip-tools":
             return self._generate_with_pip_tools()
-        else:
-            logger.error(f"Unknown tool: {self.config.tool}")
-            return False
+        raise ValueError(f"Unknown tool: {self.config.tool}")
 
     def _generate_with_uv(self) -> bool:
         """Generate constraints using uv."""

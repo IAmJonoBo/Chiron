@@ -32,30 +32,25 @@ import textwrap
 import urllib.error
 import urllib.parse
 import urllib.request
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
 try:  # Python 3.11+
-    import tomllib  # type: ignore[attr-defined]
+    import tomllib
 except ModuleNotFoundError:  # pragma: no cover - Python < 3.11 fallback
-    import tomli as tomllib  # type: ignore[no-redef]
+    tomllib = importlib.import_module("tomli")
 
 try:
-    _markers_mod = importlib.import_module("packaging.markers")
-    _tags_mod = importlib.import_module("packaging.tags")
-    _utils_mod = importlib.import_module("packaging.utils")
-except ModuleNotFoundError as exc:  # pragma: no cover - fails fast without deps
+    from packaging.markers import Marker
+    from packaging.tags import Tag
+    from packaging.utils import InvalidWheelFilename, parse_wheel_filename
+except ImportError as exc:  # pragma: no cover - fails fast without deps
     raise RuntimeError(
         "The 'packaging' library is required for dependency preflight checks. "
         "Install it via `poetry install` or `pip install packaging`."
     ) from exc
-
-Marker = _markers_mod.Marker
-Tag = _tags_mod.Tag
-InvalidWheelFilename = _utils_mod.InvalidWheelFilename
-parse_wheel_filename = _utils_mod.parse_wheel_filename
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_LOCK = REPO_ROOT / "poetry.lock"
@@ -195,16 +190,19 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 def _load_lock(path: Path) -> Mapping[str, object]:
     with path.open("rb") as handle:
-        return tomllib.load(handle)
+        data = tomllib.load(handle)
+    if not isinstance(data, Mapping):
+        raise ValueError(f"Invalid poetry.lock structure at {path}")
+    return data
 
 
 def _iter_packages(
     lock_data: Mapping[str, object], *, only: Iterable[str] | None
-) -> Iterable[PackageEntry]:
+) -> Iterator[PackageEntry]:
     only_lower = {name.lower() for name in only} if only else None
     packages = lock_data.get("package", [])
     if not isinstance(packages, list):  # pragma: no cover - defensive
-        return []
+        return
     for entry in packages:
         if not isinstance(entry, Mapping):  # pragma: no cover - defensive
             continue
@@ -236,7 +234,7 @@ def _fetch_release(name: str, version: str) -> Mapping[str, object] | None:
         headers={"Accept": "application/json"},
     )
     try:
-        with urllib.request.urlopen(  # type: ignore[arg-type]  # noqa: S310 - trusted host list
+        with urllib.request.urlopen(  # noqa: S310 - trusted host list
             request,
             timeout=20,
         ) as response:
@@ -252,9 +250,14 @@ def _fetch_release(name: str, version: str) -> Mapping[str, object] | None:
             f"PyPI request failed for {name}=={version}: {exc.reason}"
         ) from exc
     try:
-        return json.loads(payload.decode("utf-8"))
+        parsed = json.loads(payload.decode("utf-8"))
     except json.JSONDecodeError as exc:  # pragma: no cover - network edge
         raise RuntimeError(f"Invalid JSON for {name}=={version}: {exc}") from exc
+    if not isinstance(parsed, Mapping):
+        raise RuntimeError(
+            f"Unexpected JSON structure for {name}=={version}: {type(parsed).__name__}"
+        )
+    return parsed
 
 
 def _wheel_supports_target(filename: str, target: WheelTarget) -> bool:

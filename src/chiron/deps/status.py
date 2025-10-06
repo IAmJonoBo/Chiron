@@ -323,9 +323,12 @@ def _load_guard_output(output_path: Path) -> dict[str, Any] | None:
     if not output_path.exists():
         return None
     try:
-        return json.loads(output_path.read_text(encoding="utf-8"))
+        parsed = json.loads(output_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         return None
+    if isinstance(parsed, dict):
+        return parsed
+    return None
 
 
 def _load_markdown(markdown_path: Path) -> str | None:

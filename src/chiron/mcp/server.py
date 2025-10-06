@@ -8,15 +8,14 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover - type checking only
-    from chiron.deps.bundler import WheelhouseBundler
-    from chiron.deps.policy import DependencyPolicy, PolicyEngine
     from chiron.features import FeatureFlags
 
-_get_feature_flags_resolver: Optional[Callable[[], "FeatureFlags"]]
+_get_feature_flags_resolver: Callable[[], FeatureFlags] | None
 try:  # pragma: no cover - optional dependency
     from chiron.features import get_feature_flags as _get_feature_flags_resolver
 except ImportError:  # pragma: no cover - fallback when features unavailable
@@ -170,7 +169,7 @@ class MCPServer:
         Returns:
             Tool execution result
         """
-        handlers: Dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
+        handlers: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
             "chiron_build_wheelhouse": self._build_wheelhouse,
             "chiron_verify_artifacts": self._verify_artifacts,
             "chiron_create_airgap_bundle": self._create_airgap_bundle,
