@@ -33,7 +33,7 @@ repos:
         args: ["--config=pyproject.toml"]
 
   - repo: https://github.com/errata-ai/vale
-    rev: v3.10.1
+    rev: v3.10.0
     hooks:
       - id: vale
         files: \.(md|rst|adoc)$
