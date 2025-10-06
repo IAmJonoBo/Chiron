@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import importlib
 import json
 import re
@@ -16,6 +17,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Literal, cast, get_args
 
+import yaml  # type: ignore[import-untyped]
 from defusedxml import ElementTree as ET  # type: ignore[import-untyped]
 
 from chiron.planning import ExecutionPlanStep, render_execution_plan
@@ -626,6 +628,220 @@ class DocumentationSyncError(RuntimeError):
     """Raised when documentation blocks cannot be updated automatically."""
 
 
+@dataclass(frozen=True, slots=True)
+class DiataxisEntry:
+    """A documentation entry grouped by Diataxis category."""
+
+    title: str
+    path: str
+    summary: str
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, object]) -> DiataxisEntry:
+        try:
+            title = str(data["title"]).strip()
+            path = str(data["path"]).strip()
+            summary = str(data["summary"]).strip()
+        except KeyError as exc:  # pragma: no cover - defensive guard
+            raise DocumentationSyncError(
+                f"Diataxis entry is missing required key: {exc}"
+            ) from exc
+
+        if not title or not path or not summary:
+            raise DocumentationSyncError(
+                f"Diataxis entry must include non-empty title, path, and summary: {data}"
+            )
+
+        return cls(title=title, path=path, summary=summary)
+
+    def to_mapping(self) -> dict[str, str]:
+        return {"title": self.title, "path": self.path, "summary": self.summary}
+
+
+DIATAXIS_CATEGORY_LABELS: dict[str, str] = {
+    "tutorials": "Tutorials",
+    "how_to": "How-to Guides",
+    "reference": "Reference",
+    "explanation": "Explanation",
+}
+
+
+def load_diataxis_entries(path: Path) -> dict[str, tuple[DiataxisEntry, ...]]:
+    """Load Diataxis documentation entries from *path*."""
+
+    if not path.exists():
+        raise DocumentationSyncError(f"Diataxis configuration not found: {path}")
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:  # pragma: no cover - defensive guard
+        raise DocumentationSyncError(f"Invalid Diataxis configuration JSON: {exc}") from exc
+
+    entries: dict[str, list[DiataxisEntry]] = {}
+    for category, items in payload.items():
+        if category not in DIATAXIS_CATEGORY_LABELS:
+            raise DocumentationSyncError(
+                f"Unsupported Diataxis category '{category}'. Expected one of: "
+                f"{', '.join(sorted(DIATAXIS_CATEGORY_LABELS))}."
+            )
+        if not isinstance(items, list):
+            raise DocumentationSyncError(
+                f"Diataxis category '{category}' must be a list of entries."
+            )
+        bucket: list[DiataxisEntry] = []
+        for item in items:
+            if not isinstance(item, Mapping):
+                raise DocumentationSyncError(
+                    f"Each Diataxis entry must be a mapping, got: {item!r}"
+                )
+            bucket.append(DiataxisEntry.from_mapping(item))
+        entries[category] = bucket
+
+    for category in DIATAXIS_CATEGORY_LABELS:
+        entries.setdefault(category, [])
+
+    return {category: tuple(items) for category, items in entries.items()}
+
+
+def dump_diataxis_entries(
+    path: Path, entries: Mapping[str, Sequence[DiataxisEntry]]
+) -> Path:
+    """Persist *entries* to *path* as JSON."""
+
+    serializable: dict[str, list[dict[str, str]]] = {}
+    for category in DIATAXIS_CATEGORY_LABELS:
+        bucket = [entry.to_mapping() for entry in entries.get(category, ())]
+        serializable[category] = bucket
+
+    path.write_text(json.dumps(serializable, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
+FRONT_MATTER_DELIMITER = "---"
+
+
+def _extract_front_matter(
+    path: Path,
+) -> tuple[dict[str, object], tuple[str, ...]]:
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != FRONT_MATTER_DELIMITER:
+        return {}, tuple(lines)
+
+    for index in range(1, len(lines)):
+        if lines[index].strip() == FRONT_MATTER_DELIMITER:
+            block = "\n".join(lines[1:index])
+            try:
+                loaded = yaml.safe_load(block) or {}
+            except yaml.YAMLError as exc:  # pragma: no cover - defensive guard
+                raise DocumentationSyncError(
+                    f"Invalid YAML front matter in {path}: {exc}"
+                ) from exc
+            if not isinstance(loaded, Mapping):
+                raise DocumentationSyncError(
+                    f"Front matter in {path} must be a mapping, got {type(loaded).__name__}"
+                )
+            data = {str(key): value for key, value in loaded.items()}
+            remainder = tuple(lines[index + 1 :])
+            return data, remainder
+
+    raise DocumentationSyncError(
+        f"Front matter in {path} is not terminated by '{FRONT_MATTER_DELIMITER}'"
+    )
+
+
+def _extract_first_heading(lines: Sequence[str]) -> str | None:
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            return stripped.lstrip("#").strip()
+    return None
+
+
+def discover_diataxis_entries(docs_dir: Path) -> dict[str, tuple[DiataxisEntry, ...]]:
+    """Discover Diataxis entries from Markdown front matter under *docs_dir*."""
+
+    if not docs_dir.exists():
+        raise DocumentationSyncError(f"Documentation directory not found: {docs_dir}")
+
+    entries: dict[str, list[DiataxisEntry]] = {
+        category: [] for category in DIATAXIS_CATEGORY_LABELS
+    }
+
+    markdown_files = sorted(docs_dir.rglob("*.md"))
+    for path in markdown_files:
+        if path.name == "index.md":
+            continue
+
+        metadata, remainder = _extract_front_matter(path)
+        if not metadata:
+            continue
+
+        try:
+            category = str(metadata["diataxis"]).strip()
+        except KeyError:
+            continue
+
+        if category not in DIATAXIS_CATEGORY_LABELS:
+            raise DocumentationSyncError(
+                f"Unsupported diataxis category '{category}' in {path}"
+            )
+
+        title_value = str(metadata.get("title", "")).strip()
+        if not title_value:
+            heading = _extract_first_heading(remainder)
+            if heading:
+                title_value = heading
+        if not title_value:
+            raise DocumentationSyncError(
+                f"Unable to determine title for {path}. Provide a 'title' front matter field or first-level heading."
+            )
+
+        summary = str(metadata.get("summary", "")).strip()
+        if not summary:
+            raise DocumentationSyncError(
+                f"Documentation summary missing for {path}. Populate the 'summary' front matter field."
+            )
+
+        rel_path = path.relative_to(docs_dir).as_posix()
+        entries[category].append(
+            DiataxisEntry(title=title_value, path=rel_path, summary=summary)
+        )
+
+    return {
+        category: tuple(
+            sorted(bucket, key=lambda entry: entry.title.casefold())
+        )
+        for category, bucket in entries.items()
+    }
+
+
+def render_diataxis_overview(
+    entries: Mapping[str, Sequence[DiataxisEntry]]
+) -> tuple[str, ...]:
+    """Render Markdown lines for the provided Diataxis *entries*."""
+
+    lines: list[str] = []
+    for category_key in DIATAXIS_CATEGORY_LABELS:
+        label = DIATAXIS_CATEGORY_LABELS[category_key]
+        lines.append(f"### {label}")
+        lines.append("")
+        category_entries = entries.get(category_key, ())
+        if category_entries:
+            for entry in category_entries:
+                lines.append(
+                    f"- [{entry.title}]({entry.path}) — {entry.summary}"
+                )
+        else:
+            lines.append("_No entries yet._")
+        lines.append("")
+
+    lines.append(
+        "_Updated automatically via `chiron tools docs sync-diataxis --discover`._"
+    )
+    return tuple(lines)
+
+
 def sync_quality_suite_documentation(
     snapshot: QualitySuiteDryRun,
     path: Path,
@@ -654,6 +870,39 @@ def sync_quality_suite_documentation(
     updated = pattern.sub(replacement, contents, count=1)
     path.write_text(updated, encoding="utf-8")
     return path
+
+
+def sync_diataxis_documentation(
+    config_path: Path,
+    doc_path: Path,
+    *,
+    marker: str = "DIATAXIS_AUTODOC",
+    entries: Mapping[str, Sequence[DiataxisEntry]] | None = None,
+) -> Path:
+    """Synchronise the Diataxis documentation block using *config_path*."""
+
+    resolved_entries = entries or load_diataxis_entries(config_path)
+    lines = render_diataxis_overview(resolved_entries)
+
+    if not doc_path.exists():
+        raise DocumentationSyncError(f"Documentation file not found: {doc_path}")
+
+    begin = f"<!-- BEGIN {marker} -->"
+    end = f"<!-- END {marker} -->"
+    contents = doc_path.read_text(encoding="utf-8")
+    pattern = re.compile(
+        rf"({re.escape(begin)})(.*?)[\r\n]+({re.escape(end)})",
+        re.DOTALL,
+    )
+    if not pattern.search(contents):
+        raise DocumentationSyncError(
+            f"Documentation markers '{begin}'/'{end}' not found in {doc_path}"
+        )
+
+    replacement = f"{begin}\n" + "\n".join(lines) + f"\n{end}"
+    updated = pattern.sub(replacement, contents, count=1)
+    doc_path.write_text(updated, encoding="utf-8")
+    return doc_path
 
 
 DEFAULT_MONITORING_FOCUS: dict[str, tuple[str, ...]] = {
@@ -1453,6 +1702,490 @@ def prepare_quality_suite_dry_run(
     )
 
 
+_TODO_PATTERN = re.compile(r"#\s*(TODO|FIXME|XXX)(:?)(?=\s|$)", re.IGNORECASE)
+
+
+def _iter_python_files(path: Path) -> Iterable[Path]:
+    """Yield Python source files from *path*."""
+
+    if path.is_file() and path.suffix == ".py":
+        yield path
+        return
+
+    if not path.is_dir():
+        return
+
+    for candidate in sorted(path.rglob("*.py")):
+        if candidate.is_file():
+            yield candidate
+
+
+def _build_path_index(paths: Sequence[Path]) -> dict[str, Path]:
+    """Return a mapping of normalised string representations to real paths."""
+
+    index: dict[str, Path] = {}
+    cwd = Path.cwd()
+    for path in paths:
+        resolved = path.resolve()
+        variants = {
+            str(path),
+            path.as_posix(),
+            str(resolved),
+            resolved.as_posix(),
+            path.name,
+        }
+        try:
+            relative = resolved.relative_to(cwd)
+        except ValueError:
+            relative = None
+        if relative is not None:
+            variants.add(str(relative))
+            variants.add(relative.as_posix())
+        parts = resolved.parts
+        for anchor in ("src", "tests"):
+            if anchor in parts:
+                start = parts.index(anchor)
+                variants.add(Path(*parts[start:]).as_posix())
+        if "chiron" in parts:
+            start = parts.index("chiron")
+            variants.add(Path(*parts[start:]).as_posix())
+        for variant in variants:
+            normalised = variant.replace("\\", "/")
+            index.setdefault(normalised, path)
+    return index
+
+
+def _severity_from_ratio(value: float, threshold: float) -> Literal["info", "warning", "critical"]:
+    """Return severity based on how much *value* exceeds *threshold*."""
+
+    if threshold <= 0:
+        return "info"
+    ratio = value / threshold
+    if ratio >= 2.0:
+        return "critical"
+    if ratio >= 1.2:
+        return "warning"
+    return "info"
+
+
+def _severity_from_shortfall(shortfall: float, threshold: float) -> Literal["info", "warning", "critical"]:
+    """Return severity based on coverage shortfall."""
+
+    if shortfall <= 0 or threshold <= 0:
+        return "info"
+    ratio = shortfall / threshold
+    if ratio >= 0.4:
+        return "critical"
+    if ratio >= 0.2:
+        return "warning"
+    return "info"
+
+
+def _node_length(node: ast.AST) -> int:
+    """Return the best-effort source length of *node*."""
+
+    end_lineno = getattr(node, "end_lineno", None)
+    if not isinstance(end_lineno, int):
+        return 1
+    start_lineno = getattr(node, "lineno", end_lineno)
+    if not isinstance(start_lineno, int):
+        start_lineno = end_lineno
+    return max(1, end_lineno - start_lineno + 1)
+
+
+def _cyclomatic_complexity(node: ast.AST) -> int:
+    """Approximate the cyclomatic complexity for the given *node*."""
+
+    class _ComplexityVisitor(ast.NodeVisitor):
+        __slots__ = ("score",)
+
+        def __init__(self) -> None:
+            self.score = 1
+
+        def visit_If(self, node: ast.If) -> None:  # noqa: N802
+            self.score += 1
+            self.generic_visit(node)
+
+        def visit_For(self, node: ast.For) -> None:  # noqa: N802
+            self.score += 1
+            self.generic_visit(node)
+
+        def visit_AsyncFor(self, node: ast.AsyncFor) -> None:  # noqa: N802
+            self.score += 1
+            self.generic_visit(node)
+
+        def visit_While(self, node: ast.While) -> None:  # noqa: N802
+            self.score += 1
+            self.generic_visit(node)
+
+        def visit_With(self, node: ast.With) -> None:  # noqa: N802
+            self.score += 1
+            self.generic_visit(node)
+
+        def visit_AsyncWith(self, node: ast.AsyncWith) -> None:  # noqa: N802
+            self.score += 1
+            self.generic_visit(node)
+
+        def visit_Try(self, node: ast.Try) -> None:  # noqa: N802
+            self.score += len(node.handlers)
+            if node.orelse:
+                self.score += 1
+            if node.finalbody:
+                self.score += 1
+            self.generic_visit(node)
+
+        def visit_BoolOp(self, node: ast.BoolOp) -> None:  # noqa: N802
+            self.score += max(0, len(node.values) - 1)
+            self.generic_visit(node)
+
+        def visit_comprehension(self, node: ast.comprehension) -> None:  # noqa: N802
+            self.score += 1 + len(node.ifs)
+            self.generic_visit(node)
+
+        def visit_IfExp(self, node: ast.IfExp) -> None:  # noqa: N802
+            self.score += 1
+            self.generic_visit(node)
+
+        def visit_Match(self, node: ast.Match) -> None:  # noqa: N802
+            self.score += len(node.cases)
+            self.generic_visit(node)
+
+        def visit_Assert(self, node: ast.Assert) -> None:  # noqa: N802
+            self.score += 1
+            self.generic_visit(node)
+
+    visitor = _ComplexityVisitor()
+    visitor.visit(node)
+    return max(1, visitor.score)
+
+
+def _count_parameters(node: ast.FunctionDef | ast.AsyncFunctionDef) -> int:
+    """Return a normalised parameter count for *node*."""
+
+    args = node.args
+    total = len(args.posonlyargs) + len(args.args) + len(args.kwonlyargs)
+    if args.vararg is not None:
+        total += 1
+    if args.kwarg is not None:
+        total += 1
+    if args.posonlyargs:
+        return total
+    if args.args:
+        first = args.args[0].arg
+        if first in {"self", "cls"}:
+            total = max(0, total - 1)
+    return total
+
+
+def _resolve_coverage_path(
+    module_name: str,
+    index: Mapping[str, Path],
+) -> Path | None:
+    """Resolve *module_name* from coverage report to an indexed source path."""
+
+    for variant in _module_name_variants(module_name):
+        candidate = index.get(variant)
+        if candidate is not None:
+            return candidate
+    return None
+
+
+@dataclass(frozen=True, slots=True)
+class RefactorOpportunity:
+    """Represents a discovered opportunity to refactor or simplify code."""
+
+    path: Path
+    line: int
+    symbol: str | None
+    kind: Literal[
+        "function_length",
+        "class_size",
+        "todo_comment",
+        "low_coverage",
+        "cyclomatic_complexity",
+        "long_parameter_list",
+        "missing_docstring",
+    ]
+    severity: Literal["info", "warning", "critical"]
+    message: str
+    metric: float | int | None = None
+    threshold: float | int | None = None
+
+    @property
+    def severity_rank(self) -> int:
+        return {"info": 1, "warning": 2, "critical": 3}[self.severity]
+
+    def to_payload(self) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "path": self.path.as_posix(),
+            "line": self.line,
+            "symbol": self.symbol,
+            "kind": self.kind,
+            "severity": self.severity,
+            "severity_rank": self.severity_rank,
+            "message": self.message,
+        }
+        if self.metric is not None:
+            payload["metric"] = self.metric
+        if self.threshold is not None:
+            payload["threshold"] = self.threshold
+        return payload
+
+
+@dataclass(frozen=True, slots=True)
+class RefactorReport:
+    """Aggregate report for refactor opportunities."""
+
+    opportunities: tuple[RefactorOpportunity, ...]
+    generated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    def __post_init__(self) -> None:
+        ordered = tuple(
+            sorted(
+                self.opportunities,
+                key=lambda op: (op.severity_rank, op.metric or 0.0),
+                reverse=True,
+            )
+        )
+        object.__setattr__(self, "opportunities", ordered)
+
+    def to_payload(self) -> dict[str, object]:
+        return {
+            "generated_at": self.generated_at.isoformat(),
+            "opportunities": [op.to_payload() for op in self.opportunities],
+        }
+
+    def render_lines(self) -> Iterable[str]:
+        if not self.opportunities:
+            yield "No refactor opportunities detected."
+            return
+
+        for opportunity in self.opportunities:
+            location = f"{opportunity.path}:{opportunity.line}"
+            symbol = f" · {opportunity.symbol}" if opportunity.symbol else ""
+            metric_hint = ""
+            if opportunity.metric is not None and opportunity.threshold is not None:
+                metric_hint = (
+                    f" (observed {opportunity.metric}, threshold {opportunity.threshold})"
+                )
+            yield (
+                f"[{opportunity.severity.upper()}] {location}{symbol} — "
+                f"{opportunity.message}{metric_hint}"
+            )
+
+
+def analyze_refactor_opportunities(
+    paths: Sequence[Path | str] | None = None,
+    *,
+    coverage_xml: Path | None = None,
+    max_function_length: int = 60,
+    max_class_methods: int = 10,
+    max_cyclomatic_complexity: int = 10,
+    max_parameters: int = 6,
+    min_docstring_length: int = 20,
+    coverage_threshold: float = 85.0,
+) -> RefactorReport:
+    """Inspect the repository and surface potential refactor opportunities."""
+
+    if not paths:
+        default_paths = [Path("src"), Path("tests")]
+    else:
+        default_paths = [Path(path) for path in paths]
+
+    python_files = sorted({candidate.resolve() for path in default_paths for candidate in _iter_python_files(path)})
+    path_index = _build_path_index(python_files)
+
+    opportunities: list[RefactorOpportunity] = []
+
+    for source_path in python_files:
+        try:
+            source = source_path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):  # pragma: no cover - defensive guard
+            continue
+
+        try:
+            tree = ast.parse(source, filename=str(source_path))
+        except SyntaxError:
+            continue
+
+        class _Visitor(ast.NodeVisitor):
+            __slots__ = ("source_path", "collector", "scope")
+
+            def __init__(self, source_path: Path, collector: list[RefactorOpportunity]) -> None:
+                self.source_path = source_path
+                self.collector = collector
+                self.scope: list[str] = []
+
+            def _qualname(self, name: str) -> str:
+                if not self.scope:
+                    return name
+                return ".".join((*self.scope, name))
+
+            def _process_function(
+                self, node: ast.FunctionDef | ast.AsyncFunctionDef
+            ) -> None:
+                qualname = self._qualname(node.name)
+                length = _node_length(node)
+                if length > max_function_length:
+                    severity = _severity_from_ratio(length, max_function_length)
+                    self.collector.append(
+                        RefactorOpportunity(
+                            path=self.source_path,
+                            line=node.lineno,
+                            symbol=qualname,
+                            kind="function_length",
+                            severity=severity,
+                            message=f"Function spans {length} lines (limit {max_function_length}).",
+                            metric=length,
+                            threshold=max_function_length,
+                        )
+                    )
+
+                complexity = _cyclomatic_complexity(node)
+                if complexity > max_cyclomatic_complexity:
+                    severity = _severity_from_ratio(
+                        float(complexity), float(max_cyclomatic_complexity)
+                    )
+                    self.collector.append(
+                        RefactorOpportunity(
+                            path=self.source_path,
+                            line=node.lineno,
+                            symbol=qualname,
+                            kind="cyclomatic_complexity",
+                            severity=severity,
+                            message=(
+                                "Cyclomatic complexity "
+                                f"{complexity} exceeds {max_cyclomatic_complexity}."
+                            ),
+                            metric=complexity,
+                            threshold=max_cyclomatic_complexity,
+                        )
+                    )
+
+                parameter_count = _count_parameters(node)
+                if parameter_count > max_parameters:
+                    severity = _severity_from_ratio(parameter_count, max_parameters)
+                    self.collector.append(
+                        RefactorOpportunity(
+                            path=self.source_path,
+                            line=node.lineno,
+                            symbol=qualname,
+                            kind="long_parameter_list",
+                            severity=severity,
+                            message=(
+                                f"Function accepts {parameter_count} parameters "
+                                f"(limit {max_parameters})."
+                            ),
+                            metric=parameter_count,
+                            threshold=max_parameters,
+                        )
+                    )
+
+                if (
+                    length >= min_docstring_length
+                    and not node.name.startswith("_")
+                    and ast.get_docstring(node) is None
+                ):
+                    severity = _severity_from_ratio(length, min_docstring_length)
+                    self.collector.append(
+                        RefactorOpportunity(
+                            path=self.source_path,
+                            line=node.lineno,
+                            symbol=qualname,
+                            kind="missing_docstring",
+                            severity=severity,
+                            message=(
+                                "Public function lacks docstring despite spanning "
+                                f"{length} lines."
+                            ),
+                            metric=length,
+                            threshold=min_docstring_length,
+                        )
+                    )
+
+                self.scope.append(node.name)
+                self.generic_visit(node)
+                self.scope.pop()
+
+            def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+                self._process_function(node)
+
+            def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+                self._process_function(node)
+
+            def visit_ClassDef(self, node: ast.ClassDef) -> None:
+                methods = [
+                    child
+                    for child in node.body
+                    if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
+                ]
+                if len(methods) > max_class_methods:
+                    severity = _severity_from_ratio(len(methods), max_class_methods)
+                    self.collector.append(
+                        RefactorOpportunity(
+                            path=self.source_path,
+                            line=node.lineno,
+                            symbol=self._qualname(node.name),
+                            kind="class_size",
+                            severity=severity,
+                            message=(
+                                f"Class declares {len(methods)} methods (limit {max_class_methods})."
+                            ),
+                            metric=len(methods),
+                            threshold=max_class_methods,
+                        )
+                    )
+                self.scope.append(node.name)
+                self.generic_visit(node)
+                self.scope.pop()
+
+        _Visitor(source_path, opportunities).visit(tree)
+
+        for match in _TODO_PATTERN.finditer(source):
+            line = source[: match.start()].count("\n") + 1
+            opportunities.append(
+                RefactorOpportunity(
+                    path=source_path,
+                    line=line,
+                    symbol=None,
+                    kind="todo_comment",
+                    severity="warning",
+                    message="TODO marker present — resolve before release.",
+                )
+            )
+
+    if coverage_xml is None:
+        default_coverage = Path("coverage.xml")
+        if default_coverage.exists():
+            coverage_xml = default_coverage
+
+    if coverage_xml is not None and coverage_xml.exists():
+        report = CoverageReport.from_xml(coverage_xml)
+        for module in report.modules_below(coverage_threshold):
+            matched = _resolve_coverage_path(module.name, path_index)
+            if matched is None:
+                continue
+            shortfall = max(0.0, coverage_threshold - module.coverage)
+            severity = _severity_from_shortfall(shortfall, coverage_threshold)
+            opportunities.append(
+                RefactorOpportunity(
+                    path=matched,
+                    line=1,
+                    symbol=None,
+                    kind="low_coverage",
+                    severity=severity,
+                    message=(
+                        f"{module.name} coverage {module.coverage:.1f}% below "
+                        f"{coverage_threshold:.1f}% gate (missing {module.missing} lines)."
+                    ),
+                    metric=module.coverage,
+                    threshold=coverage_threshold,
+                )
+            )
+
+    return RefactorReport(opportunities=tuple(opportunities))
+
+
 __all__ = [
     "CommandResult",
     "CoverageFocusSummary",
@@ -1470,8 +2203,11 @@ __all__ = [
     "QualitySuiteProgressEvent",
     "QualitySuiteRunReport",
     "QualitySuiteDryRun",
+    "RefactorOpportunity",
+    "RefactorReport",
     "available_quality_gates",
     "available_quality_profiles",
+    "analyze_refactor_opportunities",
     "build_coverage_focus_summaries",
     "build_quality_suite_insights",
     "build_quality_suite_monitoring",

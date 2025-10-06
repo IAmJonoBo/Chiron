@@ -1,3 +1,9 @@
+---
+title: "TUF Implementation Guide"
+diataxis: reference
+summary: Reference procedures for supply-chain signing and key management using TUF.
+---
+
 # TUF Implementation Guide
 
 This guide provides a roadmap for completing The Update Framework (TUF) implementation with key management and signing capabilities.

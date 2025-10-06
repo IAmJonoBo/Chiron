@@ -54,14 +54,11 @@ def _can_bind_localhost(port: int) -> bool:
 @pytest.fixture(scope="module")
 def pact(request: pytest.FixtureRequest):
     """Create a Pact instance for testing."""
-    worker_id = getattr(getattr(request.config, "workerinput", {}), "workerid", "gw0")
-    try:
-        offset = int(str(worker_id).replace("gw", ""))
-    except ValueError:
-        offset = 0
+    with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
 
-    port = 8000 + offset
-
+    # Guard against rare race where the port becomes unavailable immediately.
     if not _can_bind_localhost(port):
         pytest.skip(
             f"Pact mock service cannot bind to localhost:{port} in this environment"

@@ -29,6 +29,10 @@
 - [x] Automate documentation parity for the quality suite via doc gate + synced snapshots — Owner: Assistant — Completed: 2025-10-06 (docs gate default + `--sync-docs` helper)
 - [x] Elevate developer toolbox CLI UX with interactive progress bars and summary panels — Owner: Assistant — Completed: 2025-10-06
 - [x] Design contract validation harness expansion for CLI/service workflows — Owner: Assistant — Completed: 2025-10-06 (contracts gate + guide surfaced in toolbox)
+- [x] Automate Diataxis documentation overview generation via CLI — Owner: Assistant — Completed: 2025-10-06 (`docs/diataxis.json` + `chiron tools docs sync-diataxis`)
+- [x] Enforce Diataxis front matter metadata and auto-discovery CLI flow — Owner: Assistant — Completed: 2025-10-06 (front matter + discoverable sync command)
+- [x] Guard Diataxis map parity via repository regression — Owner: Assistant — Completed: 2025-10-06 (in-repo sync assertion)
+- [x] Ship refactor opportunity scanner with CLI/dev-toolbox integration — Owner: Assistant — Completed: 2025-10-06 (structural heuristics + coverage overlays)
 - [ ] Prototype HTTP-level contract replay harness for live Pact validation — Owner: Assistant — Due: TBC (post-contract gate rollout)
 
 ## Steps
@@ -64,6 +68,10 @@
 - [x] Wire docs gate into quality suite profiles and surface automated doc-sync workflow — Owner: Assistant — Completed: 2025-10-06
 - [x] Add interactive progress rendering and rich summaries to the developer toolbox CLI — Owner: Assistant — Completed: 2025-10-06
 - [x] Surface Pact contract validation as an optional quality gate and agent-facing guidance — Owner: Assistant — Completed: 2025-10-06
+- [x] Publish Diataxis overview automation backed by JSON mapping and CLI command — Owner: Assistant — Completed: 2025-10-06
+- [x] Annotate docs with Diataxis front matter and regenerate map via CLI discovery — Owner: Assistant — Completed: 2025-10-06
+- [x] Assert repository Diataxis map parity during regression runs — Owner: Assistant — Completed: 2025-10-06
+- [x] Add refactor heuristics and CLI analytics for structural hotspots — Owner: Assistant — Completed: 2025-10-06
 
 ## Deliverables
 - [x] Code commits implementing required features/tests
@@ -87,16 +95,20 @@
 - [x] Documentation parity is now enforced via `--sync-docs` automation and an optional docs gate toggle
 - [x] Developer toolbox CLI streams progress bars and rich summary panels for interactive quality-suite runs
 - [x] Contracts gate added to developer toolbox profiles with CLI toggle and documentation updates
+- [x] Diataxis overview now syncs from `docs/diataxis.json` via `chiron tools docs sync-diataxis`
+- [x] Documentation metadata includes Diataxis front matter with CLI auto-discovery and JSON regeneration
+- [x] Repository tests now fail if `docs/diataxis.json` drifts from discovered documentation structure
+- [x] Developer toolbox/CLI now surface refactor opportunity analysis with severity-ranked heuristics covering complexity, parameter pressure, docstring gaps, TODO markers, and coverage overlays
 
-- ✅ Tests: `uv run --group test pytest --cov=src/chiron --cov-report=term --cov-report=xml` — 83.95% coverage, 742 passed / 0 failed / 0 skipped (145 warnings) (`43e5a5†L1-L148`)
-- ✅ Lint: `uv run --group dev ruff check .` — clean (`9a27e3†L1-L2`)
-- ✅ Type Check: `uv run --group dev mypy src` — clean (`e59391†L1-L2`)
-- ✅ Security Scan: `uv run --extra security bandit -r src -lll` — reported no blocking issues (3 medium, 81 low informational hits remain) (`2ffbfe†L1-L20`)
-- ✅ Build: `uv build` — wheel & sdist succeed (`dea103†L1-L3`)
+- ✅ Tests: `uv run --group test pytest --cov=src/chiron --cov-report=term --cov-report=xml` — 83.67% coverage, 758 passed / 0 failed / 0 skipped (145 warnings) (`cdeb14†L1-L119`)
+- ✅ Lint: `uv run --group dev ruff check .` — clean (`e417b5†L1-L3`)
+- ✅ Type Check: `uv run --group dev mypy src` — clean (`12d329†L1-L2`)
+- ✅ Security Scan: `uv run --extra security bandit -r src -lll` — reported no blocking issues (3 medium, 81 low informational hits remain) (`467ee1†L1-L19`)
+- ✅ Build: `uv build` — wheel & sdist succeed (`cfb97b†L1-L4`)
     
 
 ## Links
-- ✅ Tests: coverage + pytest run (`43e5a5†L1-L148`)
+- ✅ Tests: coverage + pytest run (`cdeb14†L1-L119`)
 - ✅ Coverage report: `htmlcov/index.html` generated locally (not committed)
 - ✅ Docs updated: README.md, docs/QUALITY_GATES.md, docs/GAP_ANALYSIS.md with latest coverage and test counts
 - ✅ Dependency governance coverage: `tests/test_deps_constraints.py`, `tests/test_deps_policy.py`, `tests/test_deps_security_overlay.py`
@@ -111,6 +123,9 @@
 - ✅ Quality suite doc snapshot automation: `src/chiron/dev_toolbox.py`, `src/chiron/typer_cli.py`, `docs/QUALITY_GATES.md`
 - ✅ Telemetry defaults: README.md, chiron.json, docs/GAP_ANALYSIS.md capture new opt-in behaviour
 - ✅ CLI compatibility shim and Typer-only tests: `src/chiron/cli/main.py`, `tests/test_cli_main.py`
+- ✅ Diataxis overview automation: `docs/diataxis.json`, `docs/index.md`, `src/chiron/dev_toolbox.py`, `tests/test_dev_toolbox.py`, `tests/test_typer_cli_tools.py`
+- ✅ Diataxis auto-discovery CLI run: `uv run chiron tools docs sync-diataxis --discover --docs-dir docs` (`570f93†L1-L3`)
+- ✅ Refactor analytics: `src/chiron/dev_toolbox.py`, `src/chiron/typer_cli.py`, `tests/test_dev_toolbox.py`, `tests/test_typer_cli_tools.py`
 
 ## Risks / Notes
 - Remaining gaps now centre on live Pact validation against deployed services; the new `--contracts` gate exercises the local mock-service flow but production rollouts should still trial full telemetry pipelines before release.
@@ -118,3 +133,6 @@
 - Pact contract tests now auto-skip when the mock service cannot start; run `pact-mock-service` locally to exercise full interactions before release sign-off.
 - New QA toolbox accelerates iteration but coverage hotspots highlighted (deps.verify, service routes) still require targeted tests.
 - Bandit informational findings (3 medium, 81 low) stem from packaging/semgrep helpers and will be triaged with security owners.
+- Diataxis overview depends on `docs/diataxis.json`; keep the mapping updated when adding or renaming guides to avoid stale navigation.
+- Coverage sits at 83.67% after the enhanced refactor heuristics; continue targeting high-branch modules to regain margin.
+- Refactor heuristics flag hotspots automatically; future passes should feed live complexity metrics into roadmap prioritisation.

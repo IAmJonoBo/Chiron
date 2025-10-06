@@ -58,12 +58,17 @@ Historical documentation that has been superseded is available in [`deprecated/`
 
 ## Documentation Structure
 
-Following the [Diátaxis](https://diataxis.fr/) framework:
+Chiron follows the [Diátaxis](https://diataxis.fr/) framework and keeps the overview section of `docs/index.md` up to date automatically:
 
-- **Tutorials**: Learning-oriented guides (coming soon)
-- **How-to Guides**: Task-oriented instructions (Quality Gates, Environment Sync, etc.)
-- **Reference**: Technical descriptions (API docs, module references)
-- **Explanation**: Understanding-oriented discussions (Gap Analysis, Architecture)
+- Each guide includes YAML front matter with `title`, `summary`, and `diataxis` keys so automation can classify content.
+- Run `uv run chiron tools docs sync-diataxis --discover` to regenerate `docs/diataxis.json` from the front matter and refresh the overview markers in one pass.
+
+- **Tutorials** – Learning-oriented guides such as [Tutorial: First Run with Chiron](tutorials/first-run.md)
+- **How-to Guides** – Task-oriented instructions (Quality Gates, Environment Sync, Observability Sandbox, Grafana deployment, MCP integration)
+- **Reference** – Technical descriptions (Dependency module status, tooling catalogue, TUF implementation)
+- **Explanation** – Understanding-oriented discussions (Gap analysis, CI reproducibility, module boundary rationale)
+
+Run `uv run chiron tools docs sync-diataxis --discover` whenever you add or move a guide to regenerate the map and overview markers automatically.
 
 ## Contributing to Documentation
 

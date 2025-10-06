@@ -1,3 +1,9 @@
+---
+title: "CI Reproducibility Validation Guide"
+diataxis: explanation
+summary: Explanation of reproducible build guarantees and validation approach.
+---
+
 # CI Reproducibility Validation Guide
 
 This guide provides instructions for implementing automated reproducibility validation in CI pipelines.

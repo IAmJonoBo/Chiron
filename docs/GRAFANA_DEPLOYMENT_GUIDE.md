@@ -1,3 +1,9 @@
+---
+title: "Grafana Dashboard Deployment Guide"
+diataxis: how_to
+summary: Provision Grafana dashboards against the Chiron observability sandbox.
+---
+
 # Grafana Dashboard Deployment Guide
 
 This guide provides step-by-step instructions for deploying Chiron's Grafana dashboard to production.

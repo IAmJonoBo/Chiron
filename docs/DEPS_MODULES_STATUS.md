@@ -1,3 +1,9 @@
+---
+title: "Supply-Chain (deps) Modules Status & Roadmap"
+diataxis: reference
+summary: Reference matrix for dependency governance coverage across modules.
+---
+
 # Supply-Chain (deps) Modules Status & Roadmap
 
 ## Overview

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from pytest import MonkeyPatch
 from typer.testing import CliRunner
 
@@ -10,6 +13,8 @@ from chiron.dev_toolbox import (
     QualitySuitePlan,
     QualitySuiteProgressEvent,
     QualitySuiteRunReport,
+    RefactorOpportunity,
+    RefactorReport,
 )
 from chiron.typer_cli import app
 
@@ -158,3 +163,230 @@ def test_tools_quality_suite_contracts_toggle_forwarded(
         captured_toggles.get(toggle) is None
         for toggle in ["tests", "lint", "types", "security", "docs", "build"]
     )
+
+
+def test_tools_docs_sync_diataxis(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_sync(
+        config: Path,
+        target: Path,
+        *,
+        marker: str,
+        entries: object | None = None,
+    ) -> Path:
+        captured["config"] = config
+        captured["target"] = target
+        captured["marker"] = marker
+        captured["entries"] = entries
+        target.write_text("updated", encoding="utf-8")
+        return target
+
+    monkeypatch.setattr(
+        "chiron.typer_cli.sync_diataxis_documentation", fake_sync
+    )
+
+    config_path = tmp_path / "map.json"
+    target_path = tmp_path / "index.md"
+
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "tools",
+            "docs",
+            "sync-diataxis",
+            "--config",
+            str(config_path),
+            "--target",
+            str(target_path),
+            "--marker",
+            "CUSTOM",
+        ],
+        catch_exceptions=False,
+        prog_name="chiron",
+    )
+
+    assert result.exit_code == 0
+    assert "Updated" in result.stdout
+    assert captured["config"] == config_path
+    assert captured["target"] == target_path
+    assert captured["marker"] == "CUSTOM"
+    assert captured["entries"] is None
+
+
+def test_tools_docs_sync_diataxis_with_discovery(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    fake_entries = {
+        "tutorials": (),
+        "how_to": (),
+        "reference": (),
+        "explanation": (),
+    }
+    captured: dict[str, object] = {}
+
+    monkeypatch.setattr(
+        "chiron.typer_cli.discover_diataxis_entries",
+        lambda docs: fake_entries if docs == docs_dir else {},
+    )
+    monkeypatch.setattr("chiron.typer_cli.dump_diataxis_entries", lambda path, entries: path)
+
+    def fake_sync(
+        config: Path,
+        target: Path,
+        *,
+        marker: str,
+        entries: object | None = None,
+    ) -> Path:
+        captured["entries"] = entries
+        return target
+
+    monkeypatch.setattr(
+        "chiron.typer_cli.sync_diataxis_documentation", fake_sync
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "tools",
+            "docs",
+            "sync-diataxis",
+            "--discover",
+            "--docs-dir",
+            str(docs_dir),
+        ],
+        catch_exceptions=False,
+        prog_name="chiron",
+    )
+
+    assert result.exit_code == 0
+    assert "Discovered" in result.stdout
+    assert captured["entries"] is fake_entries
+
+
+def test_tools_refactor_analyze_outputs_summary(monkeypatch: MonkeyPatch) -> None:
+    opportunity = RefactorOpportunity(
+        path=Path("src/chiron/example.py"),
+        line=42,
+        symbol="example",
+        kind="function_length",
+        severity="critical",
+        message="Function exceeds threshold",
+        metric=120,
+        threshold=30,
+    )
+    report = RefactorReport(opportunities=(opportunity,))
+
+    monkeypatch.setattr(
+        "chiron.typer_cli.analyze_refactor_opportunities",
+        lambda paths=None, **kwargs: report,
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "tools",
+            "refactor",
+            "analyze",
+            "--path",
+            "src/chiron/example.py",
+        ],
+        catch_exceptions=False,
+        prog_name="chiron",
+    )
+
+    assert result.exit_code == 0
+    assert "Function exceeds threshold" in result.stdout
+
+
+def test_tools_refactor_analyze_json_output_is_sorted(monkeypatch: MonkeyPatch) -> None:
+    opportunity_high = RefactorOpportunity(
+        path=Path("src/chiron/high.py"),
+        line=5,
+        symbol="complex",
+        kind="cyclomatic_complexity",
+        severity="critical",
+        message="Cyclomatic complexity 12 exceeds 8",
+        metric=12,
+        threshold=8,
+    )
+    opportunity_low = RefactorOpportunity(
+        path=Path("src/chiron/low.py"),
+        line=3,
+        symbol="helper",
+        kind="function_length",
+        severity="info",
+        message="Function spans 15 lines",
+        metric=15,
+        threshold=30,
+    )
+    report = RefactorReport(opportunities=(opportunity_low, opportunity_high))
+
+    monkeypatch.setattr(
+        "chiron.typer_cli.analyze_refactor_opportunities",
+        lambda paths=None, **kwargs: report,
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "tools",
+            "refactor",
+            "analyze",
+            "--json",
+        ],
+        catch_exceptions=False,
+        prog_name="chiron",
+    )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    severities = [item["severity"] for item in payload["opportunities"]]
+    assert severities == ["critical", "info"]
+
+
+def test_tools_refactor_analyze_forwards_thresholds(monkeypatch: MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_analyze(paths=None, **kwargs):
+        captured["paths"] = paths
+        captured["kwargs"] = kwargs
+        return RefactorReport(opportunities=())
+
+    monkeypatch.setattr(
+        "chiron.typer_cli.analyze_refactor_opportunities",
+        fake_analyze,
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "tools",
+            "refactor",
+            "analyze",
+            "--max-function-length",
+            "45",
+            "--max-class-methods",
+            "8",
+            "--max-cyclomatic-complexity",
+            "7",
+            "--max-parameters",
+            "4",
+            "--min-docstring-length",
+            "18",
+        ],
+        catch_exceptions=False,
+        prog_name="chiron",
+    )
+
+    assert result.exit_code == 0
+    assert captured["kwargs"]["max_cyclomatic_complexity"] == 7
+    assert captured["kwargs"]["max_parameters"] == 4
+    assert captured["kwargs"]["min_docstring_length"] == 18

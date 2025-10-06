@@ -1,3 +1,9 @@
+---
+title: "Quality Gates - Frontier Standards"
+diataxis: how_to
+summary: Align local QA suites with CI using profile-aware planning, monitoring, and documentation sync.
+---
+
 # Quality Gates - Frontier Standards
 
 This document describes Chiron's comprehensive quality gates that enforce frontier-grade standards across all aspects of the codebase.

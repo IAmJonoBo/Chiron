@@ -1,3 +1,9 @@
+---
+title: "Module Boundary Testing Gap Analysis"
+diataxis: explanation
+summary: Rationale and coverage notes for cross-module integration tests.
+---
+
 # Module Boundary Testing Gap Analysis
 
 **Date**: January 2026 (Updated)  

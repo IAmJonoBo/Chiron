@@ -1,0 +1,70 @@
+{
+  "tutorials": [
+    {
+      "title": "Tutorial: First Run with Chiron",
+      "path": "tutorials/first-run.md",
+      "summary": "Install dependencies, execute the quality toolbox, and launch the FastAPI service locally."
+    }
+  ],
+  "how_to": [
+    {
+      "title": "Chiron Observability Sandbox",
+      "path": "OBSERVABILITY_SANDBOX.md",
+      "summary": "Stand up the local OpenTelemetry stack with docker-compose for metrics, traces, and logs."
+    },
+    {
+      "title": "Environment Synchronization",
+      "path": "ENVIRONMENT_SYNC.md",
+      "summary": "Keep dev containers, CI, and local tooling aligned with automated dependency sync scripts."
+    },
+    {
+      "title": "Grafana Dashboard Deployment Guide",
+      "path": "GRAFANA_DEPLOYMENT_GUIDE.md",
+      "summary": "Provision Grafana dashboards against the Chiron observability sandbox."
+    },
+    {
+      "title": "MCP Integration Testing Guide",
+      "path": "MCP_INTEGRATION_TESTING.md",
+      "summary": "Run the MCP server end-to-end with contract validation and wheelhouse planning."
+    },
+    {
+      "title": "Quality Gates - Frontier Standards",
+      "path": "QUALITY_GATES.md",
+      "summary": "Align local QA suites with CI using profile-aware planning, monitoring, and documentation sync."
+    }
+  ],
+  "reference": [
+    {
+      "title": "Supply-Chain (deps) Modules Status & Roadmap",
+      "path": "DEPS_MODULES_STATUS.md",
+      "summary": "Reference matrix for dependency governance coverage across modules."
+    },
+    {
+      "title": "Tooling Implementation Status",
+      "path": "TOOLING_IMPLEMENTATION_STATUS.md",
+      "summary": "Detailed catalogue of developer tooling and automation surfaced in the repo."
+    },
+    {
+      "title": "TUF Implementation Guide",
+      "path": "TUF_IMPLEMENTATION_GUIDE.md",
+      "summary": "Reference procedures for supply-chain signing and key management using TUF."
+    }
+  ],
+  "explanation": [
+    {
+      "title": "Chiron Gap Analysis (April 2025)",
+      "path": "GAP_ANALYSIS.md",
+      "summary": "Current operational, testing, and documentation gaps with recommended remediations."
+    },
+    {
+      "title": "CI Reproducibility Validation Guide",
+      "path": "CI_REPRODUCIBILITY_VALIDATION.md",
+      "summary": "Explanation of reproducible build guarantees and validation approach."
+    },
+    {
+      "title": "Module Boundary Testing Gap Analysis",
+      "path": "MODULE_BOUNDARY_TESTING.md",
+      "summary": "Rationale and coverage notes for cross-module integration tests."
+    }
+  ]
+}
