@@ -6,7 +6,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import Request, Response
-from starlette.datastructures import Headers
 
 from chiron.service.middleware import LoggingMiddleware, SecurityMiddleware
 

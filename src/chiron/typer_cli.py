@@ -12,16 +12,30 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Annotated, Literal, cast
 
-import click
+from typer import Context
 
 try:
     import typer
 except ImportError as exc:
     raise RuntimeError("Typer must be installed to use the Chiron CLI") from exc
 
+from chiron.dev_toolbox import (
+    CoverageReport,
+    available_quality_gates,
+    available_quality_profiles,
+    coverage_focus,
+    coverage_gap_summary,
+    coverage_guard,
+    coverage_hotspots,
+    load_quality_configuration,
+    resolve_quality_profile,
+    run_quality_suite,
+    summarise_suite,
+)
 from chiron.github import (
     COPILOT_DISABLE_ENV_VAR,
     CopilotProvisioningError,
@@ -35,6 +49,88 @@ logger = logging.getLogger(__name__)
 
 VERBOSE_HELP = "Verbose output"
 DRY_RUN_HELP = "Dry run mode"
+
+_NO_ARGS = object()
+
+
+class CliInvocationError(RuntimeError):
+    """Raised when a delegated CLI command cannot provide a valid exit code."""
+
+
+def _normalise_exit_code(result: object, *, command_name: str) -> int:
+    """Translate heterogeneous return values into an integer exit status."""
+
+    if isinstance(result, bool):
+        return 0 if result else 1
+    if isinstance(result, int):
+        return result
+    if result is None:
+        return 0
+
+    raise CliInvocationError(
+        f"Command '{command_name}' returned unsupported result type "
+        f"{type(result).__name__}."
+    )
+
+
+def _invoke_cli_callable(
+    command_name: str,
+    callback: Callable[..., object],
+    *,
+    args: Sequence[str] | None | object = _NO_ARGS,
+) -> None:
+    """Execute a delegated CLI callable with consistent error handling."""
+
+    try:
+        if args is _NO_ARGS:
+            result = callback()
+        else:
+            result = callback(args)
+    except typer.Exit:  # pragma: no cover - Typer manages propagation
+        raise
+    except SystemExit as exc:  # pragma: no cover - defensive guard
+        raise typer.Exit(int(exc.code or 0))
+    except Exception as exc:  # pragma: no cover - defensive guard
+        logger.exception("Error executing %s", command_name)
+        typer.secho(
+            f"❌ Unexpected error while executing {command_name}: {exc}",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(1) from exc
+
+    try:
+        exit_code = _normalise_exit_code(result, command_name=command_name)
+    except CliInvocationError as exc:
+        typer.secho(f"❌ {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1) from exc
+
+    if exit_code != 0:
+        typer.secho(
+            f"Command '{command_name}' failed with exit code {exit_code}",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(exit_code)
+
+
+def _invoke_script_command(
+    ctx: Context,
+    *,
+    command_name: str,
+    callback: Callable[[list[str] | None], object],
+    allow_empty_argv: bool = True,
+) -> None:
+    """Run a script-style command, forwarding any extra CLI arguments."""
+
+    argv = list(ctx.args)
+    forwarded: list[str] | None
+    if allow_empty_argv:
+        forwarded = argv or None
+    else:
+        forwarded = argv
+
+    _invoke_cli_callable(command_name, callback, args=forwarded)
 
 # ============================================================================
 # Main Chiron CLI
@@ -68,6 +164,9 @@ app.add_typer(doctor_app, name="doctor")
 
 tools_app = typer.Typer(help="Developer tools and utilities")
 app.add_typer(tools_app, name="tools")
+
+coverage_app = typer.Typer(help="Test coverage analytics")
+tools_app.add_typer(coverage_app, name="coverage")
 
 github_app = typer.Typer(help="GitHub Actions integration and artifact sync")
 app.add_typer(github_app, name="github")
@@ -103,7 +202,7 @@ def version() -> None:
     "offline",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def package_offline(ctx: click.Context) -> None:
+def package_offline(ctx: Context) -> None:
     """Execute offline packaging workflow.
 
     Build complete offline deployment artifacts including dependencies,
@@ -111,10 +210,11 @@ def package_offline(ctx: click.Context) -> None:
     """
     from chiron.doctor import package_cli
 
-    argv = list(ctx.args)
-    exit_code = package_cli.main(argv or None)
-    if exit_code != 0:
-        raise typer.Exit(exit_code)
+    _invoke_script_command(
+        ctx,
+        command_name="chiron package offline",
+        callback=package_cli.main,
+    )
 
 
 # ============================================================================
@@ -126,7 +226,7 @@ def package_offline(ctx: click.Context) -> None:
     "offline",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def doctor_offline(ctx: click.Context) -> None:
+def doctor_offline(ctx: Context) -> None:
     """Diagnose offline packaging readiness.
 
     Validates tool availability, wheelhouse health, and configuration
@@ -134,17 +234,18 @@ def doctor_offline(ctx: click.Context) -> None:
     """
     from chiron.doctor import offline as doctor_module
 
-    argv = list(ctx.args)
-    exit_code = doctor_module.main(argv or None)
-    if exit_code != 0:
-        raise typer.Exit(exit_code)
+    _invoke_script_command(
+        ctx,
+        command_name="chiron doctor offline",
+        callback=doctor_module.main,
+    )
 
 
 @doctor_app.command(
     "bootstrap",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def doctor_bootstrap(ctx: click.Context) -> None:
+def doctor_bootstrap(ctx: Context) -> None:
     """Bootstrap offline environment from wheelhouse.
 
     Install dependencies from the offline wheelhouse, useful for
@@ -152,17 +253,19 @@ def doctor_bootstrap(ctx: click.Context) -> None:
     """
     from chiron.doctor import bootstrap
 
-    argv = list(ctx.args)
-    exit_code = bootstrap.main(argv)
-    if exit_code != 0:
-        raise typer.Exit(exit_code)
+    _invoke_script_command(
+        ctx,
+        command_name="chiron doctor bootstrap",
+        callback=bootstrap.main,
+        allow_empty_argv=False,
+    )
 
 
 @doctor_app.command(
     "models",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def doctor_models(ctx: click.Context) -> None:
+def doctor_models(ctx: Context) -> None:
     """Download model artifacts for offline use.
 
     Pre-populate caches for Sentence-Transformers, Hugging Face,
@@ -170,10 +273,12 @@ def doctor_models(ctx: click.Context) -> None:
     """
     from chiron.doctor import models
 
-    argv = list(ctx.args)
-    exit_code = models.main(argv)
-    if exit_code != 0:
-        raise typer.Exit(exit_code)
+    _invoke_script_command(
+        ctx,
+        command_name="chiron doctor models",
+        callback=models.main,
+        allow_empty_argv=False,
+    )
 
 
 # ============================================================================
@@ -276,77 +381,82 @@ def deps_status(
     "guard",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def deps_guard(ctx: click.Context) -> None:
+def deps_guard(ctx: Context) -> None:
     """Run dependency guard checks."""
     from chiron.deps import guard
 
-    argv = list(ctx.args)
-    exit_code = guard.main(argv or None)
-    if exit_code != 0:
-        raise typer.Exit(exit_code)
+    _invoke_script_command(
+        ctx,
+        command_name="chiron deps guard",
+        callback=guard.main,
+    )
 
 
 @deps_app.command(
     "upgrade",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def deps_upgrade(ctx: click.Context) -> None:
+def deps_upgrade(ctx: Context) -> None:
     """Plan dependency upgrades."""
     from chiron.deps import planner
 
-    argv = list(ctx.args)
-    exit_code = planner.main(argv or None)
-    if exit_code != 0:
-        raise typer.Exit(exit_code)
+    _invoke_script_command(
+        ctx,
+        command_name="chiron deps upgrade",
+        callback=planner.main,
+    )
 
 
 @deps_app.command(
     "drift",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def deps_drift(ctx: click.Context) -> None:
+def deps_drift(ctx: Context) -> None:
     """Detect dependency drift."""
     from chiron.deps import drift
 
-    argv = list(ctx.args)
-    exit_code = drift.main(argv or None)
-    if exit_code != 0:
-        raise typer.Exit(exit_code)
+    _invoke_script_command(
+        ctx,
+        command_name="chiron deps drift",
+        callback=drift.main,
+    )
 
 
 @deps_app.command(
     "sync",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def deps_sync(ctx: click.Context) -> None:
+def deps_sync(ctx: Context) -> None:
     """Synchronize manifests from contract."""
     from chiron.deps import sync
 
-    argv = list(ctx.args)
-    exit_code = sync.main(argv or None)
-    if exit_code != 0:
-        raise typer.Exit(exit_code)
+    _invoke_script_command(
+        ctx,
+        command_name="chiron deps sync",
+        callback=sync.main,
+    )
 
 
 @deps_app.command(
     "preflight",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def deps_preflight(ctx: click.Context) -> None:
+def deps_preflight(ctx: Context) -> None:
     """Run dependency preflight checks."""
     from chiron.deps import preflight
 
-    argv = list(ctx.args)
-    exit_code = preflight.main(argv or None)
-    if exit_code != 0:
-        raise typer.Exit(exit_code)
+    _invoke_script_command(
+        ctx,
+        command_name="chiron deps preflight",
+        callback=preflight.main,
+    )
 
 
 @deps_app.command(
     "graph",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def deps_graph(ctx: click.Context) -> None:
+def deps_graph(ctx: Context) -> None:
     """Generate dependency graph visualization.
 
     Analyzes Python imports across the codebase and generates
@@ -354,16 +464,14 @@ def deps_graph(ctx: click.Context) -> None:
     """
     from chiron.deps import graph
 
-    exit_code = graph.main()
-    if exit_code != 0:
-        raise typer.Exit(exit_code)
+    _invoke_cli_callable("chiron deps graph", graph.main)
 
 
 @deps_app.command(
     "verify",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def deps_verify(ctx: click.Context) -> None:
+def deps_verify(ctx: Context) -> None:
     """Verify dependency pipeline setup and integration.
 
     Checks that all components of the dependency management pipeline
@@ -371,9 +479,7 @@ def deps_verify(ctx: click.Context) -> None:
     """
     from chiron.deps import verify
 
-    exit_code = verify.main()
-    if exit_code != 0:
-        raise typer.Exit(exit_code)
+    _invoke_cli_callable("chiron deps verify", verify.main)
 
 
 @deps_app.command("constraints")
@@ -979,11 +1085,236 @@ def deps_security(
 # ============================================================================
 
 
+@tools_app.command("qa")
+def tools_quality_suite(
+    ctx: typer.Context,
+    profile: str = typer.Option(
+        "full",
+        "--profile",
+        "-p",
+        help="Quality profile to execute",
+    ),
+    list_profiles: bool = typer.Option(
+        False,
+        "--list-profiles",
+        help="List available profiles and exit",
+    ),
+    explain: bool = typer.Option(
+        False,
+        "--explain",
+        help="Show resolved gates before executing",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Display the plan without running commands",
+    ),
+    tests: bool | None = typer.Option(
+        None,
+        "--tests/--no-tests",
+        help="Run pytest with coverage",
+        show_default=False,
+    ),
+    lint: bool | None = typer.Option(
+        None,
+        "--lint/--no-lint",
+        help="Run Ruff linting",
+        show_default=False,
+    ),
+    types: bool | None = typer.Option(
+        None,
+        "--types/--no-types",
+        help="Run mypy type checking",
+        show_default=False,
+    ),
+    security: bool | None = typer.Option(
+        None,
+        "--security/--no-security",
+        help="Run Bandit security scan",
+        show_default=False,
+    ),
+    build: bool | None = typer.Option(
+        None,
+        "--build/--no-build",
+        help="Build wheel and sdist",
+        show_default=False,
+    ),
+    halt: bool = typer.Option(True, "--halt/--keep-going", help="Stop on first failure"),
+    json_output: bool = typer.Option(False, "--json", help="Emit JSON results"),
+    save_report: Path | None = typer.Option(
+        None,
+        "--save-report",
+        help="Write JSON results to the provided path",
+    ),
+) -> None:
+    """Run the curated quality gate command suite."""
+
+    config = load_quality_configuration()
+    profiles = available_quality_profiles(config)
+
+    if list_profiles:
+        lines = ["Available quality profiles:"]
+        for name, gate_names in sorted(profiles.items()):
+            rendered = ", ".join(gate_names) if gate_names else "(none)"
+            lines.append(f"  • {name}: {rendered}")
+        typer.echo("\n".join(lines))
+        raise typer.Exit(0)
+
+    try:
+        planned_gates = resolve_quality_profile(profile, config=config)
+    except KeyError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1) from exc
+
+    catalog = available_quality_gates(config)
+
+    def _apply_toggle(category: str, enabled: bool | None) -> None:
+        nonlocal planned_gates
+        if enabled is None:
+            return
+        if enabled:
+            if any(gate.category == category for gate in planned_gates):
+                return
+            for gate in planned_gates:
+                if gate.name == category:
+                    return
+            candidate = next(
+                (gate for gate in catalog.values() if gate.category == category),
+                None,
+            )
+            if candidate:
+                planned_gates.append(candidate)
+        else:
+            planned_gates = [gate for gate in planned_gates if gate.category != category]
+
+    _apply_toggle("tests", tests)
+    _apply_toggle("lint", lint)
+    _apply_toggle("types", types)
+    _apply_toggle("security", security)
+    _apply_toggle("build", build)
+
+    if not planned_gates:
+        typer.echo("No quality gates selected.")
+        raise typer.Exit(code=0)
+
+    if explain or dry_run:
+        lines = ["Resolved quality gates:"]
+        for gate in planned_gates:
+            rendered = " ".join(gate.command)
+            lines.append(f"  • {gate.name}: {rendered}")
+        typer.echo("\n".join(lines))
+        if dry_run:
+            raise typer.Exit(0)
+
+    results = run_quality_suite(planned_gates, halt_on_failure=halt)
+    payload = [result.to_payload() for result in results]
+
+    if json_output:
+        typer.echo(json.dumps(payload, indent=2))
+    else:
+        typer.echo(summarise_suite(results))
+
+    if save_report is not None:
+        save_report.parent.mkdir(parents=True, exist_ok=True)
+        save_report.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    if any(result.returncode != 0 for result in results):
+        raise typer.Exit(1)
+
+
+@coverage_app.command("hotspots")
+def coverage_hotspots_cli(
+    xml: Path = typer.Option(Path("coverage.xml"), "--xml", help="Path to coverage XML"),
+    threshold: float = typer.Option(90.0, "--threshold", help="Coverage threshold"),
+    limit: int = typer.Option(10, "--limit", min=1, help="Number of modules to show"),
+) -> None:
+    """List modules falling below the specified coverage threshold."""
+
+    report = CoverageReport.from_xml(xml)
+    typer.echo(coverage_hotspots(report, threshold=threshold, limit=limit))
+
+
+@coverage_app.command("focus")
+def coverage_focus_cli(
+    module: str = typer.Argument(..., help="Module path as listed in coverage.xml"),
+    xml: Path = typer.Option(Path("coverage.xml"), "--xml", help="Path to coverage XML"),
+    lines: int | None = typer.Option(
+        None, "--lines", min=1, help="Limit of missing lines to display"
+    ),
+) -> None:
+    """Show missing lines for a specific module."""
+
+    report = CoverageReport.from_xml(xml)
+    typer.echo(coverage_focus(report, module, line_limit=lines))
+
+
+@coverage_app.command("summary")
+def coverage_summary_cli(
+    xml: Path = typer.Option(Path("coverage.xml"), "--xml", help="Path to coverage XML"),
+    limit: int = typer.Option(5, "--limit", min=1, help="Number of entries to include"),
+) -> None:
+    """Display the best and worst performing modules from coverage."""
+
+    report = CoverageReport.from_xml(xml)
+    best = report.best(limit=limit)
+    worst = report.worst(limit=limit)
+    lines = ["🔥 Coverage hotspots:"]
+    if worst:
+        lines.extend(
+            f"  • {module.name} — {module.coverage:.2f}% (missing {module.missing})"
+            for module in worst
+        )
+    else:
+        lines.append("  • None! 🎉")
+
+    lines.append(f"\n📊 Overall coverage: {report.summary.coverage:.2f}% ({report.summary.covered}/{report.summary.total_statements})")
+    lines.append("\n🌟 Top performers:")
+    if best:
+        lines.extend(
+            f"  • {module.name} — {module.coverage:.2f}%" for module in best
+        )
+    else:
+        lines.append("  • No modules found")
+
+    typer.echo("\n".join(lines))
+
+
+@coverage_app.command("guard")
+def coverage_guard_cli(
+    xml: Path = typer.Option(Path("coverage.xml"), "--xml", help="Path to coverage XML"),
+    threshold: float = typer.Option(80.0, "--threshold", help="Minimum acceptable coverage"),
+    limit: int = typer.Option(5, "--limit", min=1, help="Hotspot limit"),
+) -> None:
+    """Fail if overall coverage drops below the specified threshold."""
+
+    report = CoverageReport.from_xml(xml)
+    passed, message = coverage_guard(report, threshold=threshold, limit=limit)
+    typer.echo(message)
+    if not passed:
+        raise typer.Exit(1)
+
+
+@coverage_app.command("gaps")
+def coverage_gaps_cli(
+    xml: Path = typer.Option(Path("coverage.xml"), "--xml", help="Path to coverage XML"),
+    min_statements: int = typer.Option(
+        0,
+        "--min-statements",
+        help="Only include modules with at least this many statements",
+    ),
+    limit: int = typer.Option(5, "--limit", min=1, help="Number of modules to show"),
+) -> None:
+    """Highlight modules with the most missing lines."""
+
+    report = CoverageReport.from_xml(xml)
+    typer.echo(coverage_gap_summary(report, min_statements=min_statements, limit=limit))
+
+
 @tools_app.command(
     "format-yaml",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def tools_format_yaml(ctx: click.Context) -> None:
+def tools_format_yaml(ctx: Context) -> None:
     """Format YAML files consistently across the repository.
 
     Runs yamlfmt with additional conveniences like removing macOS
@@ -991,9 +1322,43 @@ def tools_format_yaml(ctx: click.Context) -> None:
     """
     from chiron.tools import format_yaml
 
-    exit_code = format_yaml.main()
-    if exit_code != 0:
-        raise typer.Exit(exit_code)
+    _invoke_cli_callable("chiron tools format-yaml", format_yaml.main)
+
+
+@tools_app.command("benchmark")
+def tools_benchmark(
+    iterations: int = typer.Option(50, "--iterations", "-n", help="Iterations per case"),
+    warmup: int = typer.Option(5, "--warmup", help="Warmup executions per case"),
+    json_output: bool = typer.Option(False, "--json", help="Emit JSON summary"),
+) -> None:
+    """Run the built-in performance benchmarking suite."""
+
+    from chiron import benchmark
+
+    suite = benchmark.default_suite()
+    for case in suite.cases():
+        case.iterations = iterations
+        case.warmup = warmup
+
+    summary = suite.summary()
+
+    if json_output:
+        typer.echo(json.dumps(summary, indent=2))
+        return
+
+    typer.echo("🏎️  Chiron benchmark results")
+    for result in summary["results"]:
+        typer.echo(
+            "  • {name}: {avg:.3f} ms avg ({throughput:.1f}/s)".format(
+                name=result["name"],
+                avg=result["avg_time"] * 1000,
+                throughput=result["throughput"],
+            )
+        )
+
+    total = summary["aggregate"]["total_time"]
+    case_count = summary["aggregate"]["cases"]
+    typer.echo(f"Total elapsed: {total:.3f}s across {case_count} cases")
 
 
 # ============================================================================
@@ -1005,28 +1370,32 @@ def tools_format_yaml(ctx: click.Context) -> None:
     "wheelhouse",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def remediate_wheelhouse(ctx: click.Context) -> None:
+def remediate_wheelhouse(ctx: Context) -> None:
     """Remediate wheelhouse issues."""
     from chiron import remediation
 
     args = ["wheelhouse", *ctx.args]
-    exit_code = remediation.main(args)
-    if exit_code != 0:
-        raise typer.Exit(exit_code)
+    _invoke_cli_callable(
+        "chiron remediate wheelhouse",
+        remediation.main,
+        args=args,
+    )
 
 
 @remediation_app.command(
     "runtime",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def remediate_runtime(ctx: click.Context) -> None:
+def remediate_runtime(ctx: Context) -> None:
     """Remediate runtime issues."""
     from chiron import remediation
 
     args = ["runtime", *ctx.args]
-    exit_code = remediation.main(args)
-    if exit_code != 0:
-        raise typer.Exit(exit_code)
+    _invoke_cli_callable(
+        "chiron remediate runtime",
+        remediation.main,
+        args=args,
+    )
 
 
 @remediation_app.command("auto")
@@ -1528,7 +1897,7 @@ def orchestrate_air_gapped_prep(
     "governance",
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
-def orchestrate_governance(ctx: click.Context) -> None:
+def orchestrate_governance(ctx: Context) -> None:
     """Process dry-run governance artifacts.
 
     Derive governance artifacts for dry-run CI executions,
@@ -1536,7 +1905,7 @@ def orchestrate_governance(ctx: click.Context) -> None:
     """
     from chiron.orchestration import governance
 
-    governance.main()
+    _invoke_cli_callable("chiron orchestrate governance", governance.main)
 
 
 # ============================================================================
@@ -1619,7 +1988,7 @@ def copilot_status(
     context_settings=_SCRIPT_PROXY_CONTEXT,
 )
 def copilot_prepare(
-    ctx: click.Context,
+    ctx: Context,
     all_extras: bool = typer.Option(
         True,
         "--all-extras/--no-all-extras",

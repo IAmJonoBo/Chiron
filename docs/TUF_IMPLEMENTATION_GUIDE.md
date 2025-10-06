@@ -529,7 +529,7 @@ class SigstoreSigner:
 
 ### Add TUF Commands
 
-Extend `src/chiron/cli/main.py`:
+Extend `src/chiron/typer_cli.py` (for example, attach a new Typer sub-app):
 
 ```python
 import typer

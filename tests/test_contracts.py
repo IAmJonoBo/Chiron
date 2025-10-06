@@ -32,22 +32,31 @@ def _can_bind_localhost(port: int) -> bool:
 
 
 @pytest.fixture(scope="module")
-def pact():
+def pact(request: pytest.FixtureRequest):
     """Create a Pact instance for testing."""
-    if not _can_bind_localhost(8000):
+    worker_id = getattr(getattr(request.config, "workerinput", {}), "workerid", "gw0")
+    try:
+        offset = int(str(worker_id).replace("gw", ""))
+    except ValueError:
+        offset = 0
+
+    port = 8000 + offset
+
+    if not _can_bind_localhost(port):
         pytest.skip(
-            "Pact mock service cannot bind to localhost:8000 in this environment"
+            f"Pact mock service cannot bind to localhost:{port} in this environment"
         )
 
     pact = Consumer("chiron-consumer").has_pact_with(
         Provider("chiron-service"),
         host_name="localhost",
-        port=8000,
+        port=port,
         pact_dir="pacts",
     )
     pact.start_service()
     yield pact
-    pact.stop_service()
+    with contextlib.suppress(RuntimeError):
+        pact.stop_service()
 
 
 class TestChironAPIContract:

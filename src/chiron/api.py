@@ -2,10 +2,12 @@
 
 from fastapi import FastAPI, HTTPException
 
+from chiron import __version__
+
 app = FastAPI(
     title="Chiron API",
     description="Air-gapped Python wheelhouse management API",
-    version="0.1.0",
+    version=__version__,
 )
 
 
@@ -14,7 +16,7 @@ async def root() -> dict[str, str]:
     """Root endpoint returning API information."""
     return {
         "name": "Chiron API",
-        "version": "0.1.0",
+        "version": __version__,
         "description": "Air-gapped Python wheelhouse management",
     }
 

@@ -1,5 +1,16 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
-  "allowedCommands": ["^bash scripts/manage-deps.sh$"]
+  "allowedCommands": ["^bash scripts/manage-deps.sh$"],
+  "postUpgradeTasks": {
+    "commands": [
+      "uv run python scripts/sync_env_deps.py"
+    ],
+    "fileFilters": [
+      "pyproject.toml",
+      "uv.lock",
+      ".devcontainer/**",
+      ".github/workflows/**"
+    ]
+  }
 }

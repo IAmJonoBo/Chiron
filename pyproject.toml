@@ -37,6 +37,7 @@ dependencies = [
   "structlog>=25.4.0",
   "rich>=13.5.2",
   "jsonschema>=4.20.0",
+  "defusedxml>=0.7.1",
 ]
 
 [project.optional-dependencies]
@@ -107,6 +108,7 @@ dev = [
   "mypy>=1.18.2",
   "ruff>=0.13.3,<0.14",
   "pre-commit>=4.3.0",
+  "packaging>=24.2",
   "uv>=0.8.22",
   "pytest-xdist>=3.6.1",
   "pytest-randomly>=3.16.0",
@@ -181,6 +183,7 @@ dev = [
   "mypy>=1.18.2",
   "ruff>=0.13.3,<0.14",
   "pre-commit>=4.3.0",
+  "packaging>=24.2",
   "uv>=0.8.22",
   "pytest-xdist>=3.6.1",
   "pytest-randomly>=3.16.0",
@@ -198,6 +201,15 @@ test = ["pact-python>=2.3.3", "httpx>=0.28.1", "pytest-benchmark>=5.1.0"]
 
 [project.scripts]
 chiron = "chiron.typer_cli:main"
+
+[tool.chiron.env_sync]
+default_manager = "uv"
+python_versions = ["3.12"]
+uv_version = "0.8.22"
+
+[tool.chiron.env_sync.commands]
+uv = "uv sync --all-extras --dev"
+pip = "pip install -r requirements.txt"
 
 [project.entry-points."chiron.plugins"]
 # Plugin system for extensibility
@@ -269,11 +281,6 @@ show_error_codes = true
 [[tool.mypy.overrides]]
 module = "tests.*"
 disallow_untyped_defs = false
-
-[[tool.mypy.overrides]]
-module = "chiron.cli.main"
-# Deprecated Click-based CLI - use typer_cli instead
-ignore_errors = true
 
 [[tool.mypy.overrides]]
 module = "chiron.typer_cli"
@@ -358,7 +365,6 @@ known-first-party = ["chiron"]
 source = ["src/chiron"]
 omit = [
   "src/chiron/__main__.py",
-  "src/chiron/cli/main.py",
   "src/chiron/typer_cli.py",
   "src/chiron/doctor/*",
   "src/chiron/remediation/*",
@@ -367,7 +373,7 @@ omit = [
   "src/chiron/orchestration/coordinator.py",
   "src/chiron/orchestration/governance.py",
   # Deps modules - gradual inclusion as tests are added
-  # Tested modules (removed from omit): bundler, constraints, policy, supply_chain, signing, guard, planner, sync, drift, status, verify, security_overlay, preflight_summary, graph, conflict_resolver, reproducibility
+  # Tested modules (removed from omit): bundler, constraints, policy, supply_chain, signing, drift, verify, security_overlay, preflight_summary, graph, conflict_resolver
   "src/chiron/deps/mirror_manager.py",
   "src/chiron/deps/oci_packaging.py",
   "src/chiron/deps/preflight.py",

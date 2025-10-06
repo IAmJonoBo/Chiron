@@ -1,7 +1,3 @@
-"""Tests for chiron.deps drift and status modules."""
-
-from __future__ import annotations
-
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -9,15 +5,25 @@ from pathlib import Path
 import pytest
 
 from chiron.deps.drift import (
+    RISK_CONFLICT,
     RISK_MAJOR,
     RISK_MINOR,
     RISK_PATCH,
+    RISK_UNKNOWN,
     DependencyDriftReport,
     DriftPolicy,
     PackageDrift,
+    _classify_drift,
+    _load_policy_from_path,
+    _overall_severity,
+    evaluate_drift,
     load_metadata,
     load_sbom,
+    parse_args,
     parse_policy,
+)
+from chiron.deps.drift import (
+    main as drift_main,
 )
 from chiron.deps.status import DependencyStatus, GuardRun, PlannerRun
 
@@ -159,17 +165,194 @@ class TestDriftUtilities:
         """Test parsing custom policy."""
         raw_policy = {
             "default_update_window_days": 7,
+            "minor_update_window_days": "45",
             "major_review_required": False,
-            "autoresolver_weight_security": 10,
-            "package_overrides": [{"name": "test-pkg", "max_days": 30}],
+            "allow_transitive_conflicts": 1,
+            "autoresolver_weight_security": "10",
+            "autoresolver_weight_contract": "7",
+            "autoresolver_weight_success": "6",
+            "package_overrides": [{"name": "test-pkg", "max_days": 30, "stay_on_major": True}],
         }
 
         policy = parse_policy(raw_policy)
 
         assert policy.default_update_window_days == 7
+        assert policy.minor_update_window_days == 45
         assert policy.major_review_required is False
+        assert policy.allow_transitive_conflicts is True
         assert policy.weight_security == 10
+        assert policy.weight_contract == 7
+        assert policy.weight_success == 6
         assert "test-pkg" in policy.package_overrides
+
+    def test_evaluate_drift_risk_paths(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Ensure evaluate_drift classifies package severities comprehensively."""
+
+        class FixedDateTime(datetime):
+            @classmethod
+            def now(cls, tz=None):  # type: ignore[override]
+                return datetime(2025, 1, 2, tzinfo=UTC)
+
+        monkeypatch.setattr("chiron.deps.drift.datetime", FixedDateTime)
+
+        components = [
+            {"name": "Alpha", "version": "1.0.0"},
+            {"name": "beta", "version": "1.2.3"},
+            {"name": "gamma", "version": "2.0.0"},
+        ]
+        metadata = {
+            "packages": {
+                "alpha": {"latest": "2.0.0"},
+                "beta": {"stable": "1.2.4"},
+            }
+        }
+        policy = DriftPolicy(package_overrides={"alpha": {"stay_on_major": True}})
+
+        report = evaluate_drift(components, metadata, policy)
+
+        assert report.generated_at == "2025-01-02T00:00:00+00:00"
+        assert report.severity == RISK_UNKNOWN
+        assert report.notes == []
+
+        ordered = {pkg.name: pkg for pkg in report.packages}
+        assert list(ordered) == ["Alpha", "beta", "gamma"]
+
+        assert ordered["Alpha"].severity == RISK_MAJOR
+        assert "major upgrade available (1.0.0 -> 2.0.0)" in ordered["Alpha"].notes
+        assert "major upgrades require override" in ordered["Alpha"].notes
+
+        assert ordered["beta"].severity == RISK_PATCH
+        assert ordered["beta"].notes == ["patch upgrade available (1.2.3 -> 1.2.4)"]
+
+        assert ordered["gamma"].severity == RISK_UNKNOWN
+        assert ordered["gamma"].notes == ["missing metadata"]
+
+    def test_evaluate_drift_missing_metadata_note(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When metadata is absent we record a diagnostic note."""
+
+        class FixedDateTime(datetime):
+            @classmethod
+            def now(cls, tz=None):  # type: ignore[override]
+                return datetime(2025, 1, 3, tzinfo=UTC)
+
+        monkeypatch.setattr("chiron.deps.drift.datetime", FixedDateTime)
+
+        report = evaluate_drift(
+            [{"name": "delta", "version": "0.1.0"}],
+            metadata={},
+            policy=DriftPolicy(),
+        )
+
+        assert report.notes == [
+            "Metadata snapshot missing or empty; severity may be inaccurate."
+        ]
+        assert report.severity == RISK_UNKNOWN
+
+    def test_classify_drift_invalid_version(self) -> None:
+        """Invalid versions result in an unknown risk."""
+
+        severity, notes = _classify_drift(
+            name="epsilon",
+            current_version="not-a-version",
+            latest_version="1.0.0",
+            policy=DriftPolicy(),
+        )
+
+        assert severity == RISK_UNKNOWN
+        assert notes == ["invalid version encountered"]
+
+    def test_overall_severity_prefers_highest(self) -> None:
+        """Highest ranked severity wins when summarising the report."""
+
+        packages = [
+            PackageDrift("one", "1", "1", RISK_PATCH),
+            PackageDrift("two", "1", "2", RISK_CONFLICT),
+            PackageDrift("three", "1", "1", RISK_MINOR),
+        ]
+
+        assert _overall_severity(packages) == RISK_CONFLICT
+
+    def test_load_policy_from_path(self, tmp_path: Path) -> None:
+        """Loading a policy file leverages parse_policy conversions."""
+
+        policy_payload = {"default_update_window_days": 5}
+        policy_path = tmp_path / "policy.json"
+        policy_path.write_text(json.dumps(policy_payload))
+
+        policy = _load_policy_from_path(policy_path)
+
+        assert isinstance(policy, DriftPolicy)
+        assert policy.default_update_window_days == 5
+
+    def test_parse_args_round_trip(self, tmp_path: Path) -> None:
+        """CLI arguments are parsed into pathlib instances."""
+
+        sbom = tmp_path / "sbom.json"
+        metadata = tmp_path / "metadata.json"
+        policy = tmp_path / "policy.json"
+
+        args = parse_args(
+            [
+                "--sbom",
+                str(sbom),
+                "--metadata",
+                str(metadata),
+                "--policy",
+                str(policy),
+            ]
+        )
+
+        assert args.sbom == sbom
+        assert args.metadata == metadata
+        assert args.policy == policy
+
+    def test_main_outputs_sorted_packages(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+    ) -> None:
+        """End-to-end CLI run emits a JSON payload with sorted packages."""
+
+        sbom_path = tmp_path / "sbom.json"
+        metadata_path = tmp_path / "metadata.json"
+        policy_path = tmp_path / "policy.json"
+
+        sbom_path.write_text(
+            json.dumps({"components": [{"name": "omega", "version": "1.0.0"}]})
+        )
+        metadata_path.write_text(
+            json.dumps({"packages": {"omega": {"latest": "1.0.1"}}})
+        )
+        policy_path.write_text(json.dumps({}))
+
+        class FixedDateTime(datetime):
+            @classmethod
+            def now(cls, tz=None):  # type: ignore[override]
+                return datetime(2025, 1, 4, tzinfo=UTC)
+
+        monkeypatch.setattr("chiron.deps.drift.datetime", FixedDateTime)
+
+        exit_code = drift_main(
+            [
+                "--sbom",
+                str(sbom_path),
+                "--metadata",
+                str(metadata_path),
+                "--policy",
+                str(policy_path),
+            ]
+        )
+
+        captured = capsys.readouterr()
+        payload = json.loads(captured.out)
+
+        assert exit_code == 0
+        assert payload["severity"] == RISK_PATCH
+        assert payload["generated_at"] == "2025-01-04T00:00:00+00:00"
+        assert payload["packages"][0]["name"] == "omega"
+        assert payload["packages"][0]["notes"] == [
+            "patch upgrade available (1.0.0 -> 1.0.1)"
+        ]
 
 
 class TestGuardRun:

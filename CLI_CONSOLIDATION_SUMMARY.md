@@ -74,11 +74,6 @@ ignore_errors = true
 
 ```toml
 [[tool.mypy.overrides]]
-module = "chiron.cli.main"
-# Deprecated Click-based CLI - use typer_cli instead
-ignore_errors = true
-
-[[tool.mypy.overrides]]
 module = "chiron.typer_cli"
 # TODO: Fix type annotations for Typer decorators
 disallow_untyped_decorators = false
@@ -86,18 +81,17 @@ disallow_untyped_decorators = false
 
 ### 5. Deprecation Notice
 
-Added deprecation notice to `src/chiron/cli/main.py`:
+Replaced the deprecated Click implementation with a lightweight compatibility
+shim in `src/chiron/cli/main.py` that simply re-exports the Typer application
+so historical entry points keep working without pulling in Click.
 
-```python
-"""Command-line interface for Chiron.
+### 6. Error-Handling Hardening
 
-DEPRECATED: This Click-based CLI is deprecated in favor of the Typer-based CLI
-in chiron.typer_cli. This module is kept for backwards compatibility but will
-be removed in a future version.
-
-Please use the new CLI by running `chiron` (via chiron.typer_cli) instead.
-"""
-```
+- Added shared helpers in `src/chiron/typer_cli.py` that normalise exit codes for
+  delegated scripts and provide consistent error messaging when commands fail.
+- Introduced regression tests that exercise success, failure, `SystemExit`, and
+  unsupported return types for proxied Typer commands to guard against future
+  regressions.
 
 ## CLI Structure
 

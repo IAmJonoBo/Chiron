@@ -12,6 +12,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from chiron import __version__
+
 if TYPE_CHECKING:  # pragma: no cover - type checking only
     from chiron.features import FeatureFlags
 
@@ -198,6 +200,7 @@ class MCPServer:
             return {
                 "status": "dry_run",
                 "message": "Would build wheelhouse",
+                "version": __version__,
                 "output_dir": output_dir,
                 "with_sbom": with_sbom,
                 "with_signatures": with_signatures,
@@ -296,6 +299,7 @@ class MCPServer:
             return {
                 "status": "dry_run",
                 "message": "Would create air-gap bundle",
+                "version": __version__,
                 "output": output,
                 "include_extras": include_extras,
                 "include_security": include_security,
@@ -396,7 +400,7 @@ class MCPServer:
                 "mcp_server": "operational",
                 "policy_check": "enabled" if self.policy_check else "disabled",
             },
-            "version": "0.1.0",
+            "version": __version__,
         }
 
     def _get_feature_flags(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -430,7 +434,7 @@ def create_mcp_server_config() -> dict[str, Any]:
                 "args": ["-m", "chiron.mcp.server"],
                 "env": {},
                 "description": "Chiron dependency & wheelhouse management",
-                "version": "0.1.0",
+                "version": __version__,
                 "capabilities": {"tools": True, "resources": False, "prompts": False},
             }
         }
