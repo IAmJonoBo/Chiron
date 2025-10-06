@@ -1,4 +1,11 @@
-"""Command-line interface for Chiron."""
+"""Command-line interface for Chiron.
+
+DEPRECATED: This Click-based CLI is deprecated in favor of the Typer-based CLI
+in chiron.typer_cli. This module is kept for backwards compatibility but will
+be removed in a future version.
+
+Please use the new CLI by running `chiron` (via chiron.typer_cli) instead.
+"""
 
 # mypy: disallow-any-decorated = False
 
