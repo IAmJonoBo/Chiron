@@ -23,7 +23,7 @@ classifiers = [
   "Topic :: Security",
   "Topic :: System :: Monitoring",
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.14"
 dependencies = [
   "fastapi>=0.118.0",
   "uvicorn[standard]>=0.37.0",
@@ -111,8 +111,8 @@ dev = [
   "pytest-xdist>=3.6.1",
   "pytest-randomly>=3.16.0",
   "deptry>=0.16.0",
-  "diff-cover>=10.0.0",
-  "mutmut>=3.4.0",
+  "diff-cover>=9.0.0,<10.0.0",
+  "mutmut>=3.0.0,<3.4.0",
 ]
 test = ["pact-python>=2.3.3", "httpx>=0.28.1", "pytest-benchmark>=5.1.0"]
 "test-speed" = ["pytest-xdist>=3.6.1", "pytest-randomly>=3.16.0"]
@@ -164,8 +164,8 @@ all = [
   "pytest-xdist>=3.6.1",
   "pytest-randomly>=3.16.0",
   "deptry>=0.16.0",
-  "diff-cover>=10.0.0",
-  "mutmut>=3.4.0",
+  "diff-cover>=9.0.0,<10.0.0",
+  "mutmut>=3.0.0,<3.4.0",
   "pact-python>=2.3.3",
   "httpx>=0.28.1",
   "pytest-benchmark>=5.1.0",
@@ -185,8 +185,8 @@ dev = [
   "pytest-xdist>=3.6.1",
   "pytest-randomly>=3.16.0",
   "deptry>=0.16.0",
-  "diff-cover>=10.0.0",
-  "mutmut>=3.4.0",
+  "diff-cover>=9.0.0,<10.0.0",
+  "mutmut>=3.0.0,<3.4.0",
 ]
 test = ["pact-python>=2.3.3", "httpx>=0.28.1", "pytest-benchmark>=5.1.0"]
 
