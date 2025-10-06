@@ -56,7 +56,9 @@ class BenchmarkResult:
     throughput: float = field(init=False)
 
     def __post_init__(self) -> None:
-        self.throughput = 0.0 if self.total_time == 0 else self.iterations / self.total_time
+        self.throughput = (
+            0.0 if self.total_time == 0 else self.iterations / self.total_time
+        )
 
     @classmethod
     def from_samples(

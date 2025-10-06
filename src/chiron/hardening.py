@@ -110,7 +110,8 @@ def _apply_seed_guard(thinc_util: Any) -> bool:
         except ValueError:
             pass
 
-        import numpy as np  # type: ignore[import-not-found]
+        import numpy as np
+
         # local import to avoid mandatory dependency at module import time
 
         random.seed(normalised)

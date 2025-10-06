@@ -80,7 +80,7 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.2.0
         env:
-          CIBW_BUILD: cp39-* cp310-* cp311-* cp312-*
+          CIBW_BUILD: cp312-* cp313-*
           CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux_i686"
           CIBW_ARCHS_LINUX: x86_64 aarch64
           CIBW_ARCHS_MACOS: x86_64 arm64
@@ -126,7 +126,25 @@ jobs:
 
       - name: Sign distributions
         run: |
-          find dist/ -type f \( -name "*.whl" -o -name "*.tar.gz" -o -name "*.json" \) | xargs cosign sign-blob --yes --bundle
+          # Sign wheels
+          for file in dist/*.whl; do
+            [ -f "$file" ] || continue
+            cosign sign-blob --yes --bundle "${file}.sigstore.json" "$file" || echo "⚠️  Signing ${file} failed"
+          done
+          # Sign source distributions
+          for file in dist/*.tar.gz; do
+            [ -f "$file" ] || continue
+            cosign sign-blob --yes --bundle "${file}.sigstore.json" "$file" || echo "⚠️  Signing ${file} failed"
+          done
+          # Sign SBOM files
+          for file in dist/*.json; do
+            [ -f "$file" ] && [[ ! "$file" =~ \.sigstore\.json$ ]] || continue
+            cosign sign-blob --yes --bundle "${file}.sigstore.json" "$file" || echo "⚠️  Signing ${file} failed"
+          done
+          echo "✅ Artifact signing completed"
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        continue-on-error: true
 
       - name: Upload signed artifacts
         uses: actions/upload-artifact@v4

@@ -34,7 +34,7 @@ jobs:
           enable-cache: true
 
       - name: Sync project dependencies
-        run: uv sync --group dev --all-extras --frozen
+        run: uv sync --all-extras --dev
         env:
           UV_PYTHON: "3.12"
 

@@ -210,6 +210,7 @@ def _build_quality_suite_progress_renderer(
 
     return _render
 
+
 # ============================================================================
 # Main Chiron CLI
 # ============================================================================
@@ -806,7 +807,9 @@ def deps_policy(
                         icon = (
                             "❌"
                             if v.severity == "error"
-                            else "⚠️" if v.severity == "warning" else "ℹ️"
+                            else "⚠️"
+                            if v.severity == "warning"
+                            else "ℹ️"
                         )
                         typer.echo(f"   {icon} {v.violation_type}: {v.message}")
         else:
@@ -1245,7 +1248,9 @@ def tools_quality_suite(
         help="Run Pact contract tests (requires pact-mock-service)",
         show_default=False,
     ),
-    halt: bool = typer.Option(True, "--halt/--keep-going", help="Stop on first failure"),
+    halt: bool = typer.Option(
+        True, "--halt/--keep-going", help="Stop on first failure"
+    ),
     json_output: bool = typer.Option(False, "--json", help="Emit JSON results"),
     save_report: Path | None = typer.Option(
         None,
@@ -1485,7 +1490,9 @@ def tools_quality_suite(
 
 @coverage_app.command("hotspots")
 def coverage_hotspots_cli(
-    xml: Path = typer.Option(Path("coverage.xml"), "--xml", help="Path to coverage XML"),
+    xml: Path = typer.Option(
+        Path("coverage.xml"), "--xml", help="Path to coverage XML"
+    ),
     threshold: float = typer.Option(90.0, "--threshold", help="Coverage threshold"),
     limit: int = typer.Option(10, "--limit", min=1, help="Number of modules to show"),
 ) -> None:
@@ -1498,7 +1505,9 @@ def coverage_hotspots_cli(
 @coverage_app.command("focus")
 def coverage_focus_cli(
     module: str = typer.Argument(..., help="Module path as listed in coverage.xml"),
-    xml: Path = typer.Option(Path("coverage.xml"), "--xml", help="Path to coverage XML"),
+    xml: Path = typer.Option(
+        Path("coverage.xml"), "--xml", help="Path to coverage XML"
+    ),
     lines: int | None = typer.Option(
         None, "--lines", min=1, help="Limit of missing lines to display"
     ),
@@ -1511,7 +1520,9 @@ def coverage_focus_cli(
 
 @coverage_app.command("summary")
 def coverage_summary_cli(
-    xml: Path = typer.Option(Path("coverage.xml"), "--xml", help="Path to coverage XML"),
+    xml: Path = typer.Option(
+        Path("coverage.xml"), "--xml", help="Path to coverage XML"
+    ),
     limit: int = typer.Option(5, "--limit", min=1, help="Number of entries to include"),
 ) -> None:
     """Display the best and worst performing modules from coverage."""
@@ -1528,12 +1539,12 @@ def coverage_summary_cli(
     else:
         lines.append("  • None! 🎉")
 
-    lines.append(f"\n📊 Overall coverage: {report.summary.coverage:.2f}% ({report.summary.covered}/{report.summary.total_statements})")
+    lines.append(
+        f"\n📊 Overall coverage: {report.summary.coverage:.2f}% ({report.summary.covered}/{report.summary.total_statements})"
+    )
     lines.append("\n🌟 Top performers:")
     if best:
-        lines.extend(
-            f"  • {module.name} — {module.coverage:.2f}%" for module in best
-        )
+        lines.extend(f"  • {module.name} — {module.coverage:.2f}%" for module in best)
     else:
         lines.append("  • No modules found")
 
@@ -1542,8 +1553,12 @@ def coverage_summary_cli(
 
 @coverage_app.command("guard")
 def coverage_guard_cli(
-    xml: Path = typer.Option(Path("coverage.xml"), "--xml", help="Path to coverage XML"),
-    threshold: float = typer.Option(80.0, "--threshold", help="Minimum acceptable coverage"),
+    xml: Path = typer.Option(
+        Path("coverage.xml"), "--xml", help="Path to coverage XML"
+    ),
+    threshold: float = typer.Option(
+        80.0, "--threshold", help="Minimum acceptable coverage"
+    ),
     limit: int = typer.Option(5, "--limit", min=1, help="Hotspot limit"),
 ) -> None:
     """Fail if overall coverage drops below the specified threshold."""
@@ -1557,7 +1572,9 @@ def coverage_guard_cli(
 
 @coverage_app.command("gaps")
 def coverage_gaps_cli(
-    xml: Path = typer.Option(Path("coverage.xml"), "--xml", help="Path to coverage XML"),
+    xml: Path = typer.Option(
+        Path("coverage.xml"), "--xml", help="Path to coverage XML"
+    ),
     min_statements: int = typer.Option(
         0,
         "--min-statements",
@@ -1753,7 +1770,6 @@ def refactor_hotspots(
         )
 
 
-
 @docs_app.command("sync-diataxis")
 def docs_sync_diataxis(
     config: Path = typer.Option(
@@ -1831,7 +1847,9 @@ def tools_format_yaml(ctx: Context) -> None:
 
 @tools_app.command("benchmark")
 def tools_benchmark(
-    iterations: int = typer.Option(50, "--iterations", "-n", help="Iterations per case"),
+    iterations: int = typer.Option(
+        50, "--iterations", "-n", help="Iterations per case"
+    ),
     warmup: int = typer.Option(5, "--warmup", help="Warmup executions per case"),
     json_output: bool = typer.Option(False, "--json", help="Emit JSON summary"),
 ) -> None:

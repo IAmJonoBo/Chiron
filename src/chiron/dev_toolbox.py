@@ -84,6 +84,7 @@ class QualitySuiteProgressEvent:
             return self.gate.name
         return self.command[0] if self.command else "<unknown>"
 
+
 def run_command(
     command: Sequence[str],
     *,
@@ -110,7 +111,9 @@ def run_command(
     )
     duration = time.perf_counter() - start
     output = (completed.stdout or "") + (completed.stderr or "")
-    result = CommandResult(tuple(command), completed.returncode, duration, output, gate=gate)
+    result = CommandResult(
+        tuple(command), completed.returncode, duration, output, gate=gate
+    )
     if check and completed.returncode != 0:
         raise DevToolCommandError(command, completed.returncode, output)
     return result
@@ -192,7 +195,11 @@ class CoverageReport:
         if coverage_attr is not None:
             overall = float(coverage_attr) * 100
         else:
-            overall = (1 - (missing_total / statements_total)) * 100 if statements_total else 0.0
+            overall = (
+                (1 - (missing_total / statements_total)) * 100
+                if statements_total
+                else 0.0
+            )
         summary = CoverageSummary(
             total_statements=statements_total,
             total_missing=missing_total,
@@ -200,7 +207,9 @@ class CoverageReport:
         )
         return cls(modules, summary)
 
-    def modules_below(self, threshold: float, *, limit: int | None = None) -> list[ModuleCoverage]:
+    def modules_below(
+        self, threshold: float, *, limit: int | None = None
+    ) -> list[ModuleCoverage]:
         below = [module for module in self._modules if module.coverage < threshold]
         if limit is not None:
             return below[:limit]
@@ -210,7 +219,9 @@ class CoverageReport:
         return self._module_index.get(name)
 
     def best(self, limit: int = 5) -> list[ModuleCoverage]:
-        return sorted(self._modules, key=lambda module: module.coverage, reverse=True)[:limit]
+        return sorted(self._modules, key=lambda module: module.coverage, reverse=True)[
+            :limit
+        ]
 
     def worst(self, limit: int = 5) -> list[ModuleCoverage]:
         return self.modules_below(100.0, limit=limit)
@@ -396,13 +407,9 @@ class QualitySuiteInsights:
                 for category, count in self.category_breakdown
             )
         if self.critical_gates:
-            lines.append(
-                "Critical gates: " + ", ".join(self.critical_gates)
-            )
+            lines.append("Critical gates: " + ", ".join(self.critical_gates))
         if self.optional_gates:
-            lines.append(
-                "Optional gates: " + ", ".join(self.optional_gates)
-            )
+            lines.append("Optional gates: " + ", ".join(self.optional_gates))
         if self.toggles:
             toggle_display = ", ".join(
                 f"{identifier}={'on' if enabled else 'off'}"
@@ -410,9 +417,7 @@ class QualitySuiteInsights:
             )
             lines.append(f"Toggles: {toggle_display}")
         if self.disabled_toggles:
-            lines.append(
-                "Disabled toggles: " + ", ".join(self.disabled_toggles)
-            )
+            lines.append("Disabled toggles: " + ", ".join(self.disabled_toggles))
         if len(lines) == 2:  # only header lines populated
             lines.append("No additional insights available.")
         return lines
@@ -675,7 +680,9 @@ def load_diataxis_entries(path: Path) -> dict[str, tuple[DiataxisEntry, ...]]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:  # pragma: no cover - defensive guard
-        raise DocumentationSyncError(f"Invalid Diataxis configuration JSON: {exc}") from exc
+        raise DocumentationSyncError(
+            f"Invalid Diataxis configuration JSON: {exc}"
+        ) from exc
 
     entries: dict[str, list[DiataxisEntry]] = {}
     for category, items in payload.items():
@@ -809,15 +816,13 @@ def discover_diataxis_entries(docs_dir: Path) -> dict[str, tuple[DiataxisEntry, 
         )
 
     return {
-        category: tuple(
-            sorted(bucket, key=lambda entry: entry.title.casefold())
-        )
+        category: tuple(sorted(bucket, key=lambda entry: entry.title.casefold()))
         for category, bucket in entries.items()
     }
 
 
 def render_diataxis_overview(
-    entries: Mapping[str, Sequence[DiataxisEntry]]
+    entries: Mapping[str, Sequence[DiataxisEntry]],
 ) -> tuple[str, ...]:
     """Render Markdown lines for the provided Diataxis *entries*."""
 
@@ -829,9 +834,7 @@ def render_diataxis_overview(
         category_entries = entries.get(category_key, ())
         if category_entries:
             for entry in category_entries:
-                lines.append(
-                    f"- [{entry.title}]({entry.path}) — {entry.summary}"
-                )
+                lines.append(f"- [{entry.title}]({entry.path}) — {entry.summary}")
         else:
             lines.append("_No entries yet._")
         lines.append("")
@@ -1013,11 +1016,7 @@ def load_quality_configuration(root: Path | None = None) -> QualityConfiguration
         return QualityConfiguration(gates={}, profiles={})
     with pyproject.open("rb") as handle:
         data = tomllib.load(handle)
-    config = (
-        data.get("tool", {})
-        .get("chiron", {})
-        .get("dev_toolbox", {})
-    )
+    config = data.get("tool", {}).get("chiron", {}).get("dev_toolbox", {})
     gates_config = config.get("gates", {}) if isinstance(config, dict) else {}
     profiles_config = config.get("profiles", {}) if isinstance(config, dict) else {}
     gates: dict[str, QualityGate] = {}
@@ -1025,17 +1024,15 @@ def load_quality_configuration(root: Path | None = None) -> QualityConfiguration
         if not isinstance(payload, dict):
             continue
         command = payload.get("command")
-        if not isinstance(command, list) or not all(isinstance(entry, str) for entry in command):
+        if not isinstance(command, list) or not all(
+            isinstance(entry, str) for entry in command
+        ):
             continue
         category = payload.get("category", "other")
         description = payload.get("description", name)
         critical = bool(payload.get("critical", True))
         cwd_value = payload.get("cwd")
-        working_directory = (
-            (base / cwd_value)
-            if isinstance(cwd_value, str)
-            else None
-        )
+        working_directory = (base / cwd_value) if isinstance(cwd_value, str) else None
         env_payload = payload.get("env", {})
         env = (
             {key: str(value) for key, value in env_payload.items()}
@@ -1043,7 +1040,9 @@ def load_quality_configuration(root: Path | None = None) -> QualityConfiguration
             else None
         )
         category_literal = (
-            category if isinstance(category, str) and category in get_args(QualityCategory) else "other"
+            category
+            if isinstance(category, str) and category in get_args(QualityCategory)
+            else "other"
         )
         gates[name] = QualityGate(
             name=name,
@@ -1057,7 +1056,9 @@ def load_quality_configuration(root: Path | None = None) -> QualityConfiguration
     profiles: dict[str, tuple[str, ...]] = {}
     for name, payload in profiles_config.items():
         gates_list = payload.get("gates") if isinstance(payload, dict) else None
-        if isinstance(gates_list, list) and all(isinstance(entry, str) for entry in gates_list):
+        if isinstance(gates_list, list) and all(
+            isinstance(entry, str) for entry in gates_list
+        ):
             profiles[name] = tuple(gates_list)
     return QualityConfiguration(gates=gates, profiles=profiles)
 
@@ -1120,7 +1121,14 @@ def _lookup_quality_gate(
     gate = catalog.get(identifier)
     if gate is not None:
         return gate
-    return next((candidate for candidate in catalog.values() if candidate.category == identifier), None)
+    return next(
+        (
+            candidate
+            for candidate in catalog.values()
+            if candidate.category == identifier
+        ),
+        None,
+    )
 
 
 def build_quality_suite_plan(
@@ -1241,7 +1249,8 @@ def quality_suite_guide(
         lines.append("Monitored follow-ups:")
         if monitoring.recommendation_details:
             lines.extend(
-                f"  • {detail.render_line()}" for detail in monitoring.recommendation_details
+                f"  • {detail.render_line()}"
+                for detail in monitoring.recommendation_details
             )
         else:
             lines.extend(f"  • {rec}" for rec in monitoring.recommendations)
@@ -1267,7 +1276,9 @@ def quality_suite_manifest(
             "category": gate.category,
             "critical": gate.critical,
             "command": list(gate.command),
-            "working_directory": str(gate.working_directory) if gate.working_directory else None,
+            "working_directory": str(gate.working_directory)
+            if gate.working_directory
+            else None,
             "env": dict(gate.env) if gate.env else None,
         }
         for name, gate in catalog.items()
@@ -1461,7 +1472,9 @@ def coverage_hotspots(report: CoverageReport, *, threshold: float, limit: int) -
     return "\n".join(lines)
 
 
-def coverage_focus(report: CoverageReport, module_name: str, *, line_limit: int | None = None) -> str:
+def coverage_focus(
+    report: CoverageReport, module_name: str, *, line_limit: int | None = None
+) -> str:
     module = report.get(module_name)
     if not module:
         available = "\n".join(module.name for module in report.worst(limit=10))
@@ -1565,9 +1578,7 @@ def build_coverage_focus_summaries(
     summaries: list[CoverageFocusSummary] = []
     for area, prefixes in focus_map.items():
         matched = [
-            module
-            for module in modules
-            if _module_matches_focus(module.name, prefixes)
+            module for module in modules if _module_matches_focus(module.name, prefixes)
         ]
         limited = matched[:limit]
         if limited:
@@ -1675,9 +1686,7 @@ def build_quality_suite_monitoring(
     if recommendation_details:
         recommendations = tuple(detail.action for detail in recommendation_details)
     else:
-        recommendations = (
-            "All monitored focus areas meet coverage expectations.",
-        )
+        recommendations = ("All monitored focus areas meet coverage expectations.",)
     return QualitySuiteMonitoring(
         coverage_focus=focus,
         recommendations=recommendations,
@@ -1755,7 +1764,9 @@ def _build_path_index(paths: Sequence[Path]) -> dict[str, Path]:
     return index
 
 
-def _severity_from_ratio(value: float, threshold: float) -> Literal["info", "warning", "critical"]:
+def _severity_from_ratio(
+    value: float, threshold: float
+) -> Literal["info", "warning", "critical"]:
     """Return severity based on how much *value* exceeds *threshold*."""
 
     if threshold <= 0:
@@ -1768,7 +1779,9 @@ def _severity_from_ratio(value: float, threshold: float) -> Literal["info", "war
     return "info"
 
 
-def _severity_from_shortfall(shortfall: float, threshold: float) -> Literal["info", "warning", "critical"]:
+def _severity_from_shortfall(
+    shortfall: float, threshold: float
+) -> Literal["info", "warning", "critical"]:
     """Return severity based on coverage shortfall."""
 
     if shortfall <= 0 or threshold <= 0:
@@ -1965,9 +1978,7 @@ class RefactorReport:
             symbol = f" · {opportunity.symbol}" if opportunity.symbol else ""
             metric_hint = ""
             if opportunity.metric is not None and opportunity.threshold is not None:
-                metric_hint = (
-                    f" (observed {opportunity.metric}, threshold {opportunity.threshold})"
-                )
+                metric_hint = f" (observed {opportunity.metric}, threshold {opportunity.threshold})"
             yield (
                 f"[{opportunity.severity.upper()}] {location}{symbol} — "
                 f"{opportunity.message}{metric_hint}"
@@ -1992,7 +2003,13 @@ def analyze_refactor_opportunities(
     else:
         default_paths = [Path(path) for path in paths]
 
-    python_files = sorted({candidate.resolve() for path in default_paths for candidate in _iter_python_files(path)})
+    python_files = sorted(
+        {
+            candidate.resolve()
+            for path in default_paths
+            for candidate in _iter_python_files(path)
+        }
+    )
     path_index = _build_path_index(python_files)
 
     opportunities: list[RefactorOpportunity] = []
@@ -2011,7 +2028,9 @@ def analyze_refactor_opportunities(
         class _Visitor(ast.NodeVisitor):
             __slots__ = ("source_path", "collector", "scope")
 
-            def __init__(self, source_path: Path, collector: list[RefactorOpportunity]) -> None:
+            def __init__(
+                self, source_path: Path, collector: list[RefactorOpportunity]
+            ) -> None:
                 self.source_path = source_path
                 self.collector = collector
                 self.scope: list[str] = []
@@ -2286,12 +2305,14 @@ def analyze_hotspots(
 
     # Step 2: Collect complexity data using existing analyze_refactor_opportunities
     complexity_data: dict[Path, int] = {}
-    python_files = sorted({
-        candidate.resolve()
-        for path in [root / "src", root / "tests"]
-        if path.exists()
-        for candidate in _iter_python_files(path)
-    })
+    python_files = sorted(
+        {
+            candidate.resolve()
+            for path in [root / "src", root / "tests"]
+            if path.exists()
+            for candidate in _iter_python_files(path)
+        }
+    )
 
     for source_path in python_files:
         try:
@@ -2304,7 +2325,8 @@ def analyze_hotspots(
                     score += max(0, func_lines - 10)  # Penalize long functions
                 elif isinstance(node, ast.ClassDef):
                     class_methods = sum(
-                        1 for n in node.body
+                        1
+                        for n in node.body
                         if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
                     )
                     score += max(0, class_methods - 5)  # Penalize large classes
@@ -2327,7 +2349,9 @@ def analyze_hotspots(
         hotspot_score = complexity * churn
         entries.append(
             HotspotEntry(
-                path=file_path.relative_to(root) if file_path.is_relative_to(root) else file_path,
+                path=file_path.relative_to(root)
+                if file_path.is_relative_to(root)
+                else file_path,
                 complexity_score=complexity,
                 churn_count=churn,
                 hotspot_score=hotspot_score,

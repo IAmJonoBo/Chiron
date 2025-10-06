@@ -7,7 +7,7 @@ a vendor-agnostic feature flag SDK.
 from __future__ import annotations
 
 import os
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any
 
 __all__ = ["FeatureFlags", "get_feature_flags", "is_feature_enabled"]
 
@@ -19,80 +19,51 @@ try:
     OPENFEATURE_AVAILABLE = True
 except ImportError:
     OPENFEATURE_AVAILABLE = False
-    api = cast(Any, None)
-    EvaluationContext = cast(Any, None)
-    InMemoryFlag = cast(Any, None)
-    InMemoryProvider = cast(Any, None)
+    if TYPE_CHECKING:
+        from openfeature import api
+        from openfeature.evaluation_context import EvaluationContext
+        from openfeature.provider.in_memory_provider import (
+            InMemoryFlag,
+            InMemoryProvider,
+        )
 
 
 class FeatureFlags:
     """Feature flag manager using OpenFeature."""
 
     if OPENFEATURE_AVAILABLE:
-        DEFAULT_FLAGS: dict[str, InMemoryFlag] = {
+        DEFAULT_FLAGS: dict[str, InMemoryFlag[bool]] = {
             "allow_public_publish": InMemoryFlag(
-                "allow_public_publish",
-                False,
-                {
-                    "description": "Allow publishing to public PyPI",
-                    "default": False,
-                },
+                default_variant="off",
+                variants={"on": True, "off": False},
             ),
             "require_slsa_provenance": InMemoryFlag(
-                "require_slsa_provenance",
-                True,
-                {
-                    "description": "Require SLSA provenance for releases",
-                    "default": True,
-                },
+                default_variant="on",
+                variants={"on": True, "off": False},
             ),
             "enable_oci_distribution": InMemoryFlag(
-                "enable_oci_distribution",
-                False,
-                {
-                    "description": "Enable OCI artifact distribution",
-                    "default": False,
-                },
+                default_variant="off",
+                variants={"on": True, "off": False},
             ),
             "enable_tuf_metadata": InMemoryFlag(
-                "enable_tuf_metadata",
-                False,
-                {
-                    "description": "Enable TUF metadata generation",
-                    "default": False,
-                },
+                default_variant="off",
+                variants={"on": True, "off": False},
             ),
             "enable_mcp_agent": InMemoryFlag(
-                "enable_mcp_agent",
-                False,
-                {
-                    "description": "Enable MCP agent mode",
-                    "default": False,
-                },
+                default_variant="off",
+                variants={"on": True, "off": False},
             ),
             "dry_run_by_default": InMemoryFlag(
-                "dry_run_by_default",
-                True,
-                {
-                    "description": "Default to dry-run for destructive operations",
-                    "default": True,
-                },
+                default_variant="on",
+                variants={"on": True, "off": False},
             ),
             "require_code_signatures": InMemoryFlag(
-                "require_code_signatures",
-                True,
-                {
-                    "description": "Require code signatures for artifacts",
-                    "default": True,
-                },
+                default_variant="on",
+                variants={"on": True, "off": False},
             ),
             "enable_vulnerability_blocking": InMemoryFlag(
-                "enable_vulnerability_blocking",
-                True,
-                {
-                    "description": "Block releases with critical vulnerabilities",
-                    "default": True,
-                },
+                default_variant="on",
+                variants={"on": True, "off": False},
             ),
         }
     else:  # pragma: no cover - fallback when OpenFeature missing

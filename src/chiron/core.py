@@ -130,7 +130,9 @@ class ChironCore:
                 in {"1", "true", "yes", "on"},
             )
 
-            endpoint_is_placeholder = endpoint in placeholder_endpoints if endpoint else False
+            endpoint_is_placeholder = (
+                endpoint in placeholder_endpoints if endpoint else False
+            )
 
             if endpoint_is_placeholder and not assume_local_collector:
                 self.logger.info(

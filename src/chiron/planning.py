@@ -56,4 +56,3 @@ def render_execution_plan_table(
         command = shlex.join(step.command) if step.command else "—"
         table.add_row(description, command)
     return table
-
