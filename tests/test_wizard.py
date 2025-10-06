@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
-
-import pytest
 
 from chiron.wizard import ChironWizard, run_init_wizard
 
@@ -167,7 +164,7 @@ class TestChironWizard:
         mock_open.return_value.__enter__.return_value = mock_file
 
         wizard = ChironWizard()
-        config = wizard.init_project()
+        _config = wizard.init_project()
 
         # Verify file was opened for writing
         mock_open.assert_called_once()

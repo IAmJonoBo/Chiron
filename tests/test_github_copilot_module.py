@@ -38,9 +38,7 @@ def test_detect_agent_environment_without_indicators() -> None:
 def test_apply_env_overrides_clears_offline_settings() -> None:
     environment = {"PIP_NO_INDEX": "1", "PIP_FIND_LINKS": "https://example"}
 
-    overrides = copilot._apply_env_overrides(
-        environment, clear_offline_overrides=True
-    )  # pylint: disable=protected-access
+    overrides = copilot._apply_env_overrides(environment, clear_offline_overrides=True)  # pylint: disable=protected-access
 
     assert overrides == {
         copilot.COPILOT_DISABLE_ENV_VAR: "1",

@@ -134,12 +134,12 @@ def test_env_sync_script():
         output = result.stdout + result.stderr  # Check both stdout and stderr
         logger.debug(f"Script output: {output}")
 
-        assert (
-            result.returncode == 0
-        ), f"Script failed with code {result.returncode}: {result.stderr}"
-        assert (
-            "synchronized" in output.lower() or "sync" in output.lower()
-        ), f"Output doesn't contain expected text: {output}"
+        assert result.returncode == 0, (
+            f"Script failed with code {result.returncode}: {result.stderr}"
+        )
+        assert "synchronized" in output.lower() or "sync" in output.lower(), (
+            f"Output doesn't contain expected text: {output}"
+        )
 
         logger.info("✓ Environment sync script works")
         return True

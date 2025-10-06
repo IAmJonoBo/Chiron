@@ -5,8 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import pytest
-
 from chiron.deps.verify import (
     check_cli_commands,
     check_documentation,
@@ -165,6 +163,7 @@ class TestCheckWorkflowIntegration:
 
         # Create preflight workflow
         preflight = workflows_dir / "dependency-preflight.yml"
+        preflight.write_text("""
         preflight.write_text(
             """
 steps:

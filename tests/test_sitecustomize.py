@@ -3,7 +3,6 @@ from __future__ import annotations
 import importlib
 import os
 import sys
-from unittest.mock import patch
 
 _MODULE_NAME = "sitecustomize"
 
@@ -67,7 +66,6 @@ def test_sitecustomize_disables_vendor_overrides_for_copilot() -> None:
 
 def test_sitecustomize_configures_wheelhouse_for_offline_installs() -> None:
     import shutil
-    import tempfile
     from pathlib import Path
 
     # Create a temporary vendor/wheelhouse directory

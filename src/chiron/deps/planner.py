@@ -163,7 +163,11 @@ PLANNER_COMPONENT = "scripts.upgrade_planner"
 
 def _ensure_observability() -> None:
     global _OBSERVABILITY_BOOTSTRAPPED, PLANNER_METER, PLANNER_RUN_COUNTER
-    global PLANNER_ATTEMPT_COUNTER, PLANNER_RESOLVER_DURATION, PLANNER_STAGE_DURATION, TRACER
+    global \
+        PLANNER_ATTEMPT_COUNTER, \
+        PLANNER_RESOLVER_DURATION, \
+        PLANNER_STAGE_DURATION, \
+        TRACER
     if _OBSERVABILITY_BOOTSTRAPPED:
         return
     configure_logging(service_name="chiron-upgrade-planner")
@@ -311,7 +315,9 @@ def generate_plan(config: PlannerConfig) -> PlannerResult:  # noqa: C901
             )
 
 
-def _build_drift_report(sbom_path: Path, metadata_path: Path | None) -> tuple[
+def _build_drift_report(
+    sbom_path: Path, metadata_path: Path | None
+) -> tuple[
     dependency_drift.DependencyDriftReport,
     dependency_drift.DriftPolicy,
 ]:

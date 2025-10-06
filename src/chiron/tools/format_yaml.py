@@ -272,7 +272,7 @@ def _validate_yamllint_rules(rules: Mapping[str, Any]) -> list[ValidationIssue]:
         issues.append(
             ValidationIssue(
                 "yamllint",
-                "line-length rule must be configured to allow long command" " strings.",
+                "line-length rule must be configured to allow long command strings.",
                 path=YAMLLINT_CONFIG_PATH,
             )
         )

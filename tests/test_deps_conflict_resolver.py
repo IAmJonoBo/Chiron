@@ -5,8 +5,6 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-import pytest
-
 from chiron.deps.conflict_resolver import (
     ConflictAnalysisReport,
     ConflictInfo,
@@ -316,5 +314,18 @@ class TestConflictResolver:
 
         # Summary should be a dictionary
         assert isinstance(report.summary, dict)
+        # Should have expected keys
+        assert "total_conflicts" in report.summary or len(report.summary) == 0
+        if len(report.summary) > 0:
+            # Verify expected summary keys
+            expected_keys = {
+                "total_conflicts",
+                "version_conflicts",
+                "missing_dependencies",
+                "circular_dependencies",
+                "errors",
+                "warnings",
+            }
+            assert set(report.summary.keys()) == expected_keys
         # Should have at least total_conflicts count
         assert "total_conflicts" in report.summary or len(report.summary) == 0

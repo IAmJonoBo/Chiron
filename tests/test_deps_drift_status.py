@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import Mock, patch
 
 import pytest
 
@@ -13,7 +12,6 @@ from chiron.deps.drift import (
     RISK_MAJOR,
     RISK_MINOR,
     RISK_PATCH,
-    RISK_SAFE,
     DependencyDriftReport,
     DriftPolicy,
     PackageDrift,

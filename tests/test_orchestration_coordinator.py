@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import json
 import subprocess
-from datetime import UTC, datetime
+from datetime import UTC
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
-
-import pytest
+from unittest.mock import Mock, patch
 
 from chiron.orchestration.coordinator import (
     OrchestrationContext,
@@ -318,7 +316,7 @@ class TestOrchestrationWorkflows:
 
             # Run preflight
             # Mock the output by writing to the file before calling
-            result = coordinator.deps_preflight()
+            _result = coordinator.deps_preflight()
             # After preflight runs, it would have written the file
             # But since we're mocking, we update it
             preflight_file.write_text(json.dumps(preflight_data))

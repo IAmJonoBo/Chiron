@@ -883,7 +883,7 @@ def _markdown_summary_section(
         )
     if drift_section:
         lines.append(
-            "- Drift severity: **" f"{drift_section.get('severity', 'unknown')}**"
+            f"- Drift severity: **{drift_section.get('severity', 'unknown')}**"
         )
     missing = summary.get("inputs_missing", [])
     if missing:
