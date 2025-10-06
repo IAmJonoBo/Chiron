@@ -1,9 +1,5 @@
 ## Next Steps
 
-Alright Jonathan—here’s a concrete, copy-ready playbook that you can actually run. I’ve tuned it for “evidence-gated” refactors at scale (monorepos and multi-service orgs), with quality gates that map to recognised standards and a pragmatic toolchain you can automate end-to-end.
-
-Executive summary
-
 Refactoring “intelligently” means: (1) pick the few changes that cut the most future cost/risk, (2) prove no behavioural drift, (3) gate merges on standards-backed quality, and (4) mechanise everything. In practice: use hotspot targeting (complexity × churn), wrap each change with characterisation tests, run codemods (OpenRewrite/Refaster/etc.), and block merges with quality gates (e.g., ISO 5055-aligned findings + Cognitive Complexity caps). Large-scale changes (LSCs) must land incrementally, not as big-bangs.  ￼
 
 Auto-Expert framing
