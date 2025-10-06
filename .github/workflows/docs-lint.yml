@@ -1,0 +1,47 @@
+name: Documentation Linting
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "docs/**/*.md"
+      - "*.md"
+      - ".vale.ini"
+      - ".vale/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/**/*.md"
+      - "*.md"
+      - ".vale.ini"
+      - ".vale/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vale:
+    name: Vale Documentation Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Vale Linter
+        uses: errata-ai/vale-action@reviewdog
+        with:
+          files: '["docs", "*.md"]'
+          version: 3.10.1
+          fail_on_error: false
+          reporter: github-check
+          filter_mode: nofilter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Vale CLI for summary
+        run: |
+          wget -qO- https://github.com/errata-ai/vale/releases/download/v3.10.1/vale_3.10.1_Linux_64-bit.tar.gz | tar xz
+          sudo mv vale /usr/local/bin/
+          vale sync
+          vale docs/ *.md || echo "Vale found documentation style issues - review the output above"

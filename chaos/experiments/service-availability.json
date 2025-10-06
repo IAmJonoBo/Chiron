@@ -1,0 +1,55 @@
+{
+  "version": "1.0.0",
+  "title": "Chiron Service Availability Under Load",
+  "description": "Validate that the Chiron service remains available under load",
+  "tags": ["availability", "performance", "http"],
+  "steady-state-hypothesis": {
+    "title": "Service is healthy and responsive",
+    "probes": [
+      {
+        "type": "probe",
+        "name": "service-is-available",
+        "tolerance": 200,
+        "provider": {
+          "type": "http",
+          "url": "http://localhost:8000/health",
+          "timeout": 3
+        }
+      },
+      {
+        "type": "probe",
+        "name": "response-time-acceptable",
+        "tolerance": true,
+        "provider": {
+          "type": "python",
+          "module": "chaos.probes",
+          "func": "check_response_time",
+          "arguments": {
+            "url": "http://localhost:8000/api/v1/status",
+            "max_ms": 500
+          }
+        }
+      }
+    ]
+  },
+  "method": [
+    {
+      "type": "action",
+      "name": "generate-load",
+      "provider": {
+        "type": "python",
+        "module": "chaos.actions",
+        "func": "generate_http_load",
+        "arguments": {
+          "url": "http://localhost:8000/api/v1/status",
+          "requests": 100,
+          "concurrency": 10
+        }
+      },
+      "pauses": {
+        "after": 5
+      }
+    }
+  ],
+  "rollbacks": []
+}

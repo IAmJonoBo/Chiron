@@ -117,3 +117,15 @@ benchmark: ## Run performance benchmarks
 
 sync-env: ## Sync dev and CI environment dependencies
 	python scripts/sync_env_deps.py
+
+diff-cover: ## Run diff-cover on changed lines (requires coverage.xml)
+	uv run diff-cover coverage.xml --compare-branch=origin/main --fail-under=80
+
+mutmut-run: ## Run mutation testing
+	uv run mutmut run
+
+mutmut-results: ## Show mutation testing results
+	uv run mutmut results
+
+mutmut-html: ## Generate mutation testing HTML report
+	uv run mutmut html

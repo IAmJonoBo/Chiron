@@ -1,0 +1,157 @@
+name: Reproducibility Validation
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "pyproject.toml"
+      - "uv.lock"
+      - "src/**"
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run weekly on Monday at 02:00 UTC
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reprotest:
+    name: Reproducibility Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install reprotest
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y reprotest diffoscope
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: First build
+        run: |
+          uv build --wheel --out-dir build1/
+
+      - name: Second build (with variations)
+        run: |
+          # Clean intermediate build artifacts
+          rm -rf build/ dist/ *.egg-info/
+          
+          # Build again with time variation
+          sleep 2
+          uv build --wheel --out-dir build2/
+
+      - name: Compare builds with diffoscope
+        run: |
+          wheel1=$(ls build1/*.whl | head -1)
+          wheel2=$(ls build2/*.whl | head -1)
+          
+          if [ -z "$wheel1" ] || [ -z "$wheel2" ]; then
+            echo "❌ One or both wheel builds failed"
+            exit 1
+          fi
+          
+          echo "Comparing:"
+          echo "  Build 1: $(basename $wheel1)"
+          echo "  Build 2: $(basename $wheel2)"
+          
+          # Run diffoscope
+          if diffoscope --text diffoscope-report.txt --html diffoscope-report.html \
+             "$wheel1" "$wheel2"; then
+            echo "✅ REPRODUCIBLE: Wheels are identical"
+            REPRODUCIBLE=true
+          else
+            echo "⚠️  DIFFERENCES FOUND: Builds are not byte-for-byte identical"
+            REPRODUCIBLE=false
+            
+            # Show summary of differences
+            echo "Difference summary:"
+            head -n 50 diffoscope-report.txt || echo "No differences file generated"
+          fi
+          
+          # Store result for later steps
+          echo "REPRODUCIBLE=$REPRODUCIBLE" >> $GITHUB_ENV
+
+      - name: Run reprotest (comprehensive)
+        run: |
+          # Run reprotest with multiple variations
+          reprotest --vary=+all,-time,-domain_host \
+            'uv build --wheel' \
+            'dist/*.whl' || {
+              echo "⚠️  Reprotest found reproducibility issues"
+              echo "This is informational - some variations (like timestamps) are expected"
+            }
+        continue-on-error: true
+
+      - name: Upload diffoscope report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reproducibility-report
+          path: |
+            diffoscope-report.txt
+            diffoscope-report.html
+
+      - name: Generate reproducibility badge data
+        run: |
+          if [ "$REPRODUCIBLE" = "true" ]; then
+            cat > reproducibility-badge.json <<EOF
+          {
+            "schemaVersion": 1,
+            "label": "reproducible",
+            "message": "yes",
+            "color": "success"
+          }
+          EOF
+          else
+            cat > reproducibility-badge.json <<EOF
+          {
+            "schemaVersion": 1,
+            "label": "reproducible",
+            "message": "with variations",
+            "color": "yellow"
+          }
+          EOF
+          fi
+
+      - name: Comment on PR with results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reproducible = process.env.REPRODUCIBLE === 'true';
+            
+            const icon = reproducible ? '✅' : '⚠️';
+            const status = reproducible ? 'REPRODUCIBLE' : 'DIFFERENCES FOUND';
+            
+            let message = `${icon} **Reproducibility Check**: ${status}\n\n`;
+            
+            if (reproducible) {
+              message += 'The wheel builds are byte-for-byte identical. ✨';
+            } else {
+              message += 'The builds have differences. This may be due to:\n';
+              message += '- Timestamps in metadata\n';
+              message += '- Build environment variations\n';
+              message += '- Non-deterministic build processes\n\n';
+              message += '📊 [View detailed diffoscope report](../actions/runs/${{ github.run_id }})';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });

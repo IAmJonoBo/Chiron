@@ -1,0 +1,168 @@
+name: Trivy Container Scanning
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "pyproject.toml"
+      - "uv.lock"
+  pull_request:
+    branches: [main]
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "pyproject.toml"
+      - "uv.lock"
+  schedule:
+    # Run every Sunday at 12:00 UTC
+    - cron: '0 12 * * 0'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  trivy-scan:
+    name: Trivy Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Run Trivy vulnerability scanner in repo mode
+        uses: aquasecurity/trivy-action@0.32.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Run Trivy for detailed report
+        uses: aquasecurity/trivy-action@0.32.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'json'
+          output: 'trivy-report.json'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Parse and report results
+        run: |
+          if [ -f trivy-report.json ]; then
+            CRITICAL=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' trivy-report.json)
+            HIGH=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH")] | length' trivy-report.json)
+            MEDIUM=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "MEDIUM")] | length' trivy-report.json)
+            
+            echo "🔍 Trivy Scan Results:"
+            echo "  Critical: $CRITICAL"
+            echo "  High: $HIGH"
+            echo "  Medium: $MEDIUM"
+            
+            if [ "$CRITICAL" -gt 0 ]; then
+              echo "❌ CRITICAL vulnerabilities found!"
+              exit 1
+            elif [ "$HIGH" -gt 0 ]; then
+              echo "⚠️  HIGH severity vulnerabilities found"
+              exit 1
+            else
+              echo "✅ No critical or high severity vulnerabilities found"
+            fi
+          fi
+
+      - name: Upload Trivy report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: |
+            trivy-results.sarif
+            trivy-report.json
+
+  trivy-container-scan:
+    name: Trivy Container Image Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build container image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: chiron:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy scanner on container image
+        uses: aquasecurity/trivy-action@0.32.0
+        with:
+          image-ref: 'chiron:latest'
+          format: 'sarif'
+          output: 'trivy-container-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy container results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-container-results.sarif'
+
+      - name: Run Trivy on container for detailed report
+        uses: aquasecurity/trivy-action@0.32.0
+        with:
+          image-ref: 'chiron:latest'
+          format: 'json'
+          output: 'trivy-container-report.json'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Parse container scan results
+        run: |
+          if [ -f trivy-container-report.json ]; then
+            CRITICAL=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' trivy-container-report.json)
+            HIGH=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH")] | length' trivy-container-report.json)
+            
+            echo "🐳 Container Scan Results:"
+            echo "  Critical: $CRITICAL"
+            echo "  High: $HIGH"
+            
+            if [ "$CRITICAL" -gt 0 ]; then
+              echo "❌ CRITICAL vulnerabilities in container!"
+              exit 1
+            elif [ "$HIGH" -gt 0 ]; then
+              echo "⚠️  HIGH severity vulnerabilities in container"
+              # Don't fail on high for container base images, but report
+            fi
+            echo "✅ Container scan completed"
+          fi
+
+      - name: Upload container scan artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-container-report
+          path: |
+            trivy-container-results.sarif
+            trivy-container-report.json
