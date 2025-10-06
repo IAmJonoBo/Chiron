@@ -168,6 +168,22 @@ safety-report.json
 .secrets.baseline
 pacts/
 
+# Vale styles (downloaded from remote)
+.vale/styles/Vale/
+.vale/styles/write-good/
+.vale/styles/Microsoft/
+
+# Mutation testing
+.mutmut-cache
+
+# Chaos testing results
+chaos/journal.json
+chaos/chaostoolkit.log
+
+# Diff coverage reports
+diff-cover.html
+diff-cover.json
+
 # Signing artifacts
 *.sigstore.json
 *.bundle

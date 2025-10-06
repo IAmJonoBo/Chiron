@@ -32,7 +32,13 @@ Welcome to Chiron's documentation! This directory contains comprehensive guides 
 ### Monitoring & Operations
 
 - [Grafana Deployment Guide](GRAFANA_DEPLOYMENT_GUIDE.md) - Dashboard deployment with OpenTelemetry metrics
+- [Observability Sandbox](OBSERVABILITY_SANDBOX.md) - **Local observability stack with docker-compose** (NEW)
 - [MCP Integration Testing](MCP_INTEGRATION_TESTING.md) - MCP server testing guide
+
+### Testing & Validation
+
+- [Module Boundary Testing](MODULE_BOUNDARY_TESTING.md) - Cross-module integration testing
+- [Chaos Testing](../chaos/README.md) - **Chaos engineering experiments** (NEW)
 
 ## Specialized Guides
 
