@@ -43,7 +43,7 @@ class VulnerabilitySummary:
             True if blocking vulnerabilities found
         """
         severity_order = {"critical": 3, "high": 2, "medium": 1, "low": 0}
-        threshold = severity_order.get(max_severity, 2)
+        threshold = severity_order.get(max_severity.lower(), 2)
 
         return bool(
             (threshold >= 3 and self.critical > 0)
@@ -120,6 +120,55 @@ class OSVScanner:
 
     def __init__(self, project_root: Path):
         self.project_root = project_root
+
+    @staticmethod
+    def _classify_severity(vuln: dict[str, Any]) -> str:
+        severity = vuln.get("severity")
+        labels: list[str] = []
+
+        if isinstance(severity, str):
+            labels.append(severity.lower())
+        elif isinstance(severity, list):
+            for entry in severity:
+                if not isinstance(entry, dict):
+                    continue
+                score = entry.get("score")
+                if score is not None:
+                    try:
+                        value = float(score)
+                    except (TypeError, ValueError):
+                        value = None
+                    if value is not None:
+                        if value >= 9.0:
+                            labels.append("critical")
+                        elif value >= 7.0:
+                            labels.append("high")
+                        elif value >= 4.0:
+                            labels.append("medium")
+                        elif value > 0:
+                            labels.append("low")
+                for candidate in ("severity", "level", "type"):
+                    raw = entry.get(candidate)
+                    if isinstance(raw, str):
+                        labels.append(raw.lower())
+
+        if not labels:
+            database_specific = vuln.get("database_specific", {})
+            raw = database_specific.get("severity") or database_specific.get("level")
+            if isinstance(raw, str):
+                labels.append(raw.lower())
+
+        for label in labels:
+            if "critical" in label:
+                return "critical"
+            if "high" in label:
+                return "high"
+            if "medium" in label or "moderate" in label:
+                return "medium"
+            if "low" in label:
+                return "low"
+
+        return ""
 
     def scan_lockfile(
         self,
@@ -210,21 +259,14 @@ class OSVScanner:
                 for vuln in vulnerabilities:
                     summary.total_vulnerabilities += 1
 
-                    # Try to determine severity
-                    severity = vuln.get("severity", "")
-                    if not severity:
-                        # Try to infer from CVSS score or other fields
-                        database_specific = vuln.get("database_specific", {})
-                        severity = database_specific.get("severity", "unknown")
-
-                    severity_lower = str(severity).lower()
-                    if "critical" in severity_lower:
+                    severity_label = self._classify_severity(vuln)
+                    if severity_label == "critical":
                         summary.critical += 1
-                    elif "high" in severity_lower:
+                    elif severity_label == "high":
                         summary.high += 1
-                    elif "medium" in severity_lower or "moderate" in severity_lower:
+                    elif severity_label == "medium":
                         summary.medium += 1
-                    elif "low" in severity_lower:
+                    elif severity_label == "low":
                         summary.low += 1
 
         summary.packages_affected = sorted(packages_affected)

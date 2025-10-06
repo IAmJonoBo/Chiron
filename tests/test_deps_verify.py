@@ -1,273 +1,222 @@
-"""Tests for chiron.deps.verify module - dependency pipeline verification."""
+"""Tests for dependency verification helpers."""
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
-from unittest.mock import Mock, patch
 
-from chiron.deps.verify import (
-    check_cli_commands,
-    check_documentation,
-    check_script_imports,
-    check_workflow_integration,
-)
+import pytest
+
+from chiron.deps import verify
+
+
+@dataclass
+class StubCommand:
+    """Lightweight stand-in for Click/Typer command groups."""
+
+    commands: dict[str, StubCommand]
+
+
+@pytest.fixture()
+def stub_cli_root() -> StubCommand:
+    """Create a nested command structure without importing Typer."""
+
+    return StubCommand(
+        commands={
+            "deps": StubCommand(
+                commands={
+                    "guard": StubCommand(commands={}),
+                    "verify": StubCommand(commands={}),
+                    "reproducibility": StubCommand(commands={}),
+                }
+            ),
+            "tools": StubCommand(
+                commands={
+                    "qa": StubCommand(commands={}),
+                    "coverage": StubCommand(
+                        commands={"guard": StubCommand(commands={})}
+                    ),
+                }
+            ),
+            "github": StubCommand(
+                commands={
+                    "sync": StubCommand(commands={}),
+                    "copilot": StubCommand(
+                        commands={"prepare": StubCommand(commands={})}
+                    ),
+                }
+            ),
+            "plugin": StubCommand(commands={"list": StubCommand(commands={})}),
+        }
+    )
 
 
 class TestCheckScriptImports:
-    """Tests for check_script_imports function."""
+    """Tests for ``check_script_imports``."""
 
-    @patch("chiron.deps.verify.REPO_ROOT", Path("/fake/repo"))
-    def test_check_script_imports_all_missing(self) -> None:
-        """Test check_script_imports when all scripts are missing."""
-        with patch("pathlib.Path.exists", return_value=False):
-            results = check_script_imports()
-
-            # Should return results for all scripts
-            assert len(results) > 0
-            # All should be False since files don't exist
-            assert all(not passed for passed in results.values())
-
-    @patch("chiron.deps.verify.REPO_ROOT", Path("/fake/repo"))
-    def test_check_script_imports_with_valid_scripts(self, tmp_path: Path) -> None:
-        """Test check_script_imports with valid scripts."""
+    def _configure_scripts(self, tmp_path: Path, files: dict[str, str]) -> Path:
         scripts_dir = tmp_path / "scripts"
         scripts_dir.mkdir()
+        for name, content in files.items():
+            (scripts_dir / name).write_text(content, encoding="utf-8")
+        return scripts_dir
 
-        # Create a valid standalone script
-        upgrade_guard = scripts_dir / "upgrade_guard.py"
-        upgrade_guard.write_text("def main():\n    pass\n")
+    def test_detects_valid_scripts(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._configure_scripts(
+            tmp_path,
+            {
+                "preflight_deps.py": 'run_module("chiron.deps.preflight")\n',
+                "sync_env_deps.py": "def main():\n    return 0\n",
+                "policy_context.py": "def main():\n    return 0\n",
+            },
+        )
 
-        # Create a valid library module
-        deps_status = scripts_dir / "deps_status.py"
-        deps_status.write_text("def generate_status():\n    pass\n")
+        monkeypatch.setattr(verify, "REPO_ROOT", tmp_path)
+        results = verify.check_script_imports()
 
-        with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
-            results = check_script_imports()
+        assert all(results.values())
 
-            assert results["upgrade_guard.py (standalone)"] is True
-            assert results["deps_status.py (library)"] is True
+    def test_handles_missing_and_invalid_scripts(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self._configure_scripts(
+            tmp_path,
+            {
+                "preflight_deps.py": "print('noop')\n",
+            },
+        )
 
-    @patch("chiron.deps.verify.REPO_ROOT", Path("/fake/repo"))
-    def test_check_script_imports_invalid_content(self, tmp_path: Path) -> None:
-        """Test check_script_imports with scripts missing required functions."""
-        scripts_dir = tmp_path / "scripts"
-        scripts_dir.mkdir()
+        monkeypatch.setattr(verify, "REPO_ROOT", tmp_path)
+        results = verify.check_script_imports()
 
-        # Create script without main() function
-        upgrade_guard = scripts_dir / "upgrade_guard.py"
-        upgrade_guard.write_text("def other_function():\n    pass\n")
-
-        with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
-            results = check_script_imports()
-
-            assert results["upgrade_guard.py (standalone)"] is False
+        assert any(not passed for passed in results.values())
 
 
 class TestCheckCliCommands:
-    """Tests for check_cli_commands function."""
+    """Tests for ``check_cli_commands``."""
 
-    @patch("chiron.deps.verify.REPO_ROOT", Path("/fake/repo"))
-    def test_check_cli_commands_no_cli_file(self) -> None:
-        """Test check_cli_commands when cli.py doesn't exist."""
-        with patch("pathlib.Path.exists", return_value=False):
-            results = check_cli_commands()
-
-            assert results == {"cli_module": False}
-
-    @patch("chiron.deps.verify.REPO_ROOT")
-    def test_check_cli_commands_with_valid_cli(
-        self, mock_repo_root: Mock, tmp_path: Path
+    def test_cli_structure_detected(
+        self,
+        stub_cli_root: StubCommand,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Test check_cli_commands with valid CLI file."""
-        mock_repo_root.return_value = tmp_path
+        monkeypatch.setattr(verify, "_load_cli_root", lambda: stub_cli_root)
+        results = verify.check_cli_commands()
 
-        chiron_dir = tmp_path / "chiron"
-        chiron_dir.mkdir()
-        cli_file = chiron_dir / "cli.py"
+        assert results["cli_module"] is True
+        assert all(
+            results[key]
+            for key in (
+                "deps.guard",
+                "deps.verify",
+                "deps.reproducibility",
+                "tools.qa",
+                "tools.coverage.guard",
+                "github.sync",
+                "github.copilot.prepare",
+            )
+        )
 
-        # Create CLI file with command decorators
-        cli_content = """
-@deps_app.command("status")
-def status_command():
-    pass
-
-@deps_app.command("upgrade")
-def upgrade_command():
-    pass
-
-@deps_app.command("guard")
-def guard_command():
-    pass
-"""
-        cli_file.write_text(cli_content)
-
-        with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
-            results = check_cli_commands()
-
-            assert results["deps status"] is True
-            assert results["deps upgrade"] is True
-            assert results["deps guard"] is True
-
-    @patch("chiron.deps.verify.REPO_ROOT")
-    def test_check_cli_commands_missing_commands(
-        self, mock_repo_root: Mock, tmp_path: Path
+    def test_missing_command_path(
+        self,
+        stub_cli_root: StubCommand,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Test check_cli_commands with CLI file missing some commands."""
-        mock_repo_root.return_value = tmp_path
+        # Remove the github copilot group to trigger a failure.
+        pruned = stub_cli_root
+        pruned.commands["github"].commands.pop("copilot")  # type: ignore[index]
+        monkeypatch.setattr(verify, "_load_cli_root", lambda: pruned)
 
-        chiron_dir = tmp_path / "chiron"
-        chiron_dir.mkdir()
-        cli_file = chiron_dir / "cli.py"
+        results = verify.check_cli_commands()
 
-        # Create CLI file with only one command
-        cli_content = '@deps_app.command("status")\ndef status():\n    pass\n'
-        cli_file.write_text(cli_content)
+        assert results["github.copilot.prepare"] is False
 
-        with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
-            results = check_cli_commands()
+    def test_import_failure(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(verify, "_load_cli_root", lambda: None)
 
-            assert results["deps status"] is True
-            assert results["deps upgrade"] is False
+        results = verify.check_cli_commands()
+
+        assert results == {"cli_module": False}
 
 
 class TestCheckWorkflowIntegration:
-    """Tests for check_workflow_integration function."""
+    """Tests for ``check_workflow_integration``."""
 
-    @patch("chiron.deps.verify.REPO_ROOT")
-    def test_check_workflow_integration_no_workflows(
-        self, mock_repo_root: Mock, tmp_path: Path
-    ) -> None:
-        """Test check_workflow_integration when workflow files don't exist."""
-        mock_repo_root.return_value = tmp_path
+    def _write_workflow(self, root: Path, name: str, lines: Iterable[str]) -> None:
+        workflow_dir = root / ".github" / "workflows"
+        workflow_dir.mkdir(parents=True, exist_ok=True)
+        (workflow_dir / name).write_text("\n".join(lines), encoding="utf-8")
 
-        workflows_dir = tmp_path / ".github" / "workflows"
-        workflows_dir.mkdir(parents=True)
-
-        with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
-            results = check_workflow_integration()
-
-            # All checks should be False when files don't exist
-            assert results["dependency-preflight uses CLI"] is False
-            assert results["dependency-contract-check uses CLI"] is False
-            assert results["offline-packaging uses CLI"] is False
-
-    @patch("chiron.deps.verify.REPO_ROOT")
-    def test_check_workflow_integration_with_valid_workflows(
-        self, mock_repo_root: Mock, tmp_path: Path
-    ) -> None:
-        """Test check_workflow_integration with valid workflow files."""
-        mock_repo_root.return_value = tmp_path
-
-        workflows_dir = tmp_path / ".github" / "workflows"
-        workflows_dir.mkdir(parents=True)
-
-        # Create preflight workflow
-        preflight = workflows_dir / "dependency-preflight.yml"
-        preflight.write_text(
-            """
-steps:
-  - run: chiron deps preflight
-  - run: chiron deps guard
-  - run: chiron deps snapshot ensure
-"""
+    def test_workflow_checks(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._write_workflow(
+            tmp_path,
+            "ci.yml",
+            ["run: uv sync --all-extras --dev"],
+        )
+        self._write_workflow(
+            tmp_path,
+            "airgap.yml",
+            ["run: chiron doctor"],
+        )
+        self._write_workflow(
+            tmp_path,
+            "sync-env.yml",
+            ["run: python scripts/sync_env_deps.py"],
         )
 
-        # Create contract check workflow
-        contract = workflows_dir / "dependency-contract-check.yml"
-        contract.write_text("steps:\n  - run: chiron deps sync\n")
+        monkeypatch.setattr(verify, "REPO_ROOT", tmp_path)
+        results = verify.check_workflow_integration()
 
-        # Create offline packaging workflow
-        packaging = workflows_dir / "offline-packaging-optimized.yml"
-        packaging.write_text("steps:\n  - run: chiron offline-package\n")
+        assert all(results.values())
 
-        with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
-            results = check_workflow_integration()
-
-            assert results["dependency-preflight uses CLI"] is True
-            assert results["dependency-contract-check uses CLI"] is True
-            assert results["offline-packaging uses CLI"] is True
-
-    @patch("chiron.deps.verify.REPO_ROOT")
-    def test_check_workflow_integration_incomplete_workflows(
-        self, mock_repo_root: Mock, tmp_path: Path
+    def test_missing_workflow_entries(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test check_workflow_integration with incomplete workflow files."""
-        mock_repo_root.return_value = tmp_path
+        self._write_workflow(
+            tmp_path,
+            "ci.yml",
+            ["run: echo noop"],
+        )
 
-        workflows_dir = tmp_path / ".github" / "workflows"
-        workflows_dir.mkdir(parents=True)
+        monkeypatch.setattr(verify, "REPO_ROOT", tmp_path)
+        results = verify.check_workflow_integration()
 
-        # Create preflight workflow missing some commands
-        preflight = workflows_dir / "dependency-preflight.yml"
-        preflight.write_text("steps:\n  - run: chiron deps preflight\n")
-
-        with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
-            results = check_workflow_integration()
-
-            # Should be False because it's missing guard and snapshot commands
-            assert results["dependency-preflight uses CLI"] is False
+        assert any(not passed for passed in results.values())
 
 
 class TestCheckDocumentation:
-    """Tests for check_documentation function."""
+    """Tests for ``check_documentation``."""
 
-    @patch("chiron.deps.verify.REPO_ROOT")
-    def test_check_documentation_no_docs(
-        self, mock_repo_root: Mock, tmp_path: Path
-    ) -> None:
-        """Test check_documentation when docs don't exist."""
-        mock_repo_root.return_value = tmp_path
-
+    def _write_docs(self, tmp_path: Path, files: dict[str, str]) -> None:
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
+        for name, content in files.items():
+            (docs_dir / name).write_text(content, encoding="utf-8")
 
-        with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
-            results = check_documentation()
-
-            assert results["dependency-governance.md exists"] is False
-            assert results["packaging workflow linked"] is False
-
-    @patch("chiron.deps.verify.REPO_ROOT")
-    def test_check_documentation_with_valid_docs(
-        self, mock_repo_root: Mock, tmp_path: Path
-    ) -> None:
-        """Test check_documentation with valid documentation."""
-        mock_repo_root.return_value = tmp_path
-
-        docs_dir = tmp_path / "docs"
-        docs_dir.mkdir()
-
-        governance_doc = docs_dir / "dependency-governance.md"
-        governance_doc.write_text(
-            """
-# Dependency Governance
-
-See [packaging-workflow-integration.md](packaging-workflow-integration.md)
-for details.
-"""
+    def test_documentation_presence(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._write_docs(
+            tmp_path,
+            {
+                "DEPS_MODULES_STATUS.md": "supply_chain.py coverage",
+                "CI_REPRODUCIBILITY_VALIDATION.md": "Verify supply chain integrity",
+            },
         )
 
-        with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
-            results = check_documentation()
+        monkeypatch.setattr(verify, "REPO_ROOT", tmp_path)
+        results = verify.check_documentation()
 
-            assert results["dependency-governance.md exists"] is True
-            assert results["packaging workflow linked"] is True
+        assert all(results.values())
 
-    @patch("chiron.deps.verify.REPO_ROOT")
-    def test_check_documentation_missing_link(
-        self, mock_repo_root: Mock, tmp_path: Path
+    def test_missing_documentation(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test check_documentation with doc missing workflow link."""
-        mock_repo_root.return_value = tmp_path
+        self._write_docs(
+            tmp_path,
+            {"DEPS_MODULES_STATUS.md": "stub"},
+        )
 
-        docs_dir = tmp_path / "docs"
-        docs_dir.mkdir()
+        monkeypatch.setattr(verify, "REPO_ROOT", tmp_path)
+        results = verify.check_documentation()
 
-        governance_doc = docs_dir / "dependency-governance.md"
-        governance_doc.write_text("# Dependency Governance\n\nSome content.\n")
-
-        with patch("chiron.deps.verify.REPO_ROOT", tmp_path):
-            results = check_documentation()
-
-            assert results["dependency-governance.md exists"] is True
-            assert results["packaging workflow linked"] is False
+        assert any(not passed for passed in results.values())

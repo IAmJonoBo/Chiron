@@ -16,7 +16,9 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Annotated, Literal, cast
 
-from typer import Context
+from rich.console import Console
+from rich.panel import Panel
+from rich.text import Text
 
 try:
     import typer
@@ -25,16 +27,20 @@ except ImportError as exc:
 
 from chiron.dev_toolbox import (
     CoverageReport,
-    available_quality_gates,
+    DocumentationSyncError,
+    QualitySuiteProgressEvent,
     available_quality_profiles,
+    build_quality_suite_monitoring,
+    build_quality_suite_plan,
     coverage_focus,
     coverage_gap_summary,
     coverage_guard,
     coverage_hotspots,
+    execute_quality_suite,
     load_quality_configuration,
-    resolve_quality_profile,
-    run_quality_suite,
-    summarise_suite,
+    prepare_quality_suite_dry_run,
+    quality_suite_manifest,
+    sync_quality_suite_documentation,
 )
 from chiron.github import (
     COPILOT_DISABLE_ENV_VAR,
@@ -44,6 +50,9 @@ from chiron.github import (
     generate_env_exports,
     prepare_environment,
 )
+from chiron.planning import render_execution_plan_table
+
+Context = typer.Context
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +140,69 @@ def _invoke_script_command(
         forwarded = argv
 
     _invoke_cli_callable(command_name, callback, args=forwarded)
+
+
+def _render_progress_bar(completed: int, total: int, *, width: int = 24) -> str:
+    """Return a textual progress bar for *completed*/*total* gates."""
+
+    safe_total = max(total, 1)
+    safe_completed = max(0, min(completed, safe_total))
+    ratio = safe_completed / safe_total
+    filled = int(ratio * width)
+    if safe_completed == safe_total:
+        filled = width
+    empty = width - filled
+    bar = "█" * filled + "░" * empty
+    return f"[{bar}] {safe_completed}/{total}"
+
+
+def _format_progress_label(event: QualitySuiteProgressEvent) -> str:
+    """Return a human-readable label for a progress *event*."""
+
+    if event.gate is None:
+        return " ".join(event.command) or event.name
+    label = event.gate.name
+    category = event.gate.category.replace("_", " ")
+    if category:
+        label = f"{label} [{category}]"
+    if event.gate.description and event.gate.description != event.gate.name:
+        label = f"{label} — {event.gate.description}"
+    return label
+
+
+def _build_quality_suite_progress_renderer(
+    console: Console, total: int
+) -> Callable[[QualitySuiteProgressEvent], None]:
+    """Return a renderer that prints progress updates to *console*."""
+
+    def _render(event: QualitySuiteProgressEvent) -> None:
+        if event.status == "started":
+            completed = event.index - 1
+            bar = _render_progress_bar(completed, total)
+            console.print(f"[cyan]▶[/cyan] {bar} {_format_progress_label(event)}")
+            return
+
+        completed = event.index
+        bar = _render_progress_bar(completed, total)
+        success = bool(event.result and event.result.returncode == 0)
+        icon = "[green]✅[/green]" if success else "[red]❌[/red]"
+        duration = "--"
+        if event.result is not None:
+            duration = f"{event.result.duration:.2f}s"
+        console.print(f"{icon} {bar} {_format_progress_label(event)} ({duration})")
+        if not success and event.result is not None:
+            output = event.result.output.strip()
+            if output:
+                console.print(
+                    Panel(
+                        Text(output),
+                        title=f"{event.name} output",
+                        border_style="red",
+                        expand=False,
+                    )
+                )
+
+    return _render
 
 # ============================================================================
 # Main Chiron CLI
@@ -1099,6 +1171,11 @@ def tools_quality_suite(
         "--list-profiles",
         help="List available profiles and exit",
     ),
+    manifest: bool = typer.Option(
+        False,
+        "--manifest",
+        help="Print a JSON manifest for gates and plans and exit",
+    ),
     explain: bool = typer.Option(
         False,
         "--explain",
@@ -1108,6 +1185,11 @@ def tools_quality_suite(
         False,
         "--dry-run",
         help="Display the plan without running commands",
+    ),
+    guide: bool = typer.Option(
+        False,
+        "--guide",
+        help="Print an agent-focused quickstart guide and exit",
     ),
     tests: bool | None = typer.Option(
         None,
@@ -1133,10 +1215,22 @@ def tools_quality_suite(
         help="Run Bandit security scan",
         show_default=False,
     ),
+    docs: bool | None = typer.Option(
+        None,
+        "--docs/--no-docs",
+        help="Build project documentation",
+        show_default=False,
+    ),
     build: bool | None = typer.Option(
         None,
         "--build/--no-build",
         help="Build wheel and sdist",
+        show_default=False,
+    ),
+    contracts: bool | None = typer.Option(
+        None,
+        "--contracts/--no-contracts",
+        help="Run Pact contract tests (requires pact-mock-service)",
         show_default=False,
     ),
     halt: bool = typer.Option(True, "--halt/--keep-going", help="Stop on first failure"),
@@ -1146,11 +1240,56 @@ def tools_quality_suite(
         "--save-report",
         help="Write JSON results to the provided path",
     ),
+    monitor: bool = typer.Option(
+        False,
+        "--monitor",
+        help="Include coverage monitoring insights for CLI and service focus areas",
+    ),
+    coverage_xml: Path = typer.Option(
+        Path("coverage.xml"),
+        "--coverage-xml",
+        help="Path to coverage XML for monitoring insights",
+    ),
+    monitor_threshold: float = typer.Option(
+        85.0,
+        "--monitor-threshold",
+        help="Threshold used to flag monitored coverage focus areas",
+    ),
+    monitor_limit: int = typer.Option(
+        3,
+        "--monitor-limit",
+        min=1,
+        help="Maximum modules to display per monitored focus area",
+    ),
+    monitor_min_statements: int = typer.Option(
+        25,
+        "--monitor-min-statements",
+        min=0,
+        help="Minimum statements required for modules to be monitored",
+    ),
+    sync_docs: Path | None = typer.Option(
+        None,
+        "--sync-docs",
+        help="Update the documentation snippet at the provided path and exit",
+    ),
+    docs_marker: str = typer.Option(
+        "QUALITY_SUITE_AUTODOC",
+        "--docs-marker",
+        help="Marker name used to locate the auto-generated documentation block",
+    ),
 ) -> None:
     """Run the curated quality gate command suite."""
 
+    console: Console | None = None
+    if not json_output:
+        console = Console()
+
     config = load_quality_configuration()
     profiles = available_quality_profiles(config)
+
+    if manifest:
+        typer.echo(json.dumps(quality_suite_manifest(config=config), indent=2))
+        raise typer.Exit(0)
 
     if list_profiles:
         lines = ["Available quality profiles:"]
@@ -1161,64 +1300,174 @@ def tools_quality_suite(
         raise typer.Exit(0)
 
     try:
-        planned_gates = resolve_quality_profile(profile, config=config)
+        plan = build_quality_suite_plan(
+            profile,
+            config=config,
+            toggles={
+                "tests": tests,
+                "lint": lint,
+                "types": types,
+                "security": security,
+                "docs": docs,
+                "build": build,
+                "contracts": contracts,
+            },
+        )
     except KeyError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(1) from exc
 
-    catalog = available_quality_gates(config)
-
-    def _apply_toggle(category: str, enabled: bool | None) -> None:
-        nonlocal planned_gates
-        if enabled is None:
-            return
-        if enabled:
-            if any(gate.category == category for gate in planned_gates):
-                return
-            for gate in planned_gates:
-                if gate.name == category:
-                    return
-            candidate = next(
-                (gate for gate in catalog.values() if gate.category == category),
-                None,
-            )
-            if candidate:
-                planned_gates.append(candidate)
-        else:
-            planned_gates = [gate for gate in planned_gates if gate.category != category]
-
-    _apply_toggle("tests", tests)
-    _apply_toggle("lint", lint)
-    _apply_toggle("types", types)
-    _apply_toggle("security", security)
-    _apply_toggle("build", build)
-
-    if not planned_gates:
+    if not plan.gates:
         typer.echo("No quality gates selected.")
         raise typer.Exit(code=0)
 
+    monitoring = None
+    if monitor:
+        try:
+            coverage_report = CoverageReport.from_xml(coverage_xml)
+        except FileNotFoundError as exc:
+            typer.echo(f"Coverage report not found at {coverage_xml}", err=True)
+            raise typer.Exit(1) from exc
+        monitoring = build_quality_suite_monitoring(
+            plan,
+            coverage_report,
+            threshold=monitor_threshold,
+            limit=monitor_limit,
+            min_statements=monitor_min_statements,
+            source=str(coverage_xml),
+        )
+
+    dry_run_snapshot = prepare_quality_suite_dry_run(plan, monitoring=monitoring)
+    plan_insights = dry_run_snapshot.insights
+
+    if sync_docs is not None:
+        try:
+            updated_path = sync_quality_suite_documentation(
+                dry_run_snapshot,
+                sync_docs,
+                marker=docs_marker,
+            )
+        except DocumentationSyncError as exc:
+            typer.echo(str(exc), err=True)
+            raise typer.Exit(1) from exc
+        documentation_lines = list(dry_run_snapshot.render_documentation_lines())
+        if json_output:
+            typer.echo(
+                json.dumps(
+                    {
+                        "status": "updated",
+                        "path": str(updated_path),
+                        "marker": docs_marker,
+                        "documentation": documentation_lines,
+                    },
+                    indent=2,
+                )
+            )
+        else:
+            typer.echo(
+                f"Documentation block updated in {updated_path} using marker {docs_marker}."
+            )
+        raise typer.Exit(0)
+
+    if guide:
+        guide_lines = list(dry_run_snapshot.guide)
+        if json_output:
+            typer.echo(
+                json.dumps(
+                    {
+                        "guide": guide_lines,
+                        "dry_run": dry_run_snapshot.to_payload(),
+                    },
+                    indent=2,
+                )
+            )
+        else:
+            typer.echo("\n".join(guide_lines))
+        raise typer.Exit(0)
+
     if explain or dry_run:
-        lines = ["Resolved quality gates:"]
-        for gate in planned_gates:
-            rendered = " ".join(gate.command)
-            lines.append(f"  • {gate.name}: {rendered}")
-        typer.echo("\n".join(lines))
+        if not json_output and console is not None:
+            console.print("[bold]Resolved quality gates:[/bold]")
+            console.print(
+                render_execution_plan_table(
+                    plan.execution_plan, title="Quality Gate Execution Plan"
+                )
+            )
+            console.print("[bold]Plan insights:[/bold]")
+            for line in plan_insights.render_lines():
+                console.print(line)
+            if monitoring is not None:
+                console.print("")
+                console.print("[bold]Monitoring insights:[/bold]")
+                for line in monitoring.render_lines():
+                    console.print(line)
+            if dry_run_snapshot.actions:
+                console.print("")
+                console.print("[bold]Recommended actions:[/bold]")
+                for action in dry_run_snapshot.actions:
+                    console.print(f"• {action}")
         if dry_run:
+            payload = dry_run_snapshot.to_payload()
+            if json_output:
+                typer.echo(json.dumps(payload, indent=2))
             raise typer.Exit(0)
 
-    results = run_quality_suite(planned_gates, halt_on_failure=halt)
-    payload = [result.to_payload() for result in results]
+    progress_callback: Callable[[QualitySuiteProgressEvent], None] | None = None
+    if console is not None and plan.gates:
+        console.print()
+        console.rule("[bold]Quality Suite Progress[/bold]")
+        progress_callback = _build_quality_suite_progress_renderer(
+            console, len(plan.gates)
+        )
+
+    report = execute_quality_suite(
+        plan,
+        halt_on_failure=halt,
+        monitoring=monitoring,
+        progress=progress_callback,
+    )
+    report_payload = report.to_payload()
 
     if json_output:
-        typer.echo(json.dumps(payload, indent=2))
+        typer.echo(json.dumps(report_payload, indent=2))
     else:
-        typer.echo(summarise_suite(results))
+        if console is None:
+            typer.echo(report.render_text_summary())
+            if report.monitoring is not None:
+                typer.echo("")
+                typer.echo("Monitoring insights:")
+                for line in report.render_monitoring_lines():
+                    typer.echo(line)
+        else:
+            console.print()
+            summary_style = "green" if report.succeeded else "red"
+            console.print(
+                Panel(
+                    Text(report.render_text_summary()),
+                    title=f"Quality Suite — {report.status.upper()}",
+                    border_style=summary_style,
+                )
+            )
+            if report.monitoring is not None:
+                monitoring_lines = report.render_monitoring_lines()
+                console.print()
+                console.print(
+                    Panel(
+                        Text("\n".join(monitoring_lines) or "No monitoring insights."),
+                        title="Monitoring Insights",
+                        border_style="cyan",
+                    )
+                )
 
     if save_report is not None:
         save_report.parent.mkdir(parents=True, exist_ok=True)
-        save_report.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        save_report.write_text(json.dumps(report_payload, indent=2), encoding="utf-8")
+        if console is not None and not json_output:
+            console.print(f"[dim]Report saved to {save_report}[/dim]")
+        else:
+            typer.echo(f"Report saved to {save_report}")
 
-    if any(result.returncode != 0 for result in results):
+    if not report.succeeded:
         raise typer.Exit(1)
 
 
@@ -1323,42 +1572,6 @@ def tools_format_yaml(ctx: Context) -> None:
     from chiron.tools import format_yaml
 
     _invoke_cli_callable("chiron tools format-yaml", format_yaml.main)
-
-
-@tools_app.command("benchmark")
-def tools_benchmark(
-    iterations: int = typer.Option(50, "--iterations", "-n", help="Iterations per case"),
-    warmup: int = typer.Option(5, "--warmup", help="Warmup executions per case"),
-    json_output: bool = typer.Option(False, "--json", help="Emit JSON summary"),
-) -> None:
-    """Run the built-in performance benchmarking suite."""
-
-    from chiron import benchmark
-
-    suite = benchmark.default_suite()
-    for case in suite.cases():
-        case.iterations = iterations
-        case.warmup = warmup
-
-    summary = suite.summary()
-
-    if json_output:
-        typer.echo(json.dumps(summary, indent=2))
-        return
-
-    typer.echo("🏎️  Chiron benchmark results")
-    for result in summary["results"]:
-        typer.echo(
-            "  • {name}: {avg:.3f} ms avg ({throughput:.1f}/s)".format(
-                name=result["name"],
-                avg=result["avg_time"] * 1000,
-                throughput=result["throughput"],
-            )
-        )
-
-    total = summary["aggregate"]["total_time"]
-    case_count = summary["aggregate"]["cases"]
-    typer.echo(f"Total elapsed: {total:.3f}s across {case_count} cases")
 
 
 @tools_app.command("benchmark")

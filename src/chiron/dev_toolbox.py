@@ -4,16 +4,21 @@ from __future__ import annotations
 
 import importlib
 import json
+import re
 import subprocess
 import textwrap
 import time
-from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from collections import Counter
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from types import ModuleType
 from typing import Literal, cast, get_args
 
 from defusedxml import ElementTree as ET  # type: ignore[import-untyped]
+
+from chiron.planning import ExecutionPlanStep, render_execution_plan
 
 tomllib: ModuleType
 
@@ -59,6 +64,23 @@ class CommandResult:
     def to_json(self) -> str:
         return json.dumps(self.to_payload())
 
+
+@dataclass(frozen=True, slots=True)
+class QualitySuiteProgressEvent:
+    """Progress update emitted while executing quality-suite gates."""
+
+    index: int
+    total: int
+    command: tuple[str, ...]
+    gate: QualityGate | None
+    status: Literal["started", "completed"]
+    result: CommandResult | None = None
+
+    @property
+    def name(self) -> str:
+        if self.gate is not None:
+            return self.gate.name
+        return self.command[0] if self.command else "<unknown>"
 
 def run_command(
     command: Sequence[str],
@@ -130,19 +152,27 @@ class CoverageReport:
         statements_total = 0
         missing_total = 0
         for package in tree.findall(".//package"):
-            for clazz in package.findall("class"):
+            class_nodes = package.findall("classes/class") or package.findall("class")
+            for clazz in class_nodes:
                 filename = clazz.get("filename")
                 if not filename:
                     continue
-                statements = int(clazz.get("statements", "0"))
-                missing = int(clazz.get("missing", "0"))
-                coverage_attr = clazz.get("line-rate") or package.get("line-rate")
-                coverage = float(coverage_attr) * 100 if coverage_attr else 0.0
+                line_elements = list(clazz.findall("lines/line"))
+                statements_attr = clazz.get("statements")
+                statements = (
+                    int(statements_attr)
+                    if statements_attr is not None
+                    else len(line_elements)
+                )
+                missing_attr = clazz.get("missing")
                 lines = [
                     int(line.get("number"))
-                    for line in clazz.findall("lines/line")
+                    for line in line_elements
                     if int(line.get("hits", "0")) == 0
                 ]
+                missing = int(missing_attr) if missing_attr is not None else len(lines)
+                coverage_attr = clazz.get("line-rate") or package.get("line-rate")
+                coverage = float(coverage_attr) * 100 if coverage_attr else 0.0
                 statements_total += statements
                 missing_total += missing
                 modules.append(
@@ -250,6 +280,397 @@ class QualityConfiguration:
     profiles: dict[str, tuple[str, ...]]
 
 
+@dataclass(frozen=True, slots=True)
+class QualitySuitePlan:
+    """Describe a resolved quality-suite run including execution plan metadata."""
+
+    profile: str
+    gates: tuple[QualityGate, ...]
+    toggles: tuple[tuple[str, bool], ...] = ()
+
+    @property
+    def execution_plan(self) -> tuple[ExecutionPlanStep, ...]:
+        """Return execution-plan steps for the resolved quality gates."""
+
+        return tuple(
+            ExecutionPlanStep(
+                key=gate.name,
+                description=gate.description,
+                command=gate.command,
+            )
+            for gate in self.gates
+        )
+
+    @property
+    def insights(self) -> QualitySuiteInsights:
+        """Return aggregated insights about the planned quality suite."""
+
+        return build_quality_suite_insights(self)
+
+    def render_lines(self) -> list[str]:
+        """Return numbered, human-readable execution lines."""
+
+        return render_execution_plan(self.execution_plan)
+
+    def gate_names(self) -> tuple[str, ...]:
+        """Return the names of gates in plan order."""
+
+        return tuple(gate.name for gate in self.gates)
+
+    def to_payload(self) -> dict[str, object]:
+        """Return a JSON-serialisable payload describing the plan."""
+
+        insights_payload = self.insights.to_payload()
+        return {
+            "profile": self.profile,
+            "gates": [
+                {
+                    "name": gate.name,
+                    "description": gate.description,
+                    "category": gate.category,
+                    "command": list(gate.command),
+                    "critical": gate.critical,
+                    "working_directory": (
+                        str(gate.working_directory) if gate.working_directory else None
+                    ),
+                    "env": dict(gate.env) if gate.env else None,
+                }
+                for gate in self.gates
+            ],
+            "toggles": [
+                {"identifier": identifier, "enabled": enabled}
+                for identifier, enabled in self.toggles
+            ],
+            "plan": [
+                {
+                    "key": step.key,
+                    "description": step.description,
+                    "command": list(step.command) if step.command else None,
+                }
+                for step in self.execution_plan
+            ],
+            "insights": insights_payload,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class QualitySuiteInsights:
+    """Aggregated metadata describing a quality-suite plan."""
+
+    profile: str
+    total_gates: int
+    category_breakdown: tuple[tuple[QualityCategory, int], ...]
+    critical_gates: tuple[str, ...]
+    optional_gates: tuple[str, ...]
+    toggles: tuple[tuple[str, bool], ...]
+    disabled_toggles: tuple[str, ...]
+
+    def to_payload(self) -> dict[str, object]:
+        return {
+            "profile": self.profile,
+            "total_gates": self.total_gates,
+            "category_breakdown": [
+                {"category": category, "count": count}
+                for category, count in self.category_breakdown
+            ],
+            "critical_gates": list(self.critical_gates),
+            "optional_gates": list(self.optional_gates),
+            "toggles": [
+                {"identifier": identifier, "enabled": enabled}
+                for identifier, enabled in self.toggles
+            ],
+            "disabled_toggles": list(self.disabled_toggles),
+        }
+
+    def render_lines(self) -> list[str]:
+        lines = [
+            f"Profile: {self.profile}",
+            f"Total gates: {self.total_gates}",
+        ]
+        if self.category_breakdown:
+            lines.append("Category breakdown:")
+            lines.extend(
+                f"  • {category}: {count}"
+                for category, count in self.category_breakdown
+            )
+        if self.critical_gates:
+            lines.append(
+                "Critical gates: " + ", ".join(self.critical_gates)
+            )
+        if self.optional_gates:
+            lines.append(
+                "Optional gates: " + ", ".join(self.optional_gates)
+            )
+        if self.toggles:
+            toggle_display = ", ".join(
+                f"{identifier}={'on' if enabled else 'off'}"
+                for identifier, enabled in self.toggles
+            )
+            lines.append(f"Toggles: {toggle_display}")
+        if self.disabled_toggles:
+            lines.append(
+                "Disabled toggles: " + ", ".join(self.disabled_toggles)
+            )
+        if len(lines) == 2:  # only header lines populated
+            lines.append("No additional insights available.")
+        return lines
+
+
+@dataclass(frozen=True, slots=True)
+class QualitySuiteRecommendation:
+    """Actionable recommendation derived from coverage monitoring."""
+
+    focus: str
+    module: str
+    missing: int
+    coverage: float
+    severity: Literal["improve", "monitor"]
+    missing_lines: tuple[int, ...]
+    action: str
+
+    def to_payload(self) -> dict[str, object]:
+        return {
+            "focus": self.focus,
+            "module": self.module,
+            "missing": self.missing,
+            "coverage": self.coverage,
+            "severity": self.severity,
+            "missing_lines": list(self.missing_lines),
+            "action": self.action,
+        }
+
+    def render_line(self) -> str:
+        icon = "🚨" if self.severity == "improve" else "👀"
+        preview = ", ".join(str(line) for line in self.missing_lines[:5]) or "(none)"
+        return (
+            f"{icon} {self.focus}: {self.module} — {self.coverage:.1f}% coverage, "
+            f"{self.missing} missing lines (key lines: {preview}). {self.action}"
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class CoverageFocusSummary:
+    """Summarise coverage hotspots for a specific focus area."""
+
+    area: str
+    modules: tuple[str, ...]
+    total_missing: int
+    average_coverage: float
+    threshold: float
+
+    def to_payload(self) -> dict[str, object]:
+        return {
+            "area": self.area,
+            "modules": list(self.modules),
+            "total_missing": self.total_missing,
+            "average_coverage": self.average_coverage,
+            "threshold": self.threshold,
+        }
+
+    def render_lines(self) -> list[str]:
+        header = (
+            f"{self.area}: avg {self.average_coverage:.2f}%"
+            f" (threshold {self.threshold:.2f}%)"
+        )
+        if not self.modules:
+            return [header + " — no modules flagged"]
+        lines = [header]
+        lines.extend(f"  • {module}" for module in self.modules)
+        lines.append(f"  Missing lines: {self.total_missing}")
+        return lines
+
+
+@dataclass(frozen=True, slots=True)
+class QualitySuiteMonitoring:
+    """Machine-readable monitoring metadata for quality-suite runs."""
+
+    coverage_focus: tuple[CoverageFocusSummary, ...]
+    recommendations: tuple[str, ...]
+    recommendation_details: tuple[QualitySuiteRecommendation, ...] = ()
+    source: str | None = None
+
+    def to_payload(self) -> dict[str, object]:
+        return {
+            "coverage_focus": [focus.to_payload() for focus in self.coverage_focus],
+            "recommendations": list(self.recommendations),
+            "recommendation_details": [
+                detail.to_payload() for detail in self.recommendation_details
+            ],
+            "source": self.source,
+        }
+
+    def render_lines(self) -> list[str]:
+        lines: list[str] = []
+        for focus in self.coverage_focus:
+            lines.extend(focus.render_lines())
+        if self.recommendation_details:
+            lines.append("")
+            lines.append("Recommendations:")
+            lines.extend(
+                f"  • {detail.render_line()}" for detail in self.recommendation_details
+            )
+        elif self.recommendations:
+            lines.append("")
+            lines.append("Recommendations:")
+            lines.extend(f"  • {rec}" for rec in self.recommendations)
+        return lines
+
+
+@dataclass(frozen=True, slots=True)
+class QualitySuiteDryRun:
+    """Snapshot describing a dry-run of the quality-suite tooling."""
+
+    plan: QualitySuitePlan
+    insights: QualitySuiteInsights
+    monitoring: QualitySuiteMonitoring | None = None
+    generated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    @property
+    def guide(self) -> tuple[str, ...]:
+        """Return the agent-facing guide for the resolved plan."""
+
+        return tuple(
+            quality_suite_guide(
+                self.plan,
+                insights=self.insights,
+                monitoring=self.monitoring,
+            )
+        )
+
+    @property
+    def actions(self) -> tuple[str, ...]:
+        """Return actionable follow-ups derived from monitoring insights."""
+
+        if self.monitoring is None:
+            return ()
+        if self.monitoring.recommendation_details:
+            return tuple(
+                detail.action for detail in self.monitoring.recommendation_details
+            )
+        return self.monitoring.recommendations
+
+    def to_payload(self) -> dict[str, object]:
+        """Serialise the dry-run snapshot for downstream consumers."""
+
+        payload: dict[str, object] = {
+            "generated_at": self.generated_at.isoformat(),
+            "plan": self.plan.to_payload(),
+            "insights": self.insights.to_payload(),
+            "guide": list(self.guide),
+            "actions": list(self.actions),
+        }
+        if self.monitoring is not None:
+            payload["monitoring"] = self.monitoring.to_payload()
+        return payload
+
+    def render_lines(self) -> list[str]:
+        """Render a readable dry-run summary."""
+
+        lines = list(self.guide)
+        if self.actions:
+            lines.append("")
+            lines.append("Recommended actions:")
+            lines.extend(f"  • {action}" for action in self.actions)
+        return lines
+
+    def render_documentation_lines(self) -> tuple[str, ...]:
+        """Return Markdown describing the resolved quality suite."""
+
+        lines: list[str] = [
+            "### Developer Toolbox Quality Suite Snapshot",
+            "",
+            "Use the developer toolbox to keep local quality gates aligned with CI.",
+            "",
+            f"**Primary profile**: `{self.plan.profile}` ({len(self.plan.gates)} gates)",
+            f"**Generated**: {self.generated_at.isoformat()}",
+            "",
+            "| Order | Gate | Category | Critical | Command |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+        for index, gate in enumerate(self.plan.gates, start=1):
+            command = " ".join(gate.command)
+            critical_label = "Required" if gate.critical else "Optional"
+            lines.append(
+                "| "
+                f"{index} | `{gate.name}` | {gate.category} | {critical_label} | `"
+                f"{command}` |"
+            )
+
+        lines.append("")
+        if self.plan.toggles:
+            toggle_summary = ", ".join(
+                f"{identifier}={'on' if enabled else 'off'}"
+                for identifier, enabled in self.plan.toggles
+            )
+            lines.append(f"**Applied toggles**: {toggle_summary}")
+        else:
+            lines.append("**Applied toggles**: _None_")
+
+        if self.actions:
+            lines.append("")
+            lines.append("**Recommended follow-ups**:")
+            lines.extend(f"- {action}" for action in self.actions)
+
+        if self.monitoring is not None and self.monitoring.source:
+            lines.append("")
+            lines.append(f"**Monitoring source**: {self.monitoring.source}")
+
+        lines.append("")
+        lines.append(
+            "_Updated automatically via `chiron tools qa --sync-docs docs/QUALITY_GATES.md`._"
+        )
+        return tuple(lines)
+
+
+class DocumentationSyncError(RuntimeError):
+    """Raised when documentation blocks cannot be updated automatically."""
+
+
+def sync_quality_suite_documentation(
+    snapshot: QualitySuiteDryRun,
+    path: Path,
+    *,
+    marker: str = "QUALITY_SUITE_AUTODOC",
+) -> Path:
+    """Synchronise the quality suite documentation block at *path*."""
+
+    if not path.exists():
+        raise DocumentationSyncError(f"Documentation file not found: {path}")
+
+    begin = f"<!-- BEGIN {marker} -->"
+    end = f"<!-- END {marker} -->"
+    contents = path.read_text(encoding="utf-8")
+    pattern = re.compile(
+        rf"({re.escape(begin)})(.*?)[\r\n]+({re.escape(end)})",
+        re.DOTALL,
+    )
+    if not pattern.search(contents):
+        raise DocumentationSyncError(
+            f"Documentation markers '{begin}'/'{end}' not found in {path}"
+        )
+
+    block = "\n".join(snapshot.render_documentation_lines())
+    replacement = f"{begin}\n{block}\n{end}"
+    updated = pattern.sub(replacement, contents, count=1)
+    path.write_text(updated, encoding="utf-8")
+    return path
+
+
+DEFAULT_MONITORING_FOCUS: dict[str, tuple[str, ...]] = {
+    "CLI": ("src/chiron/cli/", "cli/", "chiron/cli/", "src/cli/"),
+    "Service": (
+        "src/chiron/service/",
+        "service/",
+        "chiron/service/",
+        "src/service/",
+        "src/chiron/mcp/",
+        "mcp/",
+        "chiron/mcp/",
+        "src/mcp/",
+    ),
+}
+
+
 DEFAULT_QUALITY_GATES: dict[str, QualityGate] = {
     "tests": QualityGate(
         name="tests",
@@ -266,6 +687,22 @@ DEFAULT_QUALITY_GATES: dict[str, QualityGate] = {
             "--cov=src/chiron",
             "--cov-report=term",
         ),
+    ),
+    "contracts": QualityGate(
+        name="contracts",
+        description="Run Pact contract tests (requires pact-mock-service)",
+        category="tests",
+        command=(
+            "uv",
+            "run",
+            "--extra",
+            "test",
+            "pytest",
+            "tests/test_contracts.py",
+            "-k",
+            "contract",
+        ),
+        critical=False,
     ),
     "lint": QualityGate(
         name="lint",
@@ -285,6 +722,21 @@ DEFAULT_QUALITY_GATES: dict[str, QualityGate] = {
         category="security",
         command=("uv", "run", "--extra", "security", "bandit", "-r", "src", "-lll"),
     ),
+    "docs": QualityGate(
+        name="docs",
+        description="Build project documentation",
+        category="docs",
+        command=(
+            "uv",
+            "run",
+            "--extra",
+            "docs",
+            "mkdocs",
+            "build",
+            "--strict",
+        ),
+        critical=False,
+    ),
     "build": QualityGate(
         name="build",
         description="Build wheel and source distribution",
@@ -295,10 +747,11 @@ DEFAULT_QUALITY_GATES: dict[str, QualityGate] = {
 
 
 DEFAULT_QUALITY_PROFILES: dict[str, tuple[str, ...]] = {
-    "full": ("tests", "lint", "types", "security", "build"),
+    "full": ("tests", "contracts", "lint", "types", "security", "docs", "build"),
     "fast": ("tests", "lint"),
     "verify": ("tests", "lint", "types"),
     "package": ("build",),
+    "contracts": ("contracts",),
 }
 
 
@@ -410,6 +863,177 @@ def resolve_quality_profile(
     return gates
 
 
+def _lookup_quality_gate(
+    identifier: str, catalog: Mapping[str, QualityGate]
+) -> QualityGate | None:
+    """Return a gate matching *identifier* by name or category."""
+
+    gate = catalog.get(identifier)
+    if gate is not None:
+        return gate
+    return next((candidate for candidate in catalog.values() if candidate.category == identifier), None)
+
+
+def build_quality_suite_plan(
+    profile: str,
+    *,
+    config: QualityConfiguration | None = None,
+    toggles: Mapping[str, bool | None] | None = None,
+) -> QualitySuitePlan:
+    """Construct a :class:`QualitySuitePlan` for the requested *profile*."""
+
+    resolved_gates = resolve_quality_profile(profile, config=config)
+    catalog = available_quality_gates(config)
+    applied_toggles: list[tuple[str, bool]] = []
+
+    if toggles:
+        for identifier, state in toggles.items():
+            if state is None:
+                continue
+            applied_toggles.append((identifier, bool(state)))
+            if state:
+                gate = _lookup_quality_gate(identifier, catalog)
+                if gate is None:
+                    continue
+                if all(existing.name != gate.name for existing in resolved_gates):
+                    resolved_gates.append(gate)
+            else:
+                resolved_gates = [
+                    gate
+                    for gate in resolved_gates
+                    if gate.name != identifier and gate.category != identifier
+                ]
+    # Ensure stable ordering by catalog appearance to aid deterministic dry-runs.
+    order = {name: index for index, name in enumerate(catalog.keys())}
+    resolved_gates.sort(key=lambda gate: order.get(gate.name, len(order)))
+    return QualitySuitePlan(
+        profile=profile,
+        gates=tuple(resolved_gates),
+        toggles=tuple(applied_toggles),
+    )
+
+
+def build_quality_suite_insights(plan: QualitySuitePlan) -> QualitySuiteInsights:
+    """Return insights for *plan* highlighting categories and toggles."""
+
+    category_counts = Counter(gate.category for gate in plan.gates)
+    category_breakdown = tuple(
+        sorted(category_counts.items(), key=lambda item: (-item[1], item[0]))
+    )
+    critical_gates = tuple(gate.name for gate in plan.gates if gate.critical)
+    optional_gates = tuple(gate.name for gate in plan.gates if not gate.critical)
+    toggles = plan.toggles
+    disabled_toggles = tuple(
+        identifier for identifier, enabled in toggles if not enabled
+    )
+    return QualitySuiteInsights(
+        profile=plan.profile,
+        total_gates=len(plan.gates),
+        category_breakdown=category_breakdown,
+        critical_gates=critical_gates,
+        optional_gates=optional_gates,
+        toggles=toggles,
+        disabled_toggles=disabled_toggles,
+    )
+
+
+def quality_suite_guide(
+    plan: QualitySuitePlan,
+    *,
+    insights: QualitySuiteInsights | None = None,
+    monitoring: QualitySuiteMonitoring | None = None,
+) -> list[str]:
+    """Return a quickstart guide for agents interacting with the quality suite."""
+
+    resolved_insights = insights or plan.insights
+    lines: list[str] = [
+        "Quality suite quickstart 🚀",
+        "",
+        f"Profile: {plan.profile} ({resolved_insights.total_gates} gates)",
+    ]
+    lines.append("Planned commands:")
+    lines.extend(f"  {step}" for step in plan.render_lines())
+
+    if resolved_insights.toggles:
+        lines.append("")
+        lines.append("Applied toggles:")
+        lines.extend(
+            f"  • {identifier}={'on' if enabled else 'off'}"
+            for identifier, enabled in resolved_insights.toggles
+        )
+
+    lines.append("")
+    lines.append("Suggested invocations:")
+    profile_flag = f"--profile {plan.profile}"
+    lines.extend(
+        [
+            f"  • chiron tools qa {profile_flag} --dry-run",
+            f"  • chiron tools qa {profile_flag} --monitor --coverage-xml coverage.xml",
+            f"  • chiron tools qa {profile_flag} --json --save-report reports/qa.json",
+            f"  • chiron tools qa {profile_flag} --manifest",
+        ]
+    )
+
+    contract_gate_present = "contracts" in plan.gate_names()
+    lines.append("")
+    if contract_gate_present:
+        lines.append("Contract validation:")
+        lines.append(
+            "  • Ensure `pact-mock-service` is running locally before executing the contracts gate."
+        )
+    else:
+        lines.append("Optional gates worth enabling:")
+        lines.append(
+            "  • Use `--contracts` to exercise Pact contract tests (requires pact-mock-service)."
+        )
+
+    if monitoring is not None:
+        lines.append("")
+        lines.append("Monitored follow-ups:")
+        if monitoring.recommendation_details:
+            lines.extend(
+                f"  • {detail.render_line()}" for detail in monitoring.recommendation_details
+            )
+        else:
+            lines.extend(f"  • {rec}" for rec in monitoring.recommendations)
+    else:
+        lines.append("")
+        lines.append(
+            "Tip: provide a coverage.xml file and --monitor to surface CLI/service gaps."
+        )
+
+    return lines
+
+
+def quality_suite_manifest(
+    *, config: QualityConfiguration | None = None
+) -> dict[str, object]:
+    """Return a manifest describing available quality gates, profiles, and plans."""
+
+    catalog = available_quality_gates(config)
+    profiles = available_quality_profiles(config)
+    gates_payload = {
+        name: {
+            "description": gate.description,
+            "category": gate.category,
+            "critical": gate.critical,
+            "command": list(gate.command),
+            "working_directory": str(gate.working_directory) if gate.working_directory else None,
+            "env": dict(gate.env) if gate.env else None,
+        }
+        for name, gate in catalog.items()
+    }
+    plans = {
+        profile_name: build_quality_suite_plan(profile_name, config=config).to_payload()
+        for profile_name in profiles
+    }
+    return {
+        "gates": gates_payload,
+        "profiles": {name: list(gate_names) for name, gate_names in profiles.items()},
+        "plans": plans,
+    }
+
+
 def format_command_result(result: CommandResult) -> str:
     status = "✅" if result.returncode == 0 else "❌"
     command_display = " ".join(result.command)
@@ -418,13 +1042,29 @@ def format_command_result(result: CommandResult) -> str:
 
 
 def run_quality_suite(
-    commands: Iterable[Sequence[str] | QualityGate], *, halt_on_failure: bool = True
+    commands: Iterable[Sequence[str] | QualityGate],
+    *,
+    halt_on_failure: bool = True,
+    progress: Callable[[QualitySuiteProgressEvent], None] | None = None,
 ) -> list[CommandResult]:
     """Run a series of commands returning their results."""
 
+    resolved_commands = list(commands)
+    total = len(resolved_commands)
     results: list[CommandResult] = []
-    for command in commands:
+    for index, command in enumerate(resolved_commands, start=1):
         if isinstance(command, QualityGate):
+            command_tuple = command.command
+            if progress is not None:
+                progress(
+                    QualitySuiteProgressEvent(
+                        index=index,
+                        total=total,
+                        command=command_tuple,
+                        gate=command,
+                        status="started",
+                    )
+                )
             result = run_command(
                 command.command,
                 check=False,
@@ -433,11 +1073,121 @@ def run_quality_suite(
                 gate=command.name,
             )
         else:
+            command_tuple = tuple(command)
+            if progress is not None:
+                progress(
+                    QualitySuiteProgressEvent(
+                        index=index,
+                        total=total,
+                        command=command_tuple,
+                        gate=None,
+                        status="started",
+                    )
+                )
             result = run_command(command, check=False)
+        if progress is not None:
+            progress(
+                QualitySuiteProgressEvent(
+                    index=index,
+                    total=total,
+                    command=command_tuple,
+                    gate=command if isinstance(command, QualityGate) else None,
+                    status="completed",
+                    result=result,
+                )
+            )
         results.append(result)
         if halt_on_failure and result.returncode != 0:
             break
     return results
+
+
+@dataclass(frozen=True, slots=True)
+class QualitySuiteRunReport:
+    """Structured summary capturing the outcome of a quality-suite run."""
+
+    plan: QualitySuitePlan
+    results: tuple[CommandResult, ...]
+    started_at: float
+    finished_at: float
+    monitoring: QualitySuiteMonitoring | None = None
+
+    @property
+    def duration(self) -> float:
+        return max(0.0, self.finished_at - self.started_at)
+
+    @property
+    def status(self) -> str:
+        return "passed" if self.succeeded else "failed"
+
+    @property
+    def succeeded(self) -> bool:
+        return all(result.returncode == 0 for result in self.results)
+
+    @property
+    def failing_gates(self) -> tuple[str, ...]:
+        return tuple(
+            result.gate or (result.command[0] if result.command else "<unknown>")
+            for result in self.results
+            if result.returncode != 0
+        )
+
+    def to_payload(self) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "status": self.status,
+            "duration": self.duration,
+            "plan": self.plan.to_payload(),
+            "results": [result.to_payload() for result in self.results],
+            "failing_gates": list(self.failing_gates),
+            "insights": self.plan.insights.to_payload(),
+        }
+        if self.monitoring is not None:
+            payload["monitoring"] = self.monitoring.to_payload()
+        return payload
+
+    def render_text_summary(self) -> str:
+        summary = summarise_suite(self.results)
+        lines = summary.splitlines() if summary else []
+        if not lines:
+            lines = ["No commands executed."]
+        lines.append("")
+        lines.append(f"Total duration: {self.duration:.2f}s")
+        if self.failing_gates:
+            lines.append("Failing gates:")
+            lines.extend(f"  • {gate}" for gate in self.failing_gates)
+        else:
+            lines.append("All gates passed ✅")
+        return "\n".join(line for line in lines if line)
+
+    def render_monitoring_lines(self) -> list[str]:
+        if self.monitoring is None:
+            return []
+        return self.monitoring.render_lines()
+
+
+def execute_quality_suite(
+    plan: QualitySuitePlan,
+    *,
+    halt_on_failure: bool = True,
+    monitoring: QualitySuiteMonitoring | None = None,
+    progress: Callable[[QualitySuiteProgressEvent], None] | None = None,
+) -> QualitySuiteRunReport:
+    """Execute *plan* and return a :class:`QualitySuiteRunReport`."""
+
+    start = time.perf_counter()
+    results = run_quality_suite(
+        plan.gates,
+        halt_on_failure=halt_on_failure,
+        progress=progress,
+    )
+    end = time.perf_counter()
+    return QualitySuiteRunReport(
+        plan=plan,
+        results=tuple(results),
+        started_at=start,
+        finished_at=end,
+        monitoring=monitoring,
+    )
 
 
 def summarise_suite(results: Sequence[CommandResult]) -> str:
@@ -496,6 +1246,101 @@ def coverage_gap_summary(
     return "\n".join(lines)
 
 
+def _module_name_variants(name: str) -> tuple[str, ...]:
+    """Return normalised variants for *name* supporting relative/absolute paths."""
+
+    normalised = name.replace("\\", "/")
+    parts = [part for part in normalised.split("/") if part not in {"", "."}]
+    variants: list[str] = []
+
+    def _add(candidate: str) -> None:
+        if candidate and candidate not in variants:
+            variants.append(candidate)
+
+    _add(normalised)
+    trimmed = "/".join(parts)
+    if trimmed:
+        _add(trimmed)
+
+    for index in range(len(parts)):
+        suffix = "/".join(parts[index:])
+        if not suffix:
+            continue
+        _add(suffix)
+        for prefix in ("src", "chiron", "src/chiron"):
+            prefix_with_slash = f"{prefix}/"
+            if not suffix.startswith(prefix_with_slash):
+                _add(prefix_with_slash + suffix)
+
+    if trimmed:
+        if not trimmed.startswith("src/chiron/"):
+            _add(f"src/chiron/{trimmed}")
+        if not trimmed.startswith("src/"):
+            _add(f"src/{trimmed}")
+        if not trimmed.startswith("chiron/"):
+            _add(f"chiron/{trimmed}")
+
+    return tuple(variants)
+
+
+def _normalise_focus_prefix(prefix: str) -> str:
+    """Return a canonical comparison prefix for focus matching."""
+
+    return prefix.replace("\\", "/").lstrip("./")
+
+
+def _module_matches_focus(module_name: str, prefixes: Sequence[str]) -> bool:
+    """Return ``True`` when *module_name* matches any of *prefixes*."""
+
+    if not prefixes:
+        return False
+    normalised_prefixes = tuple(_normalise_focus_prefix(prefix) for prefix in prefixes)
+    for variant in _module_name_variants(module_name):
+        candidate = variant.replace("\\", "/").lstrip("./")
+        if any(candidate.startswith(prefix) for prefix in normalised_prefixes):
+            return True
+    return False
+
+
+def build_coverage_focus_summaries(
+    report: CoverageReport,
+    *,
+    focus_map: Mapping[str, Sequence[str]],
+    threshold: float,
+    limit: int,
+    min_statements: int,
+) -> tuple[CoverageFocusSummary, ...]:
+    """Return coverage focus summaries for configured focus areas."""
+
+    modules = report.by_missing(min_statements=min_statements)
+    summaries: list[CoverageFocusSummary] = []
+    for area, prefixes in focus_map.items():
+        matched = [
+            module
+            for module in modules
+            if _module_matches_focus(module.name, prefixes)
+        ]
+        limited = matched[:limit]
+        if limited:
+            total_missing = sum(module.missing for module in limited)
+            average = sum(module.coverage for module in limited) / len(limited)
+            modules_list = tuple(module.name for module in limited)
+        else:
+            total_missing = 0
+            average = 100.0
+            modules_list = ()
+        summaries.append(
+            CoverageFocusSummary(
+                area=area,
+                modules=modules_list,
+                total_missing=total_missing,
+                average_coverage=average,
+                threshold=threshold,
+            )
+        )
+    return tuple(summaries)
+
+
 def coverage_guard(
     report: CoverageReport,
     *,
@@ -528,22 +1373,119 @@ def coverage_guard(
     return False, message
 
 
+def build_quality_suite_monitoring(
+    plan: QualitySuitePlan,
+    report: CoverageReport,
+    *,
+    focus_map: Mapping[str, Sequence[str]] = DEFAULT_MONITORING_FOCUS,
+    threshold: float = 85.0,
+    limit: int = 3,
+    min_statements: int = 25,
+    source: str | None = None,
+) -> QualitySuiteMonitoring:
+    """Generate monitoring metadata for *plan* using *report*."""
+
+    focus = build_coverage_focus_summaries(
+        report,
+        focus_map=focus_map,
+        threshold=threshold,
+        limit=limit,
+        min_statements=min_statements,
+    )
+    recommendation_details: list[QualitySuiteRecommendation] = []
+    for summary in focus:
+        for module_name in summary.modules:
+            module = report.get(module_name)
+            if module is None:
+                continue
+            severity: Literal["improve", "monitor"]
+            if module.coverage < threshold:
+                severity = "improve"
+                action = (
+                    f"Raise {module.name} coverage above {threshold:.1f}% (currently "
+                    f"{module.coverage:.1f}%, {module.missing} missing lines)."
+                    f" Target lines: {module.format_missing_lines(limit=5)}."
+                )
+            else:
+                severity = "monitor"
+                action = (
+                    f"Maintain {module.name} coverage at {module.coverage:.1f}%"
+                    f" (missing {module.missing} lines)."
+                )
+            recommendation_details.append(
+                QualitySuiteRecommendation(
+                    focus=summary.area,
+                    module=module.name,
+                    missing=module.missing,
+                    coverage=module.coverage,
+                    severity=severity,
+                    missing_lines=module.missing_lines,
+                    action=action,
+                )
+            )
+    if recommendation_details:
+        recommendations = tuple(detail.action for detail in recommendation_details)
+    else:
+        recommendations = (
+            "All monitored focus areas meet coverage expectations.",
+        )
+    return QualitySuiteMonitoring(
+        coverage_focus=focus,
+        recommendations=recommendations,
+        recommendation_details=tuple(recommendation_details),
+        source=source,
+    )
+
+
+def prepare_quality_suite_dry_run(
+    plan: QualitySuitePlan,
+    *,
+    monitoring: QualitySuiteMonitoring | None = None,
+    generated_at: datetime | None = None,
+) -> QualitySuiteDryRun:
+    """Build a :class:`QualitySuiteDryRun` snapshot for the supplied *plan*."""
+
+    return QualitySuiteDryRun(
+        plan=plan,
+        insights=plan.insights,
+        monitoring=monitoring,
+        generated_at=generated_at or datetime.now(UTC),
+    )
+
+
 __all__ = [
     "CommandResult",
+    "CoverageFocusSummary",
     "CoverageSummary",
     "CoverageReport",
+    "DEFAULT_MONITORING_FOCUS",
     "DevToolCommandError",
     "ModuleCoverage",
     "QualityConfiguration",
     "QualityGate",
+    "QualitySuiteInsights",
+    "QualitySuiteMonitoring",
+    "QualitySuitePlan",
+    "QualitySuiteRecommendation",
+    "QualitySuiteProgressEvent",
+    "QualitySuiteRunReport",
+    "QualitySuiteDryRun",
     "available_quality_gates",
     "available_quality_profiles",
+    "build_coverage_focus_summaries",
+    "build_quality_suite_insights",
+    "build_quality_suite_monitoring",
+    "build_quality_suite_plan",
     "coverage_gap_summary",
     "coverage_focus",
     "coverage_hotspots",
     "coverage_guard",
+    "execute_quality_suite",
     "format_command_result",
     "load_quality_configuration",
+    "quality_suite_guide",
+    "quality_suite_manifest",
+    "prepare_quality_suite_dry_run",
     "run_command",
     "run_quality_suite",
     "resolve_quality_profile",

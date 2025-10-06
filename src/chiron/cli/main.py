@@ -1,13 +1,12 @@
-"""Compatibility shim bridging to the Typer-based Chiron CLI.
-
-This module previously hosted a Click command tree. The authoritative CLI now
-lives in :mod:`chiron.typer_cli`; this shim simply re-exports the Typer
-application so historical entry points keep working without a Click
-implementation.
-"""
+"""Compatibility shim exposing the Typer-based CLI to legacy entry points."""
 
 from __future__ import annotations
 
+import hashlib
+import json
+import shutil
+import subprocess
+import sys
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -15,18 +14,28 @@ from typing import Any, cast
 
 import click
 import structlog
+import typer
 from rich.console import Console
 from rich.table import Table
 
 from chiron import __version__
 from chiron.core import ChironCore
 from chiron.exceptions import ChironError
+from chiron.planning import (
+    ExecutionPlanStep,
+    plan_by_key,
+    render_execution_plan_table,
+)
 from chiron.schema_validator import validate_config
+from chiron.typer_cli import app
 
 console = Console()
 logger = structlog.get_logger(__name__)
 
 WHEELHOUSE_CHECKSUM_FILENAME = "wheelhouse.sha256"
+
+
+WheelhouseStep = ExecutionPlanStep
 
 
 def _resolve_executable(executable: str) -> str:
@@ -50,7 +59,7 @@ def _resolve_executable(executable: str) -> str:
 
 
 def _run_command(
-    command: Sequence[str], **kwargs: object
+    command: Sequence[str], **kwargs: Any
 ) -> subprocess.CompletedProcess[str]:
     """Run a command with sanitized executable resolution."""
 
@@ -58,7 +67,10 @@ def _run_command(
         raise click.ClickException("Command must contain at least one argument.")
 
     resolved = [_resolve_executable(command[0]), *command[1:]]
-    return subprocess.run(resolved, **kwargs)  # noqa: S603
+    return cast(
+        subprocess.CompletedProcess[str],
+        subprocess.run(resolved, **kwargs),  # noqa: S603
+    )
 
 
 def _current_git_commit() -> str | None:
@@ -118,6 +130,101 @@ def _write_manifest(path: Path, extras: Sequence[str]) -> None:
     path.write_text(
         json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
+
+
+def _select_wheelhouse_extras(
+    extras: Sequence[str],
+    *,
+    base_only: bool,
+    include_all_extras: bool,
+    default_extras: Sequence[str] = ("dev", "test"),
+) -> list[str]:
+    """Return the sanitized extras list for wheelhouse operations."""
+
+    if base_only:
+        selected: list[str] = []
+    elif extras:
+        seen: set[str] = set()
+        selected = []
+        for extra in extras:
+            extra_name = extra.strip()
+            if not extra_name:
+                continue
+            normalized = extra_name.lower()
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+            selected.append(extra_name)
+    else:
+        selected = [extra for extra in default_extras if extra]
+
+    if include_all_extras:
+        seen_lower = {extra.lower() for extra in selected}
+        if "all" not in seen_lower:
+            selected.append("all")
+
+    return selected
+
+
+def _build_wheelhouse_plan(
+    *,
+    wheelhouse_path: Path,
+    requirements_path: Path,
+    extras: Sequence[str],
+    with_sbom: bool,
+    with_signatures: bool,
+) -> list[WheelhouseStep]:
+    """Return the ordered execution plan for the wheelhouse command."""
+
+    compile_cmd: list[str] = [
+        "uv",
+        "pip",
+        "compile",
+        "pyproject.toml",
+        "--generate-hashes",
+        "-o",
+        str(requirements_path),
+    ]
+    for extra in extras:
+        compile_cmd.extend(["--extra", extra])
+
+    download_cmd = [
+        sys.executable,
+        "-m",
+        "pip",
+        "download",
+        "-d",
+        str(wheelhouse_path),
+        "-r",
+        str(requirements_path),
+    ]
+
+    build_cmd = ["uv", "build", "--wheel", "-o", str(wheelhouse_path)]
+
+    plan: list[WheelhouseStep] = [
+        WheelhouseStep("freeze", "Freeze dependency manifest", compile_cmd),
+        WheelhouseStep("download", "Download dependency wheels", download_cmd),
+        WheelhouseStep("build", "Build project wheel", build_cmd),
+    ]
+
+    if with_sbom:
+        plan.append(
+            WheelhouseStep(
+                "sbom",
+                "Generate SBOM",
+                [
+                    "syft",
+                    str(wheelhouse_path),
+                    "-o",
+                    "cyclonedx-json=sbom.json",
+                ],
+            )
+        )
+
+    if with_signatures:
+        plan.append(WheelhouseStep("sign", "Sign artifacts", None))
+
+    return plan
 
 
 @click.group()
@@ -320,27 +427,25 @@ def wheelhouse(
     """Create/offline-sync wheelhouse bundles for reproducible installs."""
 
     dry_run = ctx.obj.get("dry_run", False)
-    default_extras: tuple[str, ...] = ("dev", "test")
-
-    if base_only:
-        selected_extras: list[str] = []
-    elif extras:
-        # Preserve user-specified ordering while removing duplicates
-        seen: set[str] = set()
-        selected_extras = []
-        for extra in extras:
-            extra_name = extra.strip()
-            if not extra_name or extra_name in seen:
-                continue
-            selected_extras.append(extra_name)
-            seen.add(extra_name)
-    else:
-        selected_extras = list(default_extras)
-
-    if include_all_extras and "all" not in selected_extras:
-        selected_extras.append("all")
+    selected_extras = _select_wheelhouse_extras(
+        extras,
+        base_only=base_only,
+        include_all_extras=include_all_extras,
+        default_extras=("dev", "test"),
+    )
 
     extras_label = ",".join(selected_extras) if selected_extras else "(base only)"
+
+    wheelhouse_path = Path(output_dir)
+    requirements_path = wheelhouse_path / "requirements.txt"
+    plan = _build_wheelhouse_plan(
+        wheelhouse_path=wheelhouse_path,
+        requirements_path=requirements_path,
+        extras=selected_extras,
+        with_sbom=with_sbom,
+        with_signatures=with_signatures,
+    )
+    plan_table = render_execution_plan_table(plan, title="Wheelhouse Execution Plan")
 
     if dry_run:
         console.print("[yellow]DRY RUN - No changes will be made[/yellow]")
@@ -349,6 +454,8 @@ def wheelhouse(
         console.print(f"[blue]Clean output directory: {clean}[/blue]")
         console.print(f"[blue]Generate SBOM: {with_sbom}[/blue]")
         console.print(f"[blue]Sign artifacts: {with_signatures}[/blue]")
+        console.print("[dim]Execution plan:[/dim]")
+        console.print(plan_table)
         console.print("[dim]Run without --dry-run to actually create wheelhouse[/dim]")
         return
 
@@ -357,8 +464,20 @@ def wheelhouse(
     )
 
     try:
-        wheelhouse_path = Path(output_dir)
         wheelhouse_path.mkdir(parents=True, exist_ok=True)
+
+        plan_lookup = plan_by_key(plan)
+        verbose = bool(ctx.obj.get("verbose", False))
+
+        if verbose:
+            console.print("[dim]Execution plan:[/dim]")
+            console.print(plan_table)
+
+        def require_command(key: str) -> Sequence[str]:
+            step = plan_lookup.get(key)
+            if step is None or step.command is None:
+                raise RuntimeError(f"Wheelhouse plan missing '{key}' command")
+            return list(step.command)
 
         if clean:
             for path in wheelhouse_path.iterdir():
@@ -371,47 +490,26 @@ def wheelhouse(
                     continue
 
         console.print("[blue]Freezing dependency manifest...[/blue]")
-        requirements_path = wheelhouse_path / "requirements.txt"
-        compile_cmd = [
-            "uv",
-            "pip",
-            "compile",
-            "pyproject.toml",
-            "--generate-hashes",
-            "-o",
-            str(requirements_path),
-        ]
-        for extra in selected_extras:
-            compile_cmd.extend(["--extra", extra])
         _run_command(
-            compile_cmd,
+            require_command("freeze"),
             check=True,
-            capture_output=not ctx.obj.get("verbose", False),
+            capture_output=not verbose,
             text=True,
         )
 
         console.print("[blue]Downloading dependency wheels...[/blue]")
         _run_command(
-            [
-                sys.executable,
-                "-m",
-                "pip",
-                "download",
-                "-d",
-                str(wheelhouse_path),
-                "-r",
-                str(requirements_path),
-            ],
+            require_command("download"),
             check=True,
-            capture_output=not ctx.obj.get("verbose", False),
+            capture_output=not verbose,
             text=True,
         )
 
         console.print("[blue]Building project wheel...[/blue]")
         _run_command(
-            ["uv", "build", "--wheel", "-o", str(wheelhouse_path)],
+            require_command("build"),
             check=True,
-            capture_output=not ctx.obj.get("verbose", False),
+            capture_output=not verbose,
             text=True,
         )
 
@@ -433,13 +531,18 @@ def wheelhouse(
             console.print("[blue]Generating SBOM...[/blue]")
             try:
                 _run_command(
-                    ["syft", str(wheelhouse_path), "-o", "cyclonedx-json=sbom.json"],
+                    require_command("sbom"),
                     check=True,
-                    capture_output=not ctx.obj.get("verbose", False),
+                    capture_output=not verbose,
                     text=True,
                 )
                 console.print("[green]SBOM generated: sbom.json[/green]")
-            except (subprocess.CalledProcessError, FileNotFoundError):
+            except (
+                subprocess.CalledProcessError,
+                FileNotFoundError,
+                OSError,
+                RuntimeError,
+            ):
                 console.print(
                     "[yellow]Syft not found, skipping SBOM generation[/yellow]"
                 )
@@ -463,7 +566,7 @@ def wheelhouse(
                         text=True,
                     )
                 console.print("[green]Artifacts signed with Sigstore[/green]")
-            except (subprocess.CalledProcessError, FileNotFoundError):
+            except (subprocess.CalledProcessError, FileNotFoundError, OSError):
                 console.print("[yellow]Cosign not found, skipping signing[/yellow]")
 
         console.print(f"[green]Wheelhouse created in {output_dir}[/green]")
@@ -484,7 +587,7 @@ def wheelhouse(
 @click.pass_context
 def airgap(
     ctx: click.Context, output: str, include_extras: bool, include_security: bool
-) -> None:  # type: ignore[no-untyped-def]
+) -> None:
     """Create an offline bundle for air-gapped environments."""
     dry_run = ctx.obj.get("dry_run", False)
 
@@ -553,7 +656,7 @@ def verify(
     verify_provenance: bool,
     verify_hashes: bool,
     verify_all: bool,
-) -> None:  # type: ignore[no-untyped-def]
+) -> None:
     """Verify signatures, provenance, and SBOM of artifacts."""
     console.print("[blue]Verifying artifacts...[/blue]")
 
@@ -760,7 +863,7 @@ def verify(
 
 
 @cli.group()
-def manage() -> None:  # type: ignore[no-untyped-def]
+def manage() -> None:
     """Manage wheelhouses and packages."""
     pass
 
@@ -768,7 +871,7 @@ def manage() -> None:  # type: ignore[no-untyped-def]
 @manage.command()
 @click.argument("packages", nargs=-1, required=True)
 @click.option("--output-dir", "-o", default="wheelhouse", help="Output directory")
-def download(packages: tuple[str, ...], output_dir: str) -> None:  # type: ignore[no-untyped-def]
+def download(packages: tuple[str, ...], output_dir: str) -> None:
     """Download packages to wheelhouse."""
     console.print(
         f"[blue]Downloading {len(packages)} packages to {output_dir}...[/blue]"
@@ -792,7 +895,7 @@ def download(packages: tuple[str, ...], output_dir: str) -> None:  # type: ignor
 
 @manage.command()
 @click.argument("wheelhouse_dir", default="wheelhouse")
-def list_packages(wheelhouse_dir: str) -> None:  # type: ignore[no-untyped-def]
+def list_packages(wheelhouse_dir: str) -> None:
     """List packages in wheelhouse."""
     from pathlib import Path
 
@@ -826,7 +929,7 @@ def list_packages(wheelhouse_dir: str) -> None:  # type: ignore[no-untyped-def]
 
 @cli.command()
 @click.pass_context
-def doctor(ctx: click.Context) -> None:  # type: ignore[no-untyped-def]
+def doctor(ctx: click.Context) -> None:
     """Run policy checks and provide upgrade advice."""
     console.print("[blue]Running health checks...[/blue]")
 
@@ -850,18 +953,14 @@ def doctor(ctx: click.Context) -> None:  # type: ignore[no-untyped-def]
         console.print(f"[red]Health check failed: {e}[/red]")
         sys.exit(1)
 
-import typer
-
-from chiron.typer_cli import app
-
 __all__ = ["cli", "main"]
 
 # Backwards-compatible name that existing entry points import.
-cli = app
+cli = cast(Any, app)
 
 
 def main(argv: Sequence[str] | None = None) -> None:
     """Invoke the Typer CLI with optional *argv* overrides."""
 
-    command = typer.main.get_command(cli)
+    command = typer.main.get_command(cast(typer.Typer, cli))
     command.main(args=list(argv) if argv is not None else None, prog_name="chiron")

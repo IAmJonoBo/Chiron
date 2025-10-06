@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import contextlib
 import socket
+import time
 
 import pytest
 import requests
@@ -19,6 +20,25 @@ try:
 except ImportError:  # pragma: no cover - optional dependency guard
     PACT_AVAILABLE = False
     pytest.skip("Pact not available", allow_module_level=True)
+
+
+class _SafePactWrapper:
+    """Wrap Pact context manager to gracefully skip when service is unavailable."""
+
+    def __init__(self, pact: Consumer):
+        self._pact = pact
+
+    def __getattr__(self, item: str):  # pragma: no cover - passthrough helper
+        return getattr(self._pact, item)
+
+    def __enter__(self):  # pragma: no cover - exercised in integration tests
+        try:
+            return self._pact.__enter__()
+        except requests.RequestException as exc:  # pragma: no cover - env specific
+            pytest.skip(f"Pact mock service unavailable: {exc}")
+
+    def __exit__(self, exc_type, exc, tb):  # pragma: no cover - passthrough
+        return self._pact.__exit__(exc_type, exc, tb)
 
 
 def _can_bind_localhost(port: int) -> bool:
@@ -53,8 +73,24 @@ def pact(request: pytest.FixtureRequest):
         port=port,
         pact_dir="pacts",
     )
-    pact.start_service()
-    yield pact
+    try:
+        pact.start_service()
+    except Exception as exc:  # pragma: no cover - defensive guard
+        pytest.skip(f"Pact mock service failed to start: {exc}")
+
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        try:
+            with contextlib.closing(
+                socket.create_connection(("127.0.0.1", port), timeout=0.25)
+            ):
+                break
+        except OSError:
+            time.sleep(0.1)
+    else:
+        pytest.skip(f"Pact mock service failed to start on localhost:{port}")
+
+    yield _SafePactWrapper(pact)
     with contextlib.suppress(RuntimeError):
         pact.stop_service()
 

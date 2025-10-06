@@ -6,6 +6,10 @@ from unittest.mock import Mock
 
 import pytest
 
+from chiron.hardening import install_thinc_seed_guard
+
+install_thinc_seed_guard()
+
 try:
     from chiron.core import ChironCore
 except ModuleNotFoundError:  # pragma: no cover - fallback for local execution

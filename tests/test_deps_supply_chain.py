@@ -65,6 +65,11 @@ class TestVulnerabilitySummary:
         summary = VulnerabilitySummary()
         assert summary.has_blocking_vulnerabilities("high") is False
 
+    def test_has_blocking_vulnerabilities_low(self) -> None:
+        """Ensure low severity never fails the gate by default."""
+        summary = VulnerabilitySummary(low=3)
+        assert summary.has_blocking_vulnerabilities("low") is False
+
 
 class TestSBOMGenerator:
     """Tests for SBOMGenerator class."""
@@ -193,6 +198,39 @@ class TestOSVScanner:
 
         assert summary is None
 
+    def test_parse_results_handles_cvss_scores(self, tmp_path: Path) -> None:
+        """Ensure CVSS score entries are converted to severity labels."""
+        scanner = OSVScanner(tmp_path)
+        scan_data = {
+            "results": [
+                {
+                    "packages": [
+                        {
+                            "package": {"name": "demo"},
+                            "vulnerabilities": [
+                                {
+                                    "severity": [
+                                        {"type": "CVSS_V3", "score": "9.3"}
+                                    ],
+                                },
+                                {
+                                    "severity": [
+                                        {"type": "CVSS_V3", "score": "5.0"}
+                                    ],
+                                },
+                            ],
+                        }
+                    ],
+                }
+            ]
+        }
+
+        summary = scanner._parse_results(scan_data)
+
+        assert summary.critical == 1
+        assert summary.medium == 1
+        assert summary.packages_affected == ["demo"]
+
 
 class TestGenerateSBOMAndScan:
     """Tests for generate_sbom_and_scan integration function."""
@@ -245,3 +283,37 @@ class TestGenerateSBOMAndScan:
 
         assert success is False
         assert summary is None
+
+    @patch("chiron.deps.supply_chain.OSVScanner")
+    @patch("chiron.deps.supply_chain.SBOMGenerator")
+    def test_generate_and_scan_gate_failure(
+        self,
+        mock_sbom_gen: Mock,
+        mock_scanner: Mock,
+        tmp_path: Path,
+    ) -> None:
+        """Gate should fail when blocking vulnerabilities are discovered."""
+        mock_gen_instance = Mock()
+        mock_gen_instance.generate.return_value = True
+        mock_sbom_gen.return_value = mock_gen_instance
+
+        mock_summary = VulnerabilitySummary(high=2)
+        mock_scanner_instance = Mock()
+        mock_scanner_instance.scan_lockfile.return_value = mock_summary
+        mock_scanner.return_value = mock_scanner_instance
+
+        sbom_output = tmp_path / "sbom.json"
+        osv_output = tmp_path / "osv.json"
+        lockfile = tmp_path / "requirements.txt"
+        lockfile.write_text("pkg==1.0.0")
+
+        success, summary = generate_sbom_and_scan(
+            tmp_path,
+            sbom_output,
+            osv_output,
+            lockfile,
+            gate_max_severity="high",
+        )
+
+        assert success is False
+        assert summary is mock_summary

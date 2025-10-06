@@ -18,6 +18,8 @@ import os
 from collections.abc import Iterable
 from pathlib import Path
 
+from chiron.hardening import install_thinc_seed_guard
+
 _VENDOR_WHEELHOUSE = Path(__file__).resolve().parent / "vendor" / "wheelhouse"
 _MANIFEST_FILENAME = "manifest.json"
 _REQUIRED_EXTRAS = {"dev", "test"}
@@ -104,3 +106,4 @@ def _configure_pip_environment() -> None:
 
 
 _configure_pip_environment()
+install_thinc_seed_guard()

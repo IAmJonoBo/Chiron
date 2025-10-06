@@ -15,6 +15,29 @@ Chiron implements 8 comprehensive quality gates that run on every push and pull 
 7. **Dependency Gate** - No dependency conflicts
 8. **Documentation Gate** - Docs build successfully
 
+<!-- BEGIN QUALITY_SUITE_AUTODOC -->
+### Developer Toolbox Quality Suite Snapshot
+
+Use the developer toolbox to keep local quality gates aligned with CI.
+
+**Primary profile**: `full` (7 gates)
+**Generated**: 2025-10-06T10:56:50.744702+00:00
+
+| Order | Gate | Category | Critical | Command |
+| --- | --- | --- | --- | --- |
+| 1 | `tests` | tests | Required | `uv run --extra dev --extra test pytest --cov=src/chiron --cov-report=term` |
+| 2 | `contracts` | tests | Optional | `uv run --extra test pytest tests/test_contracts.py -k contract` |
+| 3 | `lint` | lint | Required | `uv run --extra dev ruff check` |
+| 4 | `types` | types | Required | `uv run --extra dev mypy src` |
+| 5 | `security` | security | Required | `uv run --extra security bandit -r src -lll` |
+| 6 | `docs` | docs | Optional | `uv run --extra docs mkdocs build --strict` |
+| 7 | `build` | build | Required | `uv build` |
+
+**Applied toggles**: _None_
+
+_Updated automatically via `chiron tools qa --sync-docs docs/QUALITY_GATES.md`._
+<!-- END QUALITY_SUITE_AUTODOC -->
+
 ## Quality Gate Details
 
 ### 1. Coverage Gate
@@ -39,11 +62,36 @@ chiron tools qa --profile fast --explain --dry-run
 # Run the curated local gate suite and archive the result
 chiron tools qa --profile full --save-report reports/qa.json
 
+# Export machine-readable plan metadata (plan + insights) for AI agents
+chiron tools qa --profile fast --dry-run --json > reports/qa-plan.json
+
+# Capture a monitored run report with gate outcomes and failing gate summaries
+chiron tools qa --profile full --json > reports/qa-run.json
+
+# Generate CLI/service coverage focus insights during dry-runs
+chiron tools qa --profile full --monitor --dry-run --coverage-xml coverage.xml
+
+# Produce machine-readable monitoring payloads for AI agents
+chiron tools qa --profile fast --monitor --json > reports/qa-monitored.json
+
+# Emit an agent-facing quickstart with actionable coverage follow-ups
+chiron tools qa --profile full --guide --monitor --coverage-xml coverage.xml
+
+# Exercise Pact contract validation alongside the core quality suite
+chiron tools qa --profile full --contracts --dry-run
+
+# Export a complete dry-run snapshot (plan, guide, insights, actions)
+chiron tools qa --profile fast --dry-run --monitor --json > reports/qa-dry-run.json
+
 # Inspect hotspots and enforce the guard locally
 chiron tools coverage hotspots --threshold 85 --limit 5
 chiron tools coverage gaps --min-statements 40 --limit 3
 chiron tools coverage guard --threshold 90
 ```
+
+Interactive executions render rich progress bars and colour-coded panels so you
+can watch each gate complete, review durations, and immediately spot failures
+while the suite runs.
 
 **Improving Coverage**:
 
@@ -53,6 +101,25 @@ chiron tools coverage guard --threshold 90
 - Configure additional gates or profiles in `[tool.chiron.dev_toolbox]` inside `pyproject.toml`
 - Add unit tests for core logic and integration tests for subprocess flows
 - See [DEPS_MODULES_STATUS.md](DEPS_MODULES_STATUS.md) for systematic plan
+
+JSON payloads emitted by `chiron tools qa` now include plan insights (category
+breakdowns, toggles, and critical gate lists) as well as monitored execution
+reports that highlight failing gates for rapid remediation. When `--monitor`
+is enabled these payloads also describe CLI and service coverage focus areas,
+alongside structured recommendation details (severity, missing lines, and
+actions) so agents can schedule deeper contract validation work or plan
+targeted tests immediately. Coverage monitoring normalises module paths from
+`coverage.xml`, so focus insights recognise CLI and service modules whether the
+report emits absolute paths, `src/chiron/...` prefixes, or shortened `cli/...`
+entries produced by the default Coverage.py configuration. Pair the
+`--contracts` toggle with these flows when you need to validate Pact
+interactions and capture progress alongside the core suite.
+
+Dry-run snapshots (`--dry-run --json`) bundle the same plan payload together
+with the rendered quickstart guide and the actionable follow-ups derived from
+monitoring. Agents can persist these artefacts to seed workflows, surface the
+recommended coverage improvements, or hand off the ready-to-run command plan
+to downstream automation without invoking the suite.
 
 ### 2. Security Gate
 
@@ -282,6 +349,9 @@ python3 -c "import tomllib; tomllib.load(open('pyproject.toml', 'rb'))"
 ```bash
 # Build documentation
 uv run mkdocs build --strict
+
+# Regenerate the Quality Suite snapshot in this guide
+chiron tools qa --profile full --sync-docs docs/QUALITY_GATES.md
 ```
 
 **Documentation Structure**:

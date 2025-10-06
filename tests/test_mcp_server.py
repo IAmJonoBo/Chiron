@@ -1,6 +1,8 @@
 """Tests for MCP server module."""
 
 import json
+import sys
+import types
 from unittest.mock import Mock, patch
 
 from chiron.mcp.server import MCPServer, create_mcp_server_config
@@ -230,6 +232,49 @@ class TestMCPServer:
         assert result["with_sbom"] is True
         assert result["with_signatures"] is True
 
+    def test_build_wheelhouse_success(self, tmp_path, monkeypatch):
+        """Test non-dry-run execution with bundled artifacts."""
+        server = MCPServer()
+
+        bundle_dir = tmp_path / "wheelhouse"
+        bundle_dir.mkdir()
+
+        class StubMetadata:
+            def to_dict(self):
+                return {"artifacts": 1}
+
+        class StubBundler:
+            def __init__(self, path):  # pragma: no cover - structure only
+                assert path == bundle_dir
+
+            def create_bundle(self, *, output_path, include_sbom, include_osv):
+                assert include_sbom is True
+                assert include_osv is True
+                assert output_path.parent == tmp_path
+                return StubMetadata()
+
+        module = types.ModuleType("chiron.deps.bundler")
+        module.WheelhouseBundler = StubBundler
+        monkeypatch.setitem(sys.modules, "chiron.deps.bundler", module)
+
+        result = server._build_wheelhouse(
+            {"dry_run": False, "output_dir": str(bundle_dir)}
+        )
+
+        assert result["status"] == "success"
+        assert result["metadata"] == {"artifacts": 1}
+
+    def test_build_wheelhouse_import_error(self, tmp_path, monkeypatch):
+        """Missing bundler should return error state."""
+        server = MCPServer()
+        monkeypatch.setitem(sys.modules, "chiron.deps.bundler", types.ModuleType("empty"))
+
+        result = server._build_wheelhouse(
+            {"dry_run": False, "output_dir": str(tmp_path)}
+        )
+
+        assert result["status"] == "error"
+
     def test_verify_artifacts_skeleton(self):
         """Test _verify_artifacts with real implementation."""
         server = MCPServer()
@@ -238,6 +283,34 @@ class TestMCPServer:
         # Real implementation returns success/warning/error based on verification results
         assert result["status"] in ["success", "warning", "error"]
         assert result["target"] == "/test/path"
+
+    def test_verify_artifacts_warning(self, monkeypatch):
+        """Partial failures should downgrade the status to warning."""
+        server = MCPServer()
+
+        monkeypatch.setattr(
+            "chiron.deps.verify.check_script_imports",
+            lambda: {"one": True, "two": False},
+        )
+        monkeypatch.setattr(
+            "chiron.deps.verify.check_cli_commands",
+            lambda: {"cli_module": True, "deps.guard": False},
+        )
+
+        result = server._verify_artifacts({"target": "artifact"})
+
+        assert result["status"] == "warning"
+        assert result["all_checks_passed"] is False
+
+    def test_verify_artifacts_import_error(self, monkeypatch):
+        """Import failures should return an error payload."""
+        server = MCPServer()
+        stub_module = types.ModuleType("chiron.deps.verify")
+        monkeypatch.setitem(sys.modules, "chiron.deps.verify", stub_module)
+
+        result = server._verify_artifacts({"target": "artifact"})
+
+        assert result["status"] == "error"
 
     def test_create_airgap_bundle_defaults(self):
         """Test _create_airgap_bundle with default arguments."""
@@ -258,6 +331,31 @@ class TestMCPServer:
         assert result["status"] in ["success", "error"]
         if result["status"] == "success":
             assert "policy" in result
+
+    def test_check_policy_missing_config(self, tmp_path, monkeypatch):
+        """Missing configuration file should produce an error."""
+        server = MCPServer()
+        module = types.ModuleType("chiron.deps.policy")
+
+        class StubPolicy:
+            def __init__(self):
+                self.default_allowed = True
+                self.max_major_version_jump = 1
+                self.require_security_review = False
+                self.allow_pre_releases = False
+                self.allowlist = []
+                self.denylist = []
+
+            @classmethod
+            def from_toml(cls, path):  # pragma: no cover - error path only
+                raise FileNotFoundError(path)
+
+        module.DependencyPolicy = StubPolicy
+        monkeypatch.setitem(sys.modules, "chiron.deps.policy", module)
+
+        result = server._check_policy({"config_path": str(tmp_path / "missing.toml")})
+
+        assert result["status"] == "error"
 
     def test_health_check_structure(self):
         """Test _health_check response structure."""
