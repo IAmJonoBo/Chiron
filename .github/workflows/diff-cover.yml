@@ -32,7 +32,7 @@ jobs:
         run: uv python install 3.12
 
       - name: Install dependencies
-        run: uv sync --group dev --group test --extra test-speed
+        run: uv sync --all-extras --dev
 
       - name: Run tests with coverage
         env:
