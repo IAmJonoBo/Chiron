@@ -1,11 +1,5 @@
 ## Next Steps
 
-Here’s a repo-specific Copilot brief that piggybacks on your existing layout, tools, and conventions in Chiron. I inspected the repo: it’s Python-first, packaged under src/chiron, with tests in tests/, a pyproject.toml, uv.lock (so use uv), pre-commit hooks, and CI/quality signalling (coverage ~84%, “quality gates”) already in play. There’s also a refactor-starter-ts-py.zip at the root if you want to mine it for pieces.  ￼
-
-I’m going to give you a copy-ready Copilot task prompt that: (1) installs a refactoring module under dev-toolkit/refactoring/ for docs and scripts, (2) wires a CLI surface inside Chiron (so it “fits the dev-toolkit in context”), and (3) reuses your stack (uv, pre-commit, pytest, ruff/mypy, Bandit/pip-audit, Radon/Xenon).
-
-COPILOT TASK — Chiron “dev-toolkit / refactoring” (Python)
-
 Role
 
 Operate inside this repository (Chiron). Create an adaptive refactoring toolkit that lives at dev-toolkit/refactoring/ and exposes commands through the Chiron CLI namespace (e.g. chiron tools refactor ... if a tools group exists). Keep all changes behaviour-preserving, idempotent, and small.
