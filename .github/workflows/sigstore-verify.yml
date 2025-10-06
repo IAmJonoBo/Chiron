@@ -30,7 +30,7 @@ jobs:
           cosign-release: 'v2.4.1'
 
       - name: Download artifacts from previous workflow
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: wheels-${{ matrix.os }}
           path: ./artifacts
