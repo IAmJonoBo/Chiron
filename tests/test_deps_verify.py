@@ -163,7 +163,6 @@ class TestCheckWorkflowIntegration:
 
         # Create preflight workflow
         preflight = workflows_dir / "dependency-preflight.yml"
-        preflight.write_text("""
         preflight.write_text(
             """
 steps:
