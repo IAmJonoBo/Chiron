@@ -16,16 +16,18 @@ from chiron.deps.signing import (
 class TestSigningResult:
     """Tests for SigningResult dataclass."""
 
-    def test_signing_result_success(self) -> None:
+    def test_signing_result_success(self, tmp_path: Path) -> None:
         """Test successful signing result."""
+        signature_path = tmp_path / "test.sig"
+        certificate_path = tmp_path / "test.crt"
         result = SigningResult(
             success=True,
-            signature_path=Path("/tmp/test.sig"),
-            certificate_path=Path("/tmp/test.crt"),
+            signature_path=signature_path,
+            certificate_path=certificate_path,
         )
         assert result.success is True
-        assert result.signature_path == Path("/tmp/test.sig")
-        assert result.certificate_path == Path("/tmp/test.crt")
+        assert result.signature_path == signature_path
+        assert result.certificate_path == certificate_path
         assert result.error_message is None
 
     def test_signing_result_failure(self) -> None:
@@ -51,24 +53,26 @@ class TestCosignSigner:
         assert signer.keyless is False
 
     @patch("chiron.deps.signing.shutil.which")
-    def test_sign_blob_cosign_not_found(self, mock_which: Mock) -> None:
+    def test_sign_blob_cosign_not_found(self, mock_which: Mock, tmp_path: Path) -> None:
         """Test sign_blob when cosign is not available."""
         mock_which.return_value = None
         signer = CosignSigner()
 
-        result = signer.sign_blob(Path("/tmp/test.tar.gz"))
+        result = signer.sign_blob(tmp_path / "test.tar.gz")
 
         assert result.success is False
         assert result.error_message == "cosign not found in PATH"
         assert result.signature_path is None
 
     @patch("chiron.deps.signing.shutil.which")
-    def test_sign_blob_artifact_not_found(self, mock_which: Mock) -> None:
+    def test_sign_blob_artifact_not_found(
+        self, mock_which: Mock, tmp_path: Path
+    ) -> None:
         """Test sign_blob when artifact doesn't exist."""
         mock_which.return_value = "/usr/bin/cosign"
         signer = CosignSigner()
 
-        artifact_path = Path("/tmp/nonexistent.tar.gz")
+        artifact_path = tmp_path / "nonexistent.tar.gz"
         result = signer.sign_blob(artifact_path)
 
         assert result.success is False
@@ -162,25 +166,31 @@ class TestCosignSigner:
         assert "Unexpected error" in result.error_message
 
     @patch("chiron.deps.signing.shutil.which")
-    def test_verify_blob_cosign_not_found(self, mock_which: Mock) -> None:
+    def test_verify_blob_cosign_not_found(
+        self, mock_which: Mock, tmp_path: Path
+    ) -> None:
         """Test verify_blob when cosign is not available."""
         mock_which.return_value = None
         signer = CosignSigner()
 
         result = signer.verify_blob(
-            Path("/tmp/test.tar.gz"), Path("/tmp/test.tar.gz.sig")
+            tmp_path / "test.tar.gz",
+            tmp_path / "test.tar.gz.sig",
         )
 
         assert result is False
 
     @patch("chiron.deps.signing.shutil.which")
-    def test_verify_blob_artifact_not_found(self, mock_which: Mock) -> None:
+    def test_verify_blob_artifact_not_found(
+        self, mock_which: Mock, tmp_path: Path
+    ) -> None:
         """Test verify_blob when artifact doesn't exist."""
         mock_which.return_value = "/usr/bin/cosign"
         signer = CosignSigner()
 
         result = signer.verify_blob(
-            Path("/tmp/nonexistent.tar.gz"), Path("/tmp/test.sig")
+            tmp_path / "nonexistent.tar.gz",
+            tmp_path / "test.sig",
         )
 
         assert result is False
@@ -196,7 +206,7 @@ class TestCosignSigner:
         artifact.write_text("test content")
 
         signer = CosignSigner()
-        result = signer.verify_blob(artifact, Path("/tmp/nonexistent.sig"))
+        result = signer.verify_blob(artifact, tmp_path / "nonexistent.sig")
 
         assert result is False
 
@@ -327,13 +337,16 @@ class TestModuleFunctions:
     """Tests for module-level convenience functions."""
 
     @patch("chiron.deps.signing.CosignSigner.sign_blob")
-    def test_sign_wheelhouse_bundle_default_output(self, mock_sign: Mock) -> None:
+    def test_sign_wheelhouse_bundle_default_output(
+        self, mock_sign: Mock, tmp_path: Path
+    ) -> None:
         """Test sign_wheelhouse_bundle with default output."""
+        signature_path = tmp_path / "bundle.tar.gz.sig"
         mock_sign.return_value = SigningResult(
-            success=True, signature_path=Path("/tmp/bundle.tar.gz.sig")
+            success=True, signature_path=signature_path
         )
 
-        bundle = Path("/tmp/bundle.tar.gz")
+        bundle = tmp_path / "bundle.tar.gz"
         result = sign_wheelhouse_bundle(bundle)
 
         assert result.success is True
@@ -344,14 +357,16 @@ class TestModuleFunctions:
         assert ".sig" in str(call_args[0][1])
 
     @patch("chiron.deps.signing.CosignSigner.sign_blob")
-    def test_sign_wheelhouse_bundle_custom_output(self, mock_sign: Mock) -> None:
+    def test_sign_wheelhouse_bundle_custom_output(
+        self, mock_sign: Mock, tmp_path: Path
+    ) -> None:
         """Test sign_wheelhouse_bundle with custom output directory."""
+        bundle = tmp_path / "bundle.tar.gz"
+        output_dir = tmp_path / "output"
+        signature_path = output_dir / "bundle.tar.gz.sig"
         mock_sign.return_value = SigningResult(
-            success=True, signature_path=Path("/output/bundle.tar.gz.sig")
+            success=True, signature_path=signature_path
         )
-
-        bundle = Path("/tmp/bundle.tar.gz")
-        output_dir = Path("/output")
         result = sign_wheelhouse_bundle(bundle, output_dir)
 
         assert result.success is True
@@ -360,24 +375,28 @@ class TestModuleFunctions:
         assert call_args[0][1] == output_dir / "bundle.tar.gz.sig"
 
     @patch("chiron.deps.signing.CosignSigner.verify_blob")
-    def test_verify_wheelhouse_bundle_success(self, mock_verify: Mock) -> None:
+    def test_verify_wheelhouse_bundle_success(
+        self, mock_verify: Mock, tmp_path: Path
+    ) -> None:
         """Test verify_wheelhouse_bundle success."""
         mock_verify.return_value = True
 
-        bundle = Path("/tmp/bundle.tar.gz")
-        signature = Path("/tmp/bundle.tar.gz.sig")
+        bundle = tmp_path / "bundle.tar.gz"
+        signature = tmp_path / "bundle.tar.gz.sig"
         result = verify_wheelhouse_bundle(bundle, signature)
 
         assert result is True
         mock_verify.assert_called_once_with(bundle, signature)
 
     @patch("chiron.deps.signing.CosignSigner.verify_blob")
-    def test_verify_wheelhouse_bundle_failure(self, mock_verify: Mock) -> None:
+    def test_verify_wheelhouse_bundle_failure(
+        self, mock_verify: Mock, tmp_path: Path
+    ) -> None:
         """Test verify_wheelhouse_bundle failure."""
         mock_verify.return_value = False
 
-        bundle = Path("/tmp/bundle.tar.gz")
-        signature = Path("/tmp/bundle.tar.gz.sig")
+        bundle = tmp_path / "bundle.tar.gz"
+        signature = tmp_path / "bundle.tar.gz.sig"
         result = verify_wheelhouse_bundle(bundle, signature)
 
         assert result is False

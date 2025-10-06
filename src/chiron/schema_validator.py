@@ -38,7 +38,12 @@ def load_schema(schema_name: str = "chiron-config") -> dict[str, Any]:
         raise FileNotFoundError(f"Schema not found: {schema_path}")
 
     with open(schema_path) as f:
-        return json.load(f)
+        data = json.load(f)
+
+    if not isinstance(data, dict):
+        raise ValueError(f"Schema {schema_name} must be a JSON object")
+
+    return cast(dict[str, Any], data)
 
 
 def validate_config(
@@ -60,7 +65,7 @@ def validate_config(
         schema = load_schema(schema_name)
         validator = Draft202012Validator(schema)
 
-        errors = []
+        errors: list[str] = []
         for error in validator.iter_errors(config):
             path = ".".join(str(p) for p in error.path) if error.path else "root"
             errors.append(f"{path}: {error.message}")
@@ -89,7 +94,11 @@ def validate_config_file(
     try:
         with open(config_path) as f:
             config = json.load(f)
-        return validate_config(config, schema_name)
+        if not isinstance(config, dict):
+            return [
+                "Configuration file must contain a JSON object at the top level",
+            ]
+        return validate_config(cast(dict[str, Any], config), schema_name)
     except FileNotFoundError:
         return [f"Configuration file not found: {config_path}"]
     except json.JSONDecodeError as e:
@@ -117,7 +126,7 @@ def get_schema_defaults(schema_name: str = "chiron-config") -> dict[str, Any]:
                     defaults[prop] = spec["default"]
                 elif spec.get("type") == "object" and "properties" in spec:
                     # Recursively get defaults for nested objects
-                    nested_defaults = {}
+                    nested_defaults: dict[str, Any] = {}
                     for nested_prop, nested_spec in spec["properties"].items():
                         if "default" in nested_spec:
                             nested_defaults[nested_prop] = nested_spec["default"]

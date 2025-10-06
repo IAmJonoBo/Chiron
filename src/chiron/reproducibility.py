@@ -58,7 +58,7 @@ class ReproducibilityReport:
 class ReproducibilityChecker:
     """Check reproducibility of wheel builds."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize reproducibility checker."""
         self.ignore_timestamps = True
         self.ignore_build_paths = True
@@ -120,7 +120,7 @@ class ReproducibilityChecker:
         wheel1 = self.analyze_wheel(wheel1_path)
         wheel2 = self.analyze_wheel(wheel2_path)
 
-        differences = []
+        differences: list[str] = []
 
         # Compare checksums
         if wheel1.sha256 != wheel2.sha256:
@@ -227,7 +227,7 @@ class ReproducibilityChecker:
         Returns:
             Parsed metadata dictionary
         """
-        metadata = {}
+        metadata: dict[str, Any] = {}
         for line in metadata_text.split("\n"):
             if ":" in line:
                 key, value = line.split(":", 1)
@@ -256,10 +256,10 @@ class ReproducibilityChecker:
         Returns:
             List of differences
         """
-        differences = []
+        differences: list[str] = []
 
         # Fields to ignore if configured
-        ignore_fields = set()
+        ignore_fields: set[str] = set()
         if self.ignore_timestamps:
             ignore_fields.add("Build-Date")
         if self.ignore_build_paths:

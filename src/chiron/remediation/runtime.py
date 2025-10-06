@@ -135,13 +135,14 @@ class RuntimeRemediator:
         findings = self._parse_log(log_text)
         if not findings:
             return None
-        summary = {
+        totals: dict[str, int] = {
+            "missing_imports": sum(finding.occurrences for finding in findings),
+            "unique_modules": len(findings),
+        }
+        summary: dict[str, object] = {
             "generated_at": datetime.now(UTC).isoformat(),
             "findings": [finding.to_dict() for finding in findings],
-            "totals": {
-                "missing_imports": sum(finding.occurrences for finding in findings),
-                "unique_modules": len(findings),
-            },
+            "totals": totals,
         }
         return summary
 

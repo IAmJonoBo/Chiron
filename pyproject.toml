@@ -219,6 +219,7 @@ addopts = [
   "--cov-report=xml",
   "--cov-fail-under=50",
 ]
+filterwarnings = ["error::pytest.PytestReturnNotNoneWarning"]
 markers = [
   "slow: marks tests as slow",
   "integration: marks tests as integration tests",
@@ -319,7 +320,6 @@ ignore = [
   "SIM110", # TODO: replace membership loops with any()/all()
   "SIM114", # TODO: consolidate boolean branches
   "UP007",  # TODO: migrate to PEP 604 type unions in service layer
-  "UP038",  # TODO: simplify isinstance checks once legacy types removed
 ]
 
 [tool.ruff.lint.per-file-ignores]

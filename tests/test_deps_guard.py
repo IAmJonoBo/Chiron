@@ -90,18 +90,19 @@ class TestPackageAssessment:
 class TestSourceSummary:
     """Tests for SourceSummary dataclass."""
 
-    def test_initialization(self) -> None:
+    def test_initialization(self, tmp_path: Path) -> None:
         """Test SourceSummary initialization."""
+        raw_path = tmp_path / "preflight.json"
         summary = SourceSummary(
             name="preflight",
             state="ok",
             message="All checks passed",
-            raw_path="/tmp/preflight.json",
+            raw_path=str(raw_path),
         )
         assert summary.name == "preflight"
         assert summary.state == "ok"
         assert summary.message == "All checks passed"
-        assert summary.raw_path == "/tmp/preflight.json"
+        assert summary.raw_path == str(raw_path)
 
     def test_initialization_with_none(self) -> None:
         """Test SourceSummary with None values."""

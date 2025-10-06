@@ -1,10 +1,13 @@
 """Core exceptions for Chiron."""
 
+from collections.abc import Mapping
+from typing import Any
+
 
 class ChironError(Exception):
     """Base exception class for Chiron."""
 
-    def __init__(self, message: str, details: dict | None = None) -> None:
+    def __init__(self, message: str, details: Mapping[str, Any] | None = None) -> None:
         """Initialize ChironError.
 
         Args:
@@ -13,7 +16,7 @@ class ChironError(Exception):
         """
         super().__init__(message)
         self.message = message
-        self.details = details or {}
+        self.details: dict[str, Any] = dict(details or {})
 
 
 class ChironValidationError(ChironError):
@@ -24,7 +27,7 @@ class ChironValidationError(ChironError):
         message: str,
         field: str | None = None,
         value: object = None,
-        details: dict | None = None,
+        details: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize ChironValidationError.
 

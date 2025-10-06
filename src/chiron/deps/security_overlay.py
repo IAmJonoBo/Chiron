@@ -102,15 +102,17 @@ class SecurityOverlayManager:
 
     def save_overlay(self) -> None:
         """Save security overlay to file."""
-        data = {
+        constraints_section: dict[str, dict[str, object]] = {}
+        cve_section: dict[str, dict[str, object]] = {}
+        data: dict[str, object] = {
             "version": "1.0",
             "updated": datetime.now().isoformat(),
-            "constraints": {},
-            "cve_database": {},
+            "constraints": constraints_section,
+            "cve_database": cve_section,
         }
 
         for pkg_name, constraint in self.constraints.items():
-            data["constraints"][pkg_name] = {
+            constraints_section[pkg_name] = {
                 "min_version": constraint.min_version,
                 "max_version": constraint.max_version,
                 "reason": constraint.reason,
@@ -118,7 +120,7 @@ class SecurityOverlayManager:
             }
 
         for cve_id, cve in self.cve_database.items():
-            data["cve_database"][cve_id] = {
+            cve_section[cve_id] = {
                 "package": cve.package,
                 "affected_versions": cve.affected_versions,
                 "fixed_version": cve.fixed_version,
