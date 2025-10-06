@@ -1,3 +1,9 @@
+---
+title: "Tooling Implementation Status"
+diataxis: reference
+summary: Detailed catalogue of developer tooling and automation surfaced in the repo.
+---
+
 # Tooling Implementation Status
 
 This document tracks the implementation status of advanced tooling opportunities identified in the project roadmap.
@@ -86,6 +92,16 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 - Workflow comments PR with coverage results
 
 **Purpose**: Accelerate coverage improvement by requiring high coverage on new/changed code without blocking work on existing code.
+
+### ✅ Refactor Opportunity Scanner
+**Status**: IMPLEMENTED
+
+**Evidence**:
+- `chiron tools refactor analyze` CLI command surfaces refactor candidates with severity-ranked insights
+- `src/chiron/dev_toolbox.py` now evaluates function length, class size, cyclomatic complexity, parameter pressure, docstring gaps, TODO markers, and low coverage overlays
+- Regression tests in `tests/test_dev_toolbox.py` and `tests/test_typer_cli_tools.py` validate analysis heuristics, JSON output ordering, and CLI wiring
+
+**Purpose**: Help contributors target high-impact refactors by correlating structural heuristics with coverage gaps and actionable messaging.
 
 ### ✅ CodeQL Workflow
 **Status**: FULLY IMPLEMENTED

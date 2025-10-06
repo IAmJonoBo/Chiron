@@ -1,3 +1,9 @@
+---
+title: "MCP Integration Testing Guide"
+diataxis: how_to
+summary: Run the MCP server end-to-end with contract validation and wheelhouse planning.
+---
+
 # MCP Integration Testing Guide
 
 This guide provides detailed instructions for testing Chiron's MCP (Model Context Protocol) server with actual MCP clients.

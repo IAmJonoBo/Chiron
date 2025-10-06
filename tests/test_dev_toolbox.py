@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import textwrap
 from datetime import UTC, datetime
 from pathlib import Path
@@ -19,18 +20,23 @@ from chiron.dev_toolbox import (
     QualitySuiteProgressEvent,
     QualitySuiteRecommendation,
     QualitySuiteRunReport,
+    analyze_refactor_opportunities,
     build_quality_suite_insights,
     build_quality_suite_monitoring,
     build_quality_suite_plan,
     coverage_gap_summary,
     coverage_guard,
+    discover_diataxis_entries,
+    dump_diataxis_entries,
     execute_quality_suite,
+    load_diataxis_entries,
     load_quality_configuration,
     prepare_quality_suite_dry_run,
     quality_suite_guide,
     quality_suite_manifest,
     resolve_quality_profile,
     run_quality_suite,
+    sync_diataxis_documentation,
     sync_quality_suite_documentation,
 )
 
@@ -544,6 +550,156 @@ def test_sync_quality_suite_documentation_requires_markers(tmp_path: Path) -> No
         sync_quality_suite_documentation(dry_run, doc_path)
 
 
+def test_sync_diataxis_documentation_updates_block(tmp_path: Path) -> None:
+    config_path = tmp_path / "diataxis.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "tutorials": [
+                    {
+                        "title": "First run",
+                        "path": "tutorials/first.md",
+                        "summary": "Intro walkthrough",
+                    }
+                ],
+                "how_to": [],
+                "reference": [],
+                "explanation": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    doc_path = tmp_path / "index.md"
+    doc_path.write_text(
+        "\n".join(
+            [
+                "Preamble",
+                "<!-- BEGIN DIATAXIS_AUTODOC -->",
+                "stale",
+                "<!-- END DIATAXIS_AUTODOC -->",
+                "Footer",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    sync_diataxis_documentation(config_path, doc_path)
+
+    contents = doc_path.read_text(encoding="utf-8")
+    assert "First run" in contents
+    assert "Tutorials" in contents
+    assert "Updated automatically" in contents
+
+
+def test_sync_diataxis_documentation_requires_markers(tmp_path: Path) -> None:
+    config_path = tmp_path / "diataxis.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "tutorials": [],
+                "how_to": [],
+                "reference": [],
+                "explanation": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    doc_path = tmp_path / "index.md"
+    doc_path.write_text("Missing markers", encoding="utf-8")
+
+    with pytest.raises(DocumentationSyncError):
+        sync_diataxis_documentation(config_path, doc_path)
+
+
+def test_discover_diataxis_entries_extracts_front_matter(tmp_path: Path) -> None:
+    docs_dir = tmp_path / "docs"
+    tutorials_dir = docs_dir / "tutorials"
+    tutorials_dir.mkdir(parents=True)
+    (docs_dir / "index.md").write_text("<!-- overview -->", encoding="utf-8")
+    tutorials_dir.joinpath("first.md").write_text(
+        textwrap.dedent(
+            """---
+            title: First Tutorial
+            diataxis: tutorials
+            summary: Walkthrough for newcomers.
+            ---
+
+            # First Tutorial
+            """
+        ).strip(),
+        encoding="utf-8",
+    )
+    (docs_dir / "howto.md").write_text(
+        textwrap.dedent(
+            """---
+            title: Build Gate
+            diataxis: how_to
+            summary: Run the build quality gate locally.
+            ---
+
+            # Build Gate
+            """
+        ).strip(),
+        encoding="utf-8",
+    )
+
+    entries = discover_diataxis_entries(docs_dir)
+
+    assert [entry.title for entry in entries["tutorials"]] == ["First Tutorial"]
+    assert entries["tutorials"][0].path == "tutorials/first.md"
+    assert entries["tutorials"][0].summary == "Walkthrough for newcomers."
+    assert entries["how_to"][0].path == "howto.md"
+    assert entries["reference"] == ()
+    assert entries["explanation"] == ()
+
+    config_path = tmp_path / "diataxis.json"
+    dump_diataxis_entries(config_path, entries)
+    persisted = load_diataxis_entries(config_path)
+    assert persisted == entries
+
+
+def test_discover_diataxis_entries_requires_summary(tmp_path: Path) -> None:
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    docs_dir.joinpath("guide.md").write_text(
+        textwrap.dedent(
+            """---
+            title: Missing Summary
+            diataxis: reference
+            ---
+
+            # Missing Summary
+            """
+        ).strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(DocumentationSyncError):
+        discover_diataxis_entries(docs_dir)
+
+
+def test_load_diataxis_entries_validates_file(tmp_path: Path) -> None:
+    config_path = tmp_path / "missing.json"
+    with pytest.raises(DocumentationSyncError):
+        load_diataxis_entries(config_path)
+
+
+def test_repository_diataxis_mapping_is_in_sync() -> None:
+    """Ensure docs/diataxis.json matches the discovered documentation tree."""
+
+    config_path = Path("docs/diataxis.json")
+    docs_dir = Path("docs")
+
+    assert config_path.exists(), "Missing docs/diataxis.json configuration"
+    assert docs_dir.exists(), "Missing docs directory"
+
+    persisted = load_diataxis_entries(config_path)
+    discovered = discover_diataxis_entries(docs_dir)
+
+    assert (
+        persisted == discovered
+    ), "Run `chiron tools docs sync-diataxis --discover --docs-dir docs`"
+
 def test_quality_gate_documentation_block_matches_generator() -> None:
     plan = build_quality_suite_plan("full")
     dry_run = prepare_quality_suite_dry_run(plan)
@@ -560,3 +716,220 @@ def test_quality_gate_documentation_block_matches_generator() -> None:
         return [line for line in lines if not line.startswith("**Generated**")]
 
     assert _filter_generated(doc_lines) == _filter_generated(expected_lines)
+
+
+def test_analyze_refactor_opportunities_highlights_complex_symbols(tmp_path: Path) -> None:
+    module = tmp_path / "demo.py"
+    module.write_text(
+        textwrap.dedent(
+            """
+            def narrow_ok():
+                return 1
+
+            def sprawling_function(value):
+                total = 0
+                for index in range(60):
+                    if value > index:
+                        value += index
+                    else:
+                        value -= index
+                    total += index
+                if value % 2 == 0:
+                    value += total
+                else:
+                    value -= total
+                return value
+
+            class Massive:
+                def a(self):
+                    return 1
+
+                def b(self):
+                    return 2
+
+                def c(self):
+                    return 3
+
+                def d(self):
+                    return 4
+
+                def e(self):
+                    return 5
+
+            # TODO: tighten API surface
+            """
+        ).strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = analyze_refactor_opportunities(
+        (module,),
+        max_function_length=10,
+        max_class_methods=4,
+    )
+
+    kinds = {op.kind for op in report.opportunities}
+    assert {"function_length", "class_size", "todo_comment"}.issubset(kinds)
+    longest = max(report.opportunities, key=lambda op: op.severity_rank)
+    assert longest.kind == "function_length"
+    assert longest.symbol == "sprawling_function"
+
+
+def test_analyze_refactor_opportunities_includes_coverage(tmp_path: Path) -> None:
+    module = tmp_path / "package" / "module.py"
+    module.parent.mkdir()
+    module.write_text(
+        textwrap.dedent(
+            """
+            def short():
+                return 1
+            """
+        ).strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    coverage_xml = tmp_path / "coverage.xml"
+    coverage_xml.write_text(
+        textwrap.dedent(
+            f"""
+            <?xml version="1.0" ?>
+            <coverage version="7.0.0" line-rate="0.40" lines-covered="4" lines-valid="10">
+              <packages>
+                <package name="demo">
+                  <class name="package.module" filename="{module}" line-rate="0.40" statements="10" missing="6">
+                    <lines>
+                      <line number="1" hits="0" />
+                    </lines>
+                  </class>
+                </package>
+              </packages>
+            </coverage>
+            """
+        ).strip(),
+        encoding="utf-8",
+    )
+
+    report = analyze_refactor_opportunities(
+        (module,),
+        coverage_xml=coverage_xml,
+        coverage_threshold=80.0,
+    )
+
+    low_coverage = [
+        op
+        for op in report.opportunities
+        if op.kind == "low_coverage" and module.name in op.message
+    ]
+    assert low_coverage, "Expected low coverage opportunity for module"
+
+
+def test_analyze_refactor_opportunities_flags_complexity_and_parameters(
+    tmp_path: Path,
+) -> None:
+    module = tmp_path / "complex.py"
+    module.write_text(
+        textwrap.dedent(
+            """
+            def intricate(a, b, c, d):
+                total = 0
+                for index in range(3):
+                    if index % 2 == 0:
+                        try:
+                            total += index
+                        except ValueError:
+                            total -= 1
+                    else:
+                        if a > index:
+                            total += a
+                        else:
+                            total -= index
+                if total and (a and b):
+                    return total
+                return a + b + c + d
+            """
+        ).strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = analyze_refactor_opportunities(
+        (module,),
+        max_function_length=50,
+        max_class_methods=10,
+        max_cyclomatic_complexity=4,
+        max_parameters=3,
+    )
+
+    complexity = next(
+        (op for op in report.opportunities if op.kind == "cyclomatic_complexity"),
+        None,
+    )
+    assert complexity is not None, "Expected cyclomatic complexity finding"
+    assert complexity.metric is not None and complexity.metric > complexity.threshold
+
+    parameters = next(
+        (op for op in report.opportunities if op.kind == "long_parameter_list"),
+        None,
+    )
+    assert parameters is not None, "Expected parameter pressure finding"
+    assert parameters.metric == 4
+    assert parameters.threshold == 3
+
+
+def test_analyze_refactor_opportunities_highlights_missing_docstrings(
+    tmp_path: Path,
+) -> None:
+    module = tmp_path / "docstrings.py"
+    module.write_text(
+        textwrap.dedent(
+            """
+            def public_api(value):
+                total = 0
+                for item in range(6):
+                    total += value + item
+                for other in range(6):
+                    total += other
+                return total
+            """
+        ).strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = analyze_refactor_opportunities(
+        (module,),
+        min_docstring_length=5,
+    )
+
+    docstring_issue = next(
+        (op for op in report.opportunities if op.kind == "missing_docstring"),
+        None,
+    )
+    assert docstring_issue is not None
+    assert docstring_issue.symbol == "public_api"
+
+
+def test_refactor_report_payload_is_sorted(tmp_path: Path) -> None:
+    module = tmp_path / "refactor.py"
+    module.write_text(
+        textwrap.dedent(
+            """
+            def branchy(value):
+                if value:
+                    return value
+                return None
+            # TODO: simplify branching
+            """
+        ).strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = analyze_refactor_opportunities((module,))
+
+    payload = report.to_payload()
+    assert payload["opportunities"], "Expected at least one opportunity"
+    ranks = [item["severity_rank"] for item in payload["opportunities"]]
+    assert ranks == sorted(ranks, reverse=True)

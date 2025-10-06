@@ -22,7 +22,7 @@
 - 🐳 **Offline Deployment**: Container image caching for air-gapped environments
 - 🔐 **TUF Integration**: Multi-backend key storage (AWS, Azure, Vault, keyring)
 - ✅ **Quality Gates**: 8 comprehensive quality gates enforcing frontier standards
-- 🎯 **89.10% Test Coverage**: Surpasses the 80% gate with healthy headroom, now covering dependency policy enforcement, constraints generation, security overlay ingestion, and the upgraded developer toolbox with profile-aware planning
+- 🎯 **83.96% Test Coverage**: Surpasses the 80% gate while covering dependency policy enforcement, constraints generation, security overlay ingestion, and the upgraded developer toolbox with profile-aware planning
 - 📝 **Documentation Linting**: Vale integration for style consistency
 - 🔍 **CodeQL Analysis**: Comprehensive SAST with security-extended queries
 - 📈 **Coverage on Diff**: 80% threshold for changed lines
@@ -161,6 +161,10 @@ chiron tools coverage hotspots --threshold 85 --limit 5
 chiron tools coverage gaps --min-statements 40 --limit 3
 chiron tools coverage guard --threshold 90
 chiron tools coverage focus src/chiron/deps/verify.py --lines 5
+
+# Inspect refactor opportunities with structural heuristics and coverage overlays
+chiron tools refactor analyze --json
+# → flags long functions, deep complexity, parameter pressure, missing docstrings, TODO markers, and low coverage
 ```
 
 Interactive runs stream rich progress bars and colour-coded panels, letting you
@@ -324,7 +328,7 @@ uv run pytest -m security
 uv run pytest -m contract
 ```
 
-**Test Coverage**: 89.10% (705 tests passing)
+**Test Coverage**: 83.96% (750 tests passing)
 
 - Minimum gate: 50% ✅
 - Target: 65% 🎯 (approaching)
@@ -334,7 +338,8 @@ See [docs/QUALITY_GATES.md](docs/QUALITY_GATES.md) for comprehensive quality sta
 
 ## 📚 Documentation
 
-- [Quality Gates](docs/QUALITY_GATES.md) - **NEW**: Frontier-grade quality standards
+- [Tutorial: First Run](docs/tutorials/first-run.md) - Walk through the CLI, quality gates, and service launch in one sitting
+- [Quality Gates](docs/QUALITY_GATES.md) - Frontier-grade quality standards with automated sync markers
 - [Testing Progress](TESTING_PROGRESS_SUMMARY.md) - **Current testing status and metrics**
 - [Deps Modules Status](docs/DEPS_MODULES_STATUS.md) - **NEW**: Supply-chain testing roadmap
 - [Environment Sync](docs/ENVIRONMENT_SYNC.md) - Dev/CI synchronization guide
@@ -376,11 +381,11 @@ Chiron is actively developed and maintained. We follow semantic versioning and m
 
 ### Quality Status
 
-- ✅ **Test Coverage**: 89.10% (exceeds the 80% frontier gate with margin)
+- ✅ **Test Coverage**: 83.96% (exceeds the 80% frontier gate with margin)
 - ✅ **Security Gate**: Zero critical vulnerabilities
 - ✅ **Type Safety**: Strict MyPy checking passes
 - ✅ **Code Quality**: Ruff linting passes
-- ✅ **All Tests Passing**: 705 tests
+- ✅ **All Tests Passing**: 750 tests
 
 ### Feature Status
 

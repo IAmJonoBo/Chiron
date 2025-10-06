@@ -27,8 +27,10 @@ except ImportError as exc:
 
 from chiron.dev_toolbox import (
     CoverageReport,
+    DiataxisEntry,
     DocumentationSyncError,
     QualitySuiteProgressEvent,
+    analyze_refactor_opportunities,
     available_quality_profiles,
     build_quality_suite_monitoring,
     build_quality_suite_plan,
@@ -36,10 +38,13 @@ from chiron.dev_toolbox import (
     coverage_gap_summary,
     coverage_guard,
     coverage_hotspots,
+    discover_diataxis_entries,
+    dump_diataxis_entries,
     execute_quality_suite,
     load_quality_configuration,
     prepare_quality_suite_dry_run,
     quality_suite_manifest,
+    sync_diataxis_documentation,
     sync_quality_suite_documentation,
 )
 from chiron.github import (
@@ -239,6 +244,12 @@ app.add_typer(tools_app, name="tools")
 
 coverage_app = typer.Typer(help="Test coverage analytics")
 tools_app.add_typer(coverage_app, name="coverage")
+
+docs_app = typer.Typer(help="Documentation workflows")
+tools_app.add_typer(docs_app, name="docs")
+
+refactor_app = typer.Typer(help="Refactor insights and code health diagnostics")
+tools_app.add_typer(refactor_app, name="refactor")
 
 github_app = typer.Typer(help="GitHub Actions integration and artifact sync")
 app.add_typer(github_app, name="github")
@@ -1557,6 +1568,163 @@ def coverage_gaps_cli(
 
     report = CoverageReport.from_xml(xml)
     typer.echo(coverage_gap_summary(report, min_statements=min_statements, limit=limit))
+
+
+@refactor_app.command("analyze")
+def refactor_analyze(
+    path: list[Path] = typer.Option(
+        [],
+        "--path",
+        "-p",
+        help="Files or directories to inspect (defaults to src/ and tests/)",
+    ),
+    coverage_xml: Path | None = typer.Option(
+        None,
+        "--coverage-xml",
+        help="Optional coverage XML file to correlate with analysis",
+    ),
+    max_function_length: int = typer.Option(
+        60,
+        "--max-function-length",
+        min=10,
+        help="Maximum allowed function length before flagging",
+    ),
+    max_class_methods: int = typer.Option(
+        12,
+        "--max-class-methods",
+        min=1,
+        help="Maximum allowed class method count before flagging",
+    ),
+    max_cyclomatic_complexity: int = typer.Option(
+        10,
+        "--max-cyclomatic-complexity",
+        min=1,
+        help="Cyclomatic complexity threshold for functions",
+    ),
+    max_parameters: int = typer.Option(
+        6,
+        "--max-parameters",
+        min=1,
+        help="Maximum allowed number of parameters for a callable",
+    ),
+    min_docstring_length: int = typer.Option(
+        20,
+        "--min-docstring-length",
+        min=1,
+        help="Flag public callables without docstrings once they exceed this length",
+    ),
+    coverage_threshold: float = typer.Option(
+        85.0,
+        "--coverage-threshold",
+        min=0.0,
+        help="Coverage percentage gate for highlighting modules",
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit machine-readable JSON report",
+    ),
+) -> None:
+    report = analyze_refactor_opportunities(
+        tuple(path) or None,
+        coverage_xml=coverage_xml,
+        max_function_length=max_function_length,
+        max_class_methods=max_class_methods,
+        max_cyclomatic_complexity=max_cyclomatic_complexity,
+        max_parameters=max_parameters,
+        min_docstring_length=min_docstring_length,
+        coverage_threshold=coverage_threshold,
+    )
+
+    if json_output:
+        typer.echo(json.dumps(report.to_payload(), indent=2))
+        return
+
+    console = Console()
+    if not report.opportunities:
+        console.print("[green]No refactor opportunities detected.[/green]")
+        return
+
+    console.print()
+    console.rule("[bold]Refactor Opportunities[/bold]")
+    severity_styles = {
+        "critical": "bold red",
+        "warning": "yellow",
+        "info": "cyan",
+    }
+    for opportunity in report.opportunities:
+        style = severity_styles.get(opportunity.severity, "white")
+        metric_hint = ""
+        if opportunity.metric is not None and opportunity.threshold is not None:
+            metric_hint = (
+                f" (observed {opportunity.metric}, threshold {opportunity.threshold})"
+            )
+        symbol = f" · {opportunity.symbol}" if opportunity.symbol else ""
+        console.print(
+            f"[{style}]{opportunity.severity.upper()}[/] "
+            f"{opportunity.path}:{opportunity.line}{symbol} — "
+            f"{opportunity.message}{metric_hint}"
+        )
+
+
+@docs_app.command("sync-diataxis")
+def docs_sync_diataxis(
+    config: Path = typer.Option(
+        Path("docs/diataxis.json"),
+        "--config",
+        help="Path to Diataxis configuration JSON",
+    ),
+    target: Path = typer.Option(
+        Path("docs/index.md"),
+        "--target",
+        help="Markdown file containing Diataxis markers",
+    ),
+    marker: str = typer.Option(
+        "DIATAXIS_AUTODOC",
+        "--marker",
+        help="Documentation marker name to update",
+    ),
+    discover: bool = typer.Option(
+        False,
+        "--discover/--no-discover",
+        help="Discover Diataxis entries from docs front matter before syncing",
+    ),
+    docs_dir: Path = typer.Option(
+        Path("docs"),
+        "--docs-dir",
+        help="Docs directory to scan when using --discover",
+    ),
+    write_config: bool = typer.Option(
+        True,
+        "--write-config/--no-write-config",
+        help="Persist discovered entries back to the Diataxis JSON map",
+    ),
+) -> None:
+    """Synchronise the Diataxis documentation overview."""
+
+    try:
+        discovered_entries: dict[str, tuple[DiataxisEntry, ...]] | None = None
+        if discover:
+            discovered_entries = discover_diataxis_entries(docs_dir)
+            if write_config:
+                dump_diataxis_entries(config, discovered_entries)
+
+        sync_diataxis_documentation(
+            config,
+            target,
+            marker=marker,
+            entries=discovered_entries,
+        )
+    except DocumentationSyncError as exc:
+        typer.secho(f"❌ {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1) from exc
+
+    if discover:
+        total = sum(len(bucket) for bucket in (discovered_entries or {}).values())
+        typer.echo(
+            f"Discovered {total} Diataxis entries from {docs_dir} and updated {config}"
+        )
+    typer.echo(f"Updated {target} using {config}")
 
 
 @tools_app.command(

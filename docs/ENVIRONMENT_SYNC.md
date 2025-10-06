@@ -1,3 +1,9 @@
+---
+title: "Environment Synchronization"
+diataxis: how_to
+summary: Keep dev containers, CI, and local tooling aligned with automated dependency sync scripts.
+---
+
 # Environment Synchronization
 
 This document describes the automatic synchronization mechanism between development and CI environments in Chiron.

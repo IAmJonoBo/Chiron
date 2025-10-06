@@ -1,3 +1,9 @@
+---
+title: "Chiron Observability Sandbox"
+diataxis: how_to
+summary: Stand up the local OpenTelemetry stack with docker-compose for metrics, traces, and logs.
+---
+
 # Chiron Observability Sandbox
 
 This Docker Compose setup provides a complete local observability stack for Chiron development and testing.

@@ -139,12 +139,34 @@ graph TB
 - **Security**: Responsible disclosure process
 - **Releases**: Semantic versioning with detailed changelogs
 
-## Next Steps
+## Documentation overview
 
-Ready to get started? Choose your path:
+<!-- BEGIN DIATAXIS_AUTODOC -->
+### Tutorials
 
-- 📚 **New to Chiron?** Start with the [Quick Start Guide](getting-started/quickstart.md)
-- 🔧 **Integrating into existing project?** See [Library Usage](guide/library.md)
-- 🚀 **Building a service?** Check out [Service Mode](guide/service.md)
-- 🛡️ **Security focused?** Explore [Security Features](guide/security.md)
-- 📊 **Need observability?** Learn about [Monitoring & Telemetry](guide/observability.md)
+- [Tutorial: First Run with Chiron](tutorials/first-run.md) — Install dependencies, execute the quality toolbox, and launch the FastAPI service locally.
+
+### How-to Guides
+
+- [Chiron Observability Sandbox](OBSERVABILITY_SANDBOX.md) — Stand up the local OpenTelemetry stack with docker-compose for metrics, traces, and logs.
+- [Environment Synchronization](ENVIRONMENT_SYNC.md) — Keep dev containers, CI, and local tooling aligned with automated dependency sync scripts.
+- [Grafana Dashboard Deployment Guide](GRAFANA_DEPLOYMENT_GUIDE.md) — Provision Grafana dashboards against the Chiron observability sandbox.
+- [MCP Integration Testing Guide](MCP_INTEGRATION_TESTING.md) — Run the MCP server end-to-end with contract validation and wheelhouse planning.
+- [Quality Gates - Frontier Standards](QUALITY_GATES.md) — Align local QA suites with CI using profile-aware planning, monitoring, and documentation sync.
+
+### Reference
+
+- [Supply-Chain (deps) Modules Status & Roadmap](DEPS_MODULES_STATUS.md) — Reference matrix for dependency governance coverage across modules.
+- [Tooling Implementation Status](TOOLING_IMPLEMENTATION_STATUS.md) — Detailed catalogue of developer tooling and automation surfaced in the repo.
+- [TUF Implementation Guide](TUF_IMPLEMENTATION_GUIDE.md) — Reference procedures for supply-chain signing and key management using TUF.
+
+### Explanation
+
+- [Chiron Gap Analysis (April 2025)](GAP_ANALYSIS.md) — Current operational, testing, and documentation gaps with recommended remediations.
+- [CI Reproducibility Validation Guide](CI_REPRODUCIBILITY_VALIDATION.md) — Explanation of reproducible build guarantees and validation approach.
+- [Module Boundary Testing Gap Analysis](MODULE_BOUNDARY_TESTING.md) — Rationale and coverage notes for cross-module integration tests.
+
+_Updated automatically via `chiron tools docs sync-diataxis --discover`._
+<!-- END DIATAXIS_AUTODOC -->
+
+Use `uv run chiron tools docs sync-diataxis --discover` after adding or moving guides to refresh the Diataxis map and section automatically.

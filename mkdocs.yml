@@ -75,29 +75,22 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Getting Started:
-      - Installation: getting-started/installation.md
-      - Quick Start: getting-started/quickstart.md
-      - Configuration: getting-started/configuration.md
-  - User Guide:
-      - Library Usage: guide/library.md
-      - Service Mode: guide/service.md
-      - CLI Commands: guide/cli.md
-      - Security Features: guide/security.md
-      - Observability: guide/observability.md
-  - API Reference:
-      - Core: api/core.md
-      - Service: api/service.md
-      - CLI: api/cli.md
-      - Exceptions: api/exceptions.md
-  - Architecture:
-      - Overview: architecture/overview.md
-      - Security Model: architecture/security.md
-      - Deployment: architecture/deployment.md
-  - Development:
-      - Contributing: development/contributing.md
-      - Testing: development/testing.md
-      - Release Process: development/releases.md
+  - Tutorials:
+      - "First Run with Chiron": tutorials/first-run.md
+  - How-to Guides:
+      - "Quality Gate Automation": QUALITY_GATES.md
+      - "Environment Sync Parity": ENVIRONMENT_SYNC.md
+      - "Observability Sandbox": OBSERVABILITY_SANDBOX.md
+      - "Grafana Deployment": GRAFANA_DEPLOYMENT_GUIDE.md
+      - "MCP Integration Testing": MCP_INTEGRATION_TESTING.md
+  - Reference:
+      - "Dependency Module Status": DEPS_MODULES_STATUS.md
+      - "Tooling Implementation Status": TOOLING_IMPLEMENTATION_STATUS.md
+      - "TUF Implementation Guide": TUF_IMPLEMENTATION_GUIDE.md
+  - Explanation:
+      - "Gap Analysis": GAP_ANALYSIS.md
+      - "CI Reproducibility Validation": CI_REPRODUCIBILITY_VALIDATION.md
+      - "Module Boundary Testing": MODULE_BOUNDARY_TESTING.md
 
 extra:
   social:
