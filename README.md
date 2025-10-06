@@ -32,6 +32,7 @@
 - 🔄 **Reproducibility**: Automated reprotest/diffoscope validation
 - 📊 **Observability Sandbox**: Complete local observability stack
 - 🔥 **Chaos Testing**: Chaos Toolkit for resilience validation
+- 🧾 **Documentation Parity**: Auto-sync quality suite docs via `chiron tools qa --sync-docs`
 
 ## 🚀 Quick Start
 
@@ -143,6 +144,18 @@ chiron tools qa --profile full --save-report reports/qa.json
 # Produce machine-readable output or trim to focused gates
 chiron tools qa --profile verify --no-security --json
 
+# Monitor CLI/service coverage focus areas and capture actionable insights
+chiron tools qa --profile full --monitor --coverage-xml coverage.xml --json
+
+# Generate an agent-ready quickstart with monitored follow-ups
+chiron tools qa --profile full --guide --monitor --coverage-xml coverage.xml
+
+# Exercise Pact contract validation gates alongside the standard suite
+chiron tools qa --profile full --contracts --dry-run
+
+# Synchronise documentation snapshots with the resolved plan
+chiron tools qa --profile full --sync-docs docs/QUALITY_GATES.md
+
 # Surface under-tested modules and enforce coverage thresholds
 chiron tools coverage hotspots --threshold 85 --limit 5
 chiron tools coverage gaps --min-statements 40 --limit 3
@@ -150,8 +163,18 @@ chiron tools coverage guard --threshold 90
 chiron tools coverage focus src/chiron/deps/verify.py --lines 5
 ```
 
-Use these helpers to align with CI, quickly identify hotspots, and plan test
-backfills while keeping automated quality gates green.
+Interactive runs stream rich progress bars and colour-coded panels, letting you
+track gate progress, durations, and failures at a glance without leaving the
+terminal.
+
+Use these helpers to align with CI, quickly identify hotspots, plan test
+backfills, and hand actionable follow-ups to AI agents without losing sight of
+the automated quality gates. Coverage monitoring now normalises module paths
+from `coverage.xml`, so CLI and service focus areas are detected whether the
+report lists `src/chiron/...`, `cli/...`, or absolute paths produced by your
+environment. Dry-run snapshots bundle the resolved execution plan together with
+the rendered quickstart guide and monitoring-derived recommendations, giving
+Copilots a single payload to stage dry-runs or queue remediation tasks.
 
 ## 🏗️ Architecture
 

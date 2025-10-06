@@ -1,197 +1,194 @@
-#!/usr/bin/env python3
-"""Verify dependency pipeline setup and integration.
-
-This script checks that all components of the dependency management pipeline
-are properly wired, scripts are importable, CLI commands are registered, and
-workflows reference the correct commands.
-"""
+"""Dependency pipeline verification helpers."""
 
 from __future__ import annotations
 
-import sys
+from collections.abc import Callable, Iterable
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from click import Command
+    from typer import Typer
+else:  # pragma: no cover - fallback typing when optional deps missing
+    Command = Any
+    Typer = Any
+
+GetCommand = Callable[[Typer], Command]
+
+try:  # pragma: no cover - Typer is an optional runtime dependency
+    from typer.main import get_command as _get_command
+except Exception:  # pragma: no cover - fallback when Typer missing
+    def _missing_get_command(app: Typer) -> Command:
+        raise RuntimeError("Typer is not installed")
+
+    get_command: GetCommand = cast(GetCommand, _missing_get_command)
+else:
+    get_command = cast(GetCommand, _get_command)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+_SCRIPT_CHECKS: dict[str, tuple[str, str]] = {
+    "scripts/preflight_deps.py": ("preflight_deps.py", "run_module(\"chiron.deps.preflight\")"),
+    "scripts/sync_env_deps.py": ("sync_env_deps.py", "def main"),
+    "scripts/policy_context.py": ("policy_context.py", "def main"),
+}
+
+_CLI_PATHS: dict[str, tuple[str, ...]] = {
+    "cli_module": (),
+    "deps.guard": ("deps", "guard"),
+    "deps.verify": ("deps", "verify"),
+    "deps.reproducibility": ("deps", "reproducibility"),
+    "tools.qa": ("tools", "qa"),
+    "tools.coverage.guard": ("tools", "coverage", "guard"),
+    "github.sync": ("github", "sync"),
+    "github.copilot.prepare": ("github", "copilot", "prepare"),
+}
+
+_WORKFLOW_CHECKS: dict[str, tuple[str, Iterable[str]]] = {
+    "ci.yml uses uv sync": ("ci.yml", ["uv sync --all-extras --dev"]),
+    "airgap.yml runs doctor": ("airgap.yml", ["chiron doctor"]),
+    "sync-env.yml runs synchroniser": (
+        "sync-env.yml",
+        ["python scripts/sync_env_deps.py"],
+    ),
+}
+
+_DOCUMENTATION_CHECKS: dict[str, tuple[str, str]] = {
+    "docs/DEPS_MODULES_STATUS.md": (
+        "DEPS_MODULES_STATUS.md",
+        "supply_chain.py",
+    ),
+    "docs/CI_REPRODUCIBILITY_VALIDATION.md": (
+        "CI_REPRODUCIBILITY_VALIDATION.md",
+        "supply chain integrity",
+    ),
+}
+
 
 def check_script_imports() -> dict[str, bool]:
-    """Verify all dependency management scripts exist and have main() functions."""
+    """Validate that helper scripts exist and delegate to the expected modules."""
+
     scripts_dir = REPO_ROOT / "scripts"
-    # Scripts that have main() functions (standalone executables)
-    standalone_scripts = {
-        "upgrade_guard.py": "def main(",
-        "upgrade_planner.py": "def main(",
-        "dependency_drift.py": "def main(",
-        "mirror_manager.py": "def main(",
-        "preflight_deps.py": "def main(",
-        "sync-dependencies.py": "def main(",
-        "offline_package.py": "def main(",
-        "offline_doctor.py": "def main(",
-        "bootstrap_offline.py": "def main(",
-    }
+    results: dict[str, bool] = {}
 
-    # Library modules (no main() function required)
-    library_modules = {
-        "deps_status.py": "generate_status",
-    }
+    for label, (filename, marker) in _SCRIPT_CHECKS.items():
+        script_path = scripts_dir / filename
+        if not script_path.exists():
+            results[label] = False
+            continue
 
-    results = {}
-
-    for script_name, main_signature in standalone_scripts.items():
-        script_path = scripts_dir / script_name
-        if script_path.exists():
-            content = script_path.read_text(encoding="utf-8")
-            results[f"{script_name} (standalone)"] = main_signature in content
-        else:
-            results[f"{script_name} (standalone)"] = False
-
-    for script_name, required_function in library_modules.items():
-        script_path = scripts_dir / script_name
-        if script_path.exists():
-            content = script_path.read_text(encoding="utf-8")
-            results[f"{script_name} (library)"] = required_function in content
-        else:
-            results[f"{script_name} (library)"] = False
+        content = script_path.read_text(encoding="utf-8")
+        results[label] = marker in content
 
     return results
 
 
-def check_cli_commands() -> dict[str, bool]:
-    """Verify CLI commands are registered."""
-    cli_path = REPO_ROOT / "chiron" / "cli.py"
+def _load_cli_root() -> Any | None:
+    try:
+        from chiron import typer_cli
+    except Exception:  # pragma: no cover - optional import guard
+        return None
 
-    if not cli_path.exists():
+    try:
+        return get_command(typer_cli.app)
+    except Exception:  # pragma: no cover - defensive
+        return None
+
+
+def _has_command_path(root: Any, path: tuple[str, ...]) -> bool:
+    current = root
+    for segment in path:
+        commands = getattr(current, "commands", {})
+        if segment not in commands:
+            return False
+        current = commands[segment]
+    return True
+
+
+def check_cli_commands() -> dict[str, bool]:
+    """Inspect the Typer CLI tree to ensure critical commands are wired up."""
+
+    root = _load_cli_root()
+    if root is None:
         return {"cli_module": False}
 
-    cli_content = cli_path.read_text(encoding="utf-8")
+    results: dict[str, bool] = {}
+    for label, path in _CLI_PATHS.items():
+        if not path:
+            results[label] = True
+        else:
+            results[label] = _has_command_path(root, path)
 
-    commands = {
-        "deps status": '@deps_app.command("status")' in cli_content,
-        "deps upgrade": '@deps_app.command("upgrade")' in cli_content,
-        "deps guard": '@deps_app.command("guard"' in cli_content,
-        "deps drift": '@deps_app.command("drift"' in cli_content,
-        "deps sync": '@deps_app.command("sync"' in cli_content,
-        "deps preflight": '@deps_app.command("preflight"' in cli_content,
-        "deps mirror": '@deps_app.command("mirror"' in cli_content,
-        "deps snapshot ensure": '@snapshot_app.command("ensure")' in cli_content,
-        "offline-package": "@app.command" in cli_content
-        and "offline-package" in cli_content,
-        "offline-doctor": "@app.command" in cli_content
-        and "offline-doctor" in cli_content,
-    }
-
-    return commands
+    return results
 
 
 def check_workflow_integration() -> dict[str, bool]:
-    """Verify workflows use CLI commands."""
+    """Ensure automation workflows call into the hardened tooling."""
+
     workflows_dir = REPO_ROOT / ".github" / "workflows"
+    results: dict[str, bool] = {}
 
-    checks = {
-        "dependency-preflight uses CLI": False,
-        "dependency-contract-check uses CLI": False,
-        "offline-packaging uses CLI": False,
-    }
+    for label, (filename, markers) in _WORKFLOW_CHECKS.items():
+        workflow_path = workflows_dir / filename
+        if not workflow_path.exists():
+            results[label] = False
+            continue
 
-    # Check dependency-preflight.yml
-    preflight_yml = workflows_dir / "dependency-preflight.yml"
-    if preflight_yml.exists():
-        content = preflight_yml.read_text(encoding="utf-8")
-        checks["dependency-preflight uses CLI"] = (
-            "chiron deps preflight" in content
-            and "chiron deps guard" in content
-            and "chiron deps snapshot ensure" in content
-        )
+        content = workflow_path.read_text(encoding="utf-8")
+        results[label] = all(marker in content for marker in markers)
 
-    # Check dependency-contract-check.yml
-    contract_yml = workflows_dir / "dependency-contract-check.yml"
-    if contract_yml.exists():
-        content = contract_yml.read_text(encoding="utf-8")
-        checks["dependency-contract-check uses CLI"] = "chiron deps sync" in content
-
-    # Check offline-packaging-optimized.yml
-    packaging_yml = workflows_dir / "offline-packaging-optimized.yml"
-    if packaging_yml.exists():
-        content = packaging_yml.read_text(encoding="utf-8")
-        checks["offline-packaging uses CLI"] = (
-            "chiron offline-package" in content or "chiron offline-doctor" in content
-        )
-
-    return checks
+    return results
 
 
 def check_documentation() -> dict[str, bool]:
-    """Verify documentation exists and references key concepts."""
+    """Verify documentation highlights the supply-chain hardening story."""
+
     docs_dir = REPO_ROOT / "docs"
+    results: dict[str, bool] = {}
 
-    checks = {
-        "dependency-governance.md exists": False,
-        "packaging workflow linked": False,
-    }
+    for label, (filename, marker) in _DOCUMENTATION_CHECKS.items():
+        doc_path = docs_dir / filename
+        if not doc_path.exists():
+            results[label] = False
+            continue
 
-    governance_doc = docs_dir / "dependency-governance.md"
-    if governance_doc.exists():
-        checks["dependency-governance.md exists"] = True
-        content = governance_doc.read_text(encoding="utf-8")
-        checks["packaging workflow linked"] = (
-            "packaging-workflow-integration.md" in content
-        )
+        content = doc_path.read_text(encoding="utf-8")
+        results[label] = marker in content
 
-    return checks
+    return results
 
 
-def main() -> int:  # noqa: C901
-    """Run all verification checks."""
+def main() -> int:
+    """Run the verification checks and emit a human-readable summary."""
+
     print("🔍 Verifying Dependency Pipeline Setup")
     print("=" * 60)
 
-    all_passed = True
+    groups = {
+        "📦 Checking Script Delegates": check_script_imports(),
+        "🖥️  Checking CLI Commands": check_cli_commands(),
+        "⚙️  Checking Workflow Integration": check_workflow_integration(),
+        "📚 Checking Documentation": check_documentation(),
+    }
 
-    # Check script imports
-    print("\n📦 Checking Script Imports...")
-    script_results = check_script_imports()
-    for name, passed in script_results.items():
-        status = "✅" if passed else "❌"
-        print(f"  {status} {name}")
-        if not passed:
-            all_passed = False
+    overall = True
+    for heading, checks in groups.items():
+        print(f"\n{heading}")
+        for name, passed in checks.items():
+            status = "✅" if passed else "❌"
+            print(f"  {status} {name}")
+            overall &= passed
 
-    # Check CLI commands
-    print("\n🖥️  Checking CLI Commands...")
-    cli_results = check_cli_commands()
-    for name, passed in cli_results.items():
-        status = "✅" if passed else "❌"
-        print(f"  {status} {name}")
-        if not passed:
-            all_passed = False
-
-    # Check workflow integration
-    print("\n⚙️  Checking Workflow Integration...")
-    workflow_results = check_workflow_integration()
-    for name, passed in workflow_results.items():
-        status = "✅" if passed else "❌"
-        print(f"  {status} {name}")
-        if not passed:
-            all_passed = False
-
-    # Check documentation
-    print("\n📚 Checking Documentation...")
-    doc_results = check_documentation()
-    for name, passed in doc_results.items():
-        status = "✅" if passed else "❌"
-        print(f"  {status} {name}")
-        if not passed:
-            all_passed = False
-
-    # Summary
     print("\n" + "=" * 60)
-    if all_passed:
+    if overall:
         print("✅ All checks passed! Dependency pipeline is properly configured.")
         return 0
-    else:
-        print("❌ Some checks failed. Review the output above.")
-        return 1
+
+    print("❌ Some checks failed. Review the output above.")
+    return 1
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover - manual invocation
+    import sys
+
     sys.exit(main())
