@@ -50,7 +50,9 @@ class DeterministicLLMClient:
         try:
             return self._responses[prompt]
         except KeyError as exc:  # pragma: no cover - defensive
-            raise KeyError(f"No deterministic response configured for prompt: {prompt}") from exc
+            raise KeyError(
+                f"No deterministic response configured for prompt: {prompt}"
+            ) from exc
 
 
 class LLMContractRunner:
@@ -65,7 +67,9 @@ class LLMContractRunner:
         try:
             data = json.loads(payload)
         except json.JSONDecodeError as exc:  # pragma: no cover - defensive
-            raise ContractAssertionError(f"LLM response is not valid JSON: {payload}") from exc
+            raise ContractAssertionError(
+                f"LLM response is not valid JSON: {payload}"
+            ) from exc
 
         tool = data.get("tool")
         if not tool:
@@ -120,14 +124,18 @@ def default_llm_client() -> DeterministicLLMClient:
     """Return a deterministic client suitable for tests and CI."""
 
     responses = {
-        default_scenarios()[0].prompt: json.dumps({
-            "tool": "chiron_health_check",
-            "arguments": {},
-        }),
-        default_scenarios()[1].prompt: json.dumps({
-            "tool": "chiron_build_wheelhouse",
-            "arguments": {"dry_run": True},
-        }),
+        default_scenarios()[0].prompt: json.dumps(
+            {
+                "tool": "chiron_health_check",
+                "arguments": {},
+            }
+        ),
+        default_scenarios()[1].prompt: json.dumps(
+            {
+                "tool": "chiron_build_wheelhouse",
+                "arguments": {"dry_run": True},
+            }
+        ),
     }
     return DeterministicLLMClient(responses)
 

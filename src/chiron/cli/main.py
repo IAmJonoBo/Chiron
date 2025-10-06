@@ -953,6 +953,7 @@ def doctor(ctx: click.Context) -> None:
         console.print(f"[red]Health check failed: {e}[/red]")
         sys.exit(1)
 
+
 __all__ = ["cli", "main"]
 
 # Backwards-compatible name that existing entry points import.

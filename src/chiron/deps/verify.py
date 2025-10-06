@@ -18,6 +18,7 @@ GetCommand = Callable[[Typer], Command]
 try:  # pragma: no cover - Typer is an optional runtime dependency
     from typer.main import get_command as _get_command
 except Exception:  # pragma: no cover - fallback when Typer missing
+
     def _missing_get_command(app: Typer) -> Command:
         raise RuntimeError("Typer is not installed")
 
@@ -28,7 +29,10 @@ else:
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 _SCRIPT_CHECKS: dict[str, tuple[str, str]] = {
-    "scripts/preflight_deps.py": ("preflight_deps.py", "run_module(\"chiron.deps.preflight\")"),
+    "scripts/preflight_deps.py": (
+        "preflight_deps.py",
+        'run_module("chiron.deps.preflight")',
+    ),
     "scripts/sync_env_deps.py": ("sync_env_deps.py", "def main"),
     "scripts/policy_context.py": ("policy_context.py", "def main"),
 }
