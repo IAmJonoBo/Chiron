@@ -1770,6 +1770,271 @@ def refactor_hotspots(
         )
 
 
+@refactor_app.command("codemod")
+def refactor_codemod(
+    old_name: str = typer.Option(
+        ...,
+        "--old-name",
+        help="Current function/method name to rename",
+    ),
+    new_name: str = typer.Option(
+        ...,
+        "--new-name",
+        help="New function/method name",
+    ),
+    path: list[Path] = typer.Option(
+        [],
+        "--path",
+        "-p",
+        help="Python files to transform",
+    ),
+    directory: Path | None = typer.Option(
+        None,
+        "--dir",
+        help="Directory to scan for Python files (recursive)",
+    ),
+    include_tests: bool = typer.Option(
+        False,
+        "--include-tests",
+        help="Include test files when scanning directory",
+    ),
+    dry_run: bool = typer.Option(
+        True,
+        "--dry-run/--apply",
+        help="Dry run mode (default) or apply changes",
+    ),
+) -> None:
+    """Run LibCST-based code transformations.
+
+    Currently supports function/method renaming. Uses LibCST for lossless
+    transformations that preserve formatting and comments.
+
+    Example:
+        chiron tools refactor codemod --old-name foo --new-name bar --path src/module.py
+    """
+    import subprocess
+    import sys
+
+    script_path = Path("dev-toolkit/refactoring/scripts/codemods/py/rename_function.py")
+
+    if not script_path.exists():
+        typer.secho(
+            f"Error: Codemod script not found: {script_path}",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        typer.secho(
+            "Ensure dev-toolkit/refactoring/ structure is present",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    # Build command
+    cmd = [
+        sys.executable,
+        str(script_path),
+        "--old-name",
+        old_name,
+        "--new-name",
+        new_name,
+    ]
+
+    if directory:
+        cmd.extend(["--dir", str(directory)])
+        if include_tests:
+            cmd.append("--include-tests")
+
+    for p in path:
+        cmd.append(str(p))
+
+    if not dry_run:
+        cmd.append("--apply")
+
+    # Execute
+    console = Console()
+    mode = "DRY RUN" if dry_run else "APPLY"
+    console.print(f"\n[bold]Running codemod ({mode})[/bold]")
+    console.print(f"Transform: {old_name} → {new_name}\n")
+
+    try:
+        result = subprocess.run(cmd, check=False)
+        if result.returncode != 0:
+            raise typer.Exit(result.returncode)
+    except FileNotFoundError as exc:
+        typer.secho(f"Error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+
+@refactor_app.command("verify")
+def refactor_verify(
+    path: Path = typer.Option(
+        ...,
+        "--path",
+        "-p",
+        help="Python file to generate characterization tests for",
+    ),
+    output: Path = typer.Option(
+        Path("tests/snapshots"),
+        "--output",
+        "-o",
+        help="Output directory for test scaffolds",
+    ),
+    max_functions: int = typer.Option(
+        10,
+        "--max-functions",
+        min=1,
+        help="Maximum number of functions to generate tests for",
+    ),
+) -> None:
+    """Generate characterization test scaffolds.
+
+    Creates pytest test skeletons that lock in current behavior before
+    refactoring. These "golden file" or "approval" tests help ensure
+    refactorings are behavior-preserving.
+
+    Example:
+        chiron tools refactor verify --path src/chiron/module.py
+    """
+    import subprocess
+    import sys
+
+    script_path = Path("dev-toolkit/refactoring/scripts/verify/snapshot_scaffold.py")
+
+    if not script_path.exists():
+        typer.secho(
+            f"Error: Verification script not found: {script_path}",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    if not path.exists():
+        typer.secho(
+            f"Error: File not found: {path}",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    # Build command
+    cmd = [
+        sys.executable,
+        str(script_path),
+        "--path",
+        str(path),
+        "--output",
+        str(output),
+        "--max-functions",
+        str(max_functions),
+    ]
+
+    # Execute
+    console = Console()
+    console.print("\n[bold]Generating characterization test scaffolds[/bold]")
+    console.print(f"Source: {path}")
+    console.print(f"Output: {output}\n")
+
+    try:
+        result = subprocess.run(cmd, check=False)
+        if result.returncode != 0:
+            raise typer.Exit(result.returncode)
+    except FileNotFoundError as exc:
+        typer.secho(f"Error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+
+@refactor_app.command("shard")
+def refactor_shard(
+    input_file: Path | None = typer.Option(
+        None,
+        "--input",
+        "-i",
+        help="File containing list of changed files (one per line)",
+    ),
+    use_stdin: bool = typer.Option(
+        False,
+        "--stdin",
+        help="Read file list from stdin",
+    ),
+    shard_size: int = typer.Option(
+        50,
+        "--shard-size",
+        "-s",
+        min=1,
+        help="Number of files per PR shard",
+    ),
+    output_file: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output file for shard plan (default: stdout)",
+    ),
+    format_type: str = typer.Option(
+        "markdown",
+        "--format",
+        "-f",
+        help="Output format: markdown, text, or json",
+    ),
+) -> None:
+    """Split large refactorings into manageable PR shards.
+
+    Helps organize refactoring work that affects many files by splitting
+    changes into reviewable chunks (default: 50 files per PR).
+
+    Example:
+        git diff --name-only main | chiron tools refactor shard --stdin
+        chiron tools refactor shard --input changed.txt --shard-size 30
+    """
+    import subprocess
+    import sys
+
+    script_path = Path("dev-toolkit/refactoring/scripts/rollout/shard_pr_list.py")
+
+    if not script_path.exists():
+        typer.secho(
+            f"Error: Shard script not found: {script_path}",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    if not input_file and not use_stdin:
+        typer.secho(
+            "Error: Must specify --input or --stdin",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    # Build command
+    cmd = [
+        sys.executable,
+        str(script_path),
+        "--shard-size",
+        str(shard_size),
+        "--format",
+        format_type,
+    ]
+
+    if use_stdin:
+        cmd.append("--stdin")
+    elif input_file:
+        cmd.extend(["--input", str(input_file)])
+
+    if output_file:
+        cmd.extend(["--output", str(output_file)])
+
+    # Execute
+    try:
+        result = subprocess.run(cmd, check=False)
+        if result.returncode != 0:
+            raise typer.Exit(result.returncode)
+    except FileNotFoundError as exc:
+        typer.secho(f"Error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+
 @docs_app.command("sync-diataxis")
 def docs_sync_diataxis(
     config: Path = typer.Option(

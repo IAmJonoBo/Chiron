@@ -129,3 +129,29 @@ mutmut-results: ## Show mutation testing results
 
 mutmut-html: ## Generate mutation testing HTML report
 	uv run mutmut html
+
+# Refactoring toolkit targets
+refactor-analyse: ## Run refactoring hotspot analysis
+	@echo "Running git churn analysis..."
+	bash dev-toolkit/refactoring/scripts/analyse/git_churn.sh "12 months ago"
+	@echo ""
+	@echo "Running hotspot analysis..."
+	uv run python dev-toolkit/refactoring/scripts/analyse/hotspots_py.py src/chiron
+
+refactor-verify: ## Generate characterization test scaffolds (usage: make refactor-verify PATH=src/module.py)
+	@if [ -z "$(PATH_TO_VERIFY)" ]; then \
+		echo "Usage: make refactor-verify PATH_TO_VERIFY=src/chiron/module.py"; \
+		exit 1; \
+	fi
+	uv run python dev-toolkit/refactoring/scripts/verify/snapshot_scaffold.py --path $(PATH_TO_VERIFY)
+
+refactor-codemod: ## Run function rename codemod (usage: make refactor-codemod OLD=foo NEW=bar FILES=src/module.py)
+	@if [ -z "$(OLD)" ] || [ -z "$(NEW)" ]; then \
+		echo "Usage: make refactor-codemod OLD=old_func NEW=new_func FILES=src/module.py"; \
+		exit 1; \
+	fi
+	@echo "Dry run mode (no changes will be made)"
+	@echo "Transform: $(OLD) -> $(NEW)"
+	@echo ""
+	uv run python dev-toolkit/refactoring/scripts/codemods/py/rename_function.py \
+		--old-name $(OLD) --new-name $(NEW) $(FILES)

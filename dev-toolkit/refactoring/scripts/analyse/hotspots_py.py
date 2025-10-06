@@ -85,13 +85,18 @@ def get_complexity(src_dir: str) -> Dict[str, int]:
         
         return complexity
     
+    except FileNotFoundError:
+        print("Warning: radon not found. Install with: uv pip install radon", file=sys.stderr)
+        print("Complexity analysis will be skipped.", file=sys.stderr)
+        return {}
     except subprocess.CalledProcessError as e:
-        print(f"Error running radon: {e}", file=sys.stderr)
-        print("Make sure radon is installed: pip install radon", file=sys.stderr)
-        sys.exit(1)
+        print(f"Warning: radon command failed: {e}", file=sys.stderr)
+        print("Complexity analysis will be skipped.", file=sys.stderr)
+        return {}
     except json.JSONDecodeError as e:
-        print(f"Error parsing radon output: {e}", file=sys.stderr)
-        sys.exit(1)
+        print(f"Warning: Could not parse radon output: {e}", file=sys.stderr)
+        print("Complexity analysis will be skipped.", file=sys.stderr)
+        return {}
 
 
 def read_churn(churn_file: str) -> Dict[str, int]:
@@ -180,12 +185,21 @@ def main():
     # Get complexity data
     print("Computing complexity with radon...")
     complexity = get_complexity(args.src_dir)
-    print(f"Found {len(complexity)} files with complexity data")
+    if complexity:
+        print(f"Found {len(complexity)} files with complexity data")
+    else:
+        print("No complexity data available (radon not installed or failed)")
+        print("Continuing with churn data only...")
     
     # Read churn data
     print("Reading churn data...")
     churn = read_churn(args.churn_file)
     print(f"Found {len(churn)} files with churn data")
+    
+    if not complexity and not churn:
+        print("\nError: No data available for hotspot analysis", file=sys.stderr)
+        print("Either install radon or ensure churn data exists", file=sys.stderr)
+        sys.exit(1)
     
     # Compute hotspots
     print("Computing hotspots...")
