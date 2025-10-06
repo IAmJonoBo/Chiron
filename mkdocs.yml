@@ -53,8 +53,8 @@ markdown_extensions:
   - pymdownx.critic
   - pymdownx.details
   - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
@@ -75,18 +75,33 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Getting Started:
+      - "Installation": getting-started/installation.md
+      - "Quick Start": getting-started/quickstart.md
+      - "Configuration": getting-started/configuration.md
   - Tutorials:
       - "First Run with Chiron": tutorials/first-run.md
   - How-to Guides:
+      - "Automation Guide": AUTOMATION_GUIDE.md
       - "Quality Gate Automation": QUALITY_GATES.md
       - "Environment Sync Parity": ENVIRONMENT_SYNC.md
       - "Observability Sandbox": OBSERVABILITY_SANDBOX.md
       - "Grafana Deployment": GRAFANA_DEPLOYMENT_GUIDE.md
       - "MCP Integration Testing": MCP_INTEGRATION_TESTING.md
+      - "Refactoring Guide": REFACTORING_GUIDE.md
   - Reference:
+      - "Quality Status Dashboard": QUALITY_STATUS.md
+      - "Project Standards": PROJECT_STANDARDS.md
+      - "Badge Management": BADGE_MANAGEMENT.md
       - "Dependency Module Status": DEPS_MODULES_STATUS.md
+      - "Implementation Summary": IMPLEMENTATION_SUMMARY.md
+      - "CI/CD Workflows": CI_WORKFLOWS.md
       - "Tooling Implementation Status": TOOLING_IMPLEMENTATION_STATUS.md
       - "TUF Implementation Guide": TUF_IMPLEMENTATION_GUIDE.md
+      - "Upgrade Plan": CHIRON_UPGRADE_PLAN.md
+      - "Roadmap": ROADMAP.md
+      - "Offline Deployment": OFFLINE.md
+      - "Contributing": CONTRIBUTING.md
   - Explanation:
       - "Gap Analysis": GAP_ANALYSIS.md
       - "CI Reproducibility Validation": CI_REPRODUCIBILITY_VALIDATION.md

@@ -15,7 +15,7 @@ Requirements:
 Example:
     # Dry run (default)
     python rename_function.py --old-name old_func --new-name new_func src/module.py
-    
+
     # Apply changes
     python rename_function.py --old-name old_func --new-name new_func src/module.py --apply
 """
@@ -23,7 +23,6 @@ Example:
 import argparse
 import pathlib
 import sys
-from typing import List
 
 try:
     import libcst as cst
@@ -36,12 +35,12 @@ except ImportError:
 
 class RenameFunctionTransformer(cst.CSTTransformer):
     """Transform function calls and definitions from old name to new name."""
-    
+
     def __init__(self, old_name: str, new_name: str):
         self.old_name = old_name
         self.new_name = new_name
         self.changes_made = 0
-    
+
     def leave_FunctionDef(
         self,
         original_node: cst.FunctionDef,
@@ -52,7 +51,7 @@ class RenameFunctionTransformer(cst.CSTTransformer):
             self.changes_made += 1
             return updated_node.with_changes(name=cst.Name(self.new_name))
         return updated_node
-    
+
     def leave_Call(
         self,
         original_node: cst.Call,
@@ -63,7 +62,7 @@ class RenameFunctionTransformer(cst.CSTTransformer):
             self.changes_made += 1
             return updated_node.with_changes(func=cst.Name(self.new_name))
         return updated_node
-    
+
     def leave_Attribute(
         self,
         original_node: cst.Attribute,
@@ -84,25 +83,25 @@ def transform_file(
 ) -> int:
     """
     Transform a single Python file.
-    
+
     Returns number of changes made.
     """
     try:
         source = file_path.read_text(encoding="utf-8")
-        
+
         # Parse source to CST
         module = cst.parse_module(source)
-        
+
         # Apply transformation
         transformer = RenameFunctionTransformer(old_name, new_name)
         modified = module.visit(transformer)
-        
+
         if transformer.changes_made == 0:
             return 0
-        
+
         # Generate new code
         new_source = modified.code
-        
+
         if dry_run:
             print(f"  Would change {transformer.changes_made} occurrence(s)")
             return transformer.changes_made
@@ -111,13 +110,13 @@ def transform_file(
             file_path.write_text(new_source, encoding="utf-8")
             print(f"  Changed {transformer.changes_made} occurrence(s) ✓")
             return transformer.changes_made
-    
+
     except Exception as e:
         print(f"  Error: {e}", file=sys.stderr)
         return 0
 
 
-def find_python_files(directory: pathlib.Path) -> List[pathlib.Path]:
+def find_python_files(directory: pathlib.Path) -> list[pathlib.Path]:
     """Find all Python files in directory recursively."""
     return list(directory.rglob("*.py"))
 
@@ -162,42 +161,42 @@ def parse_args():
 def main():
     """Main entry point."""
     args = parse_args()
-    
+
     # Collect files to process
     files_to_process = []
-    
+
     if args.dir:
         dir_path = pathlib.Path(args.dir)
         if not dir_path.is_dir():
             print(f"Error: Not a directory: {args.dir}", file=sys.stderr)
             sys.exit(1)
-        
+
         files_to_process = find_python_files(dir_path)
-        
+
         if not args.include_tests:
             files_to_process = [
                 f for f in files_to_process
                 if not f.name.startswith("test_") and "tests/" not in str(f)
             ]
-    
+
     if args.files:
         files_to_process.extend(pathlib.Path(f) for f in args.files)
-    
+
     if not files_to_process:
         print("Error: No files to process", file=sys.stderr)
         print("Specify files or use --dir", file=sys.stderr)
         sys.exit(1)
-    
+
     # Filter to existing Python files
     files_to_process = [
         f for f in files_to_process
         if f.is_file() and f.suffix == ".py"
     ]
-    
+
     if not files_to_process:
         print("Error: No Python files found", file=sys.stderr)
         sys.exit(1)
-    
+
     # Show configuration
     mode = "APPLY" if args.apply else "DRY RUN"
     print(f"Mode: {mode}")
@@ -205,11 +204,11 @@ def main():
     print(f"New name: {args.new_name}")
     print(f"Files: {len(files_to_process)}")
     print()
-    
+
     # Process files
     total_changes = 0
     files_changed = 0
-    
+
     for file_path in files_to_process:
         print(f"Processing: {file_path}")
         changes = transform_file(
@@ -218,18 +217,18 @@ def main():
             args.new_name,
             dry_run=not args.apply,
         )
-        
+
         if changes > 0:
             total_changes += changes
             files_changed += 1
-    
+
     # Summary
     print()
-    print(f"Summary:")
+    print("Summary:")
     print(f"  Files processed: {len(files_to_process)}")
     print(f"  Files with changes: {files_changed}")
     print(f"  Total changes: {total_changes}")
-    
+
     if not args.apply and total_changes > 0:
         print()
         print("This was a DRY RUN. Use --apply to make changes.")

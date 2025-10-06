@@ -655,8 +655,7 @@ jq '.matches[] | select(.vulnerability.severity == "Critical")' vulnerability-re
 
 ## References
 
-- [Quality Gates Workflow](../.github/workflows/quality-gates.yml)
+- [CI/CD Workflows](CI_WORKFLOWS.md) - Quality Gates and CI Configuration
 - [DEPS_MODULES_STATUS.md](DEPS_MODULES_STATUS.md)
-- [IMPLEMENTATION_SUMMARY.md](../IMPLEMENTATION_SUMMARY.md)
-- [CHIRON_UPGRADE_PLAN.md](../CHIRON_UPGRADE_PLAN.md)
-- [CI Configuration](../.github/workflows/ci.yml)
+- [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)
+- [CHIRON_UPGRADE_PLAN.md](CHIRON_UPGRADE_PLAN.md)

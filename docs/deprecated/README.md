@@ -8,13 +8,13 @@ This folder contains documentation that has been superseded by more current docu
 
 **Reason**: All TODOs mentioned in this document have been completed. The information has been consolidated into `IMPLEMENTATION_SUMMARY.md`.
 
-**Current Reference**: See [`IMPLEMENTATION_SUMMARY.md`](../../IMPLEMENTATION_SUMMARY.md) for current implementation status.
+**Current Reference**: See [IMPLEMENTATION_SUMMARY.md](../IMPLEMENTATION_SUMMARY.md) for current implementation status.
 
 ### TESTING_IMPLEMENTATION_SUMMARY.md → Moved here 2025-04
 
 **Reason**: Brief 48-line summary superseded by the more comprehensive `TESTING_PROGRESS_SUMMARY.md` (238 lines) which provides detailed testing metrics and progress tracking.
 
-**Current Reference**: See [`TESTING_PROGRESS_SUMMARY.md`](../../TESTING_PROGRESS_SUMMARY.md) for detailed testing status.
+**Current Reference**: See TESTING_PROGRESS_SUMMARY.md in repository root for detailed testing status.
 
 ### QUALITY_GATES_IMPLEMENTATION_SUMMARY.md → Moved here 2025-04
 
@@ -23,7 +23,7 @@ This folder contains documentation that has been superseded by more current docu
 **Current Reference**:
 
 - [`QUALITY_GATES.md`](../QUALITY_GATES.md) for quality gate documentation
-- [`IMPLEMENTATION_SUMMARY.md`](../../IMPLEMENTATION_SUMMARY.md) for overall implementation status
+- [IMPLEMENTATION_SUMMARY.md](../IMPLEMENTATION_SUMMARY.md) for overall implementation status
 
 ---
 

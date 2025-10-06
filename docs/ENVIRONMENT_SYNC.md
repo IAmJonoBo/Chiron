@@ -229,6 +229,6 @@ All roadmap enhancements for environment sync have been implemented:
 
 ## Related
 
-- [Contributing Guide](../CONTRIBUTING.md)
-- [Development Setup](../README.md#development)
+- [Contributing Guide](CONTRIBUTING.md)
+- Development Setup: See project README for development instructions
 - [CI/CD Documentation](CI_REPRODUCIBILITY_VALIDATION.md)

@@ -23,7 +23,6 @@ import json
 import pathlib
 import subprocess
 import sys
-from typing import Dict, List, Tuple
 
 
 def parse_args():
@@ -62,10 +61,10 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_complexity(src_dir: str) -> Dict[str, int]:
+def get_complexity(src_dir: str) -> dict[str, int]:
     """
     Run radon to get cyclomatic complexity for all Python files.
-    
+
     Returns dict mapping file paths to total complexity sum.
     """
     try:
@@ -76,15 +75,15 @@ def get_complexity(src_dir: str) -> Dict[str, int]:
             text=True,
         )
         data = json.loads(result.stdout or "{}")
-        
+
         # Sum complexity per file
         complexity = {}
         for path, items in data.items():
             if items:
                 complexity[path] = sum(item.get("complexity", 0) for item in items)
-        
+
         return complexity
-    
+
     except FileNotFoundError:
         print("Warning: radon not found. Install with: uv pip install radon", file=sys.stderr)
         print("Complexity analysis will be skipped.", file=sys.stderr)
@@ -99,26 +98,26 @@ def get_complexity(src_dir: str) -> Dict[str, int]:
         return {}
 
 
-def read_churn(churn_file: str) -> Dict[str, int]:
+def read_churn(churn_file: str) -> dict[str, int]:
     """
     Read git churn data from file.
-    
+
     Format: <count> <file>
     Returns dict mapping file paths to churn counts.
     """
     churn = {}
     churn_path = pathlib.Path(churn_file)
-    
+
     if not churn_path.exists():
         print(f"Warning: Churn file not found: {churn_file}", file=sys.stderr)
         print("Run git_churn.sh first to generate churn data", file=sys.stderr)
         return churn
-    
+
     for line in churn_path.read_text().splitlines():
         line = line.strip()
         if not line:
             continue
-        
+
         parts = line.split(maxsplit=1)
         if len(parts) == 2:
             count_str, file_path = parts
@@ -126,47 +125,47 @@ def read_churn(churn_file: str) -> Dict[str, int]:
                 churn[file_path] = int(count_str)
             except ValueError:
                 continue
-    
+
     return churn
 
 
 def compute_hotspots(
-    complexity: Dict[str, int],
-    churn: Dict[str, int],
+    complexity: dict[str, int],
+    churn: dict[str, int],
     min_complexity: int = 0,
     min_churn: int = 0,
-) -> List[Tuple[str, int, int, int]]:
+) -> list[tuple[str, int, int, int]]:
     """
     Compute hotspots from complexity and churn.
-    
+
     Returns list of (file, complexity, churn, hotspot_score) tuples,
     sorted by hotspot score descending.
     """
     all_files = set(complexity.keys()) | set(churn.keys())
-    
+
     hotspots = []
     for file_path in all_files:
         cplx = complexity.get(file_path, 0)
         ch = churn.get(file_path, 0)
-        
+
         # Apply thresholds
         if cplx < min_complexity or ch < min_churn:
             continue
-        
+
         score = cplx * ch
         hotspots.append((file_path, cplx, ch, score))
-    
+
     # Sort by hotspot score descending
     hotspots.sort(key=lambda x: x[3], reverse=True)
-    
+
     return hotspots
 
 
-def write_csv(hotspots: List[Tuple[str, int, int, int]], output_file: str):
+def write_csv(hotspots: list[tuple[str, int, int, int]], output_file: str):
     """Write hotspots to CSV file."""
     output_path = pathlib.Path(output_file)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     with output_path.open("w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["file", "complexity_sum", "churn", "hotspot_score"])
@@ -176,12 +175,12 @@ def write_csv(hotspots: List[Tuple[str, int, int, int]], output_file: str):
 def main():
     """Main entry point."""
     args = parse_args()
-    
+
     print(f"Analyzing: {args.src_dir}")
     print(f"Churn file: {args.churn_file}")
     print(f"Output: {args.output}")
     print()
-    
+
     # Get complexity data
     print("Computing complexity with radon...")
     complexity = get_complexity(args.src_dir)
@@ -190,17 +189,17 @@ def main():
     else:
         print("No complexity data available (radon not installed or failed)")
         print("Continuing with churn data only...")
-    
+
     # Read churn data
     print("Reading churn data...")
     churn = read_churn(args.churn_file)
     print(f"Found {len(churn)} files with churn data")
-    
+
     if not complexity and not churn:
         print("\nError: No data available for hotspot analysis", file=sys.stderr)
         print("Either install radon or ensure churn data exists", file=sys.stderr)
         sys.exit(1)
-    
+
     # Compute hotspots
     print("Computing hotspots...")
     hotspots = compute_hotspots(
@@ -209,11 +208,11 @@ def main():
         min_complexity=args.min_complexity,
         min_churn=args.min_churn,
     )
-    
+
     # Write output
     write_csv(hotspots, args.output)
     print(f"\n✅ Wrote {len(hotspots)} hotspots to {args.output}")
-    
+
     # Display top 10
     if hotspots:
         print("\nTop 10 hotspots:")
