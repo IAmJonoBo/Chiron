@@ -187,3 +187,6 @@ diff-cover.json
 # Signing artifacts
 *.sigstore.json
 *.bundle
+
+# Refactoring toolkit output
+dev-toolkit/refactoring/output/
