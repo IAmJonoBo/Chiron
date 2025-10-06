@@ -13,7 +13,8 @@ from typing import Any
 
 DEFAULT_MIRROR_ROOT = Path("vendor") / "wheelhouse"
 ARTIFACT_SUFFIXES = (".whl", ".tar.gz", ".tgz", ".zip", ".tar", ".bin", ".pt", ".onnx")
-SIGNATURE_SUFFIXES = (".sha256", ".sig", ".asc")
+SHA256_SUFFIX = ".sha256"
+SIGNATURE_SUFFIXES = (SHA256_SUFFIX, ".sig", ".asc")
 
 
 def _compute_sha256(path: Path) -> str:
@@ -161,8 +162,9 @@ def _validate_signature(path: Path, *, require_signature: bool) -> SignatureResu
                 status="missing", reason="signature required but not present"
             )
         return SignatureResult(status="missing", reason="signature not provided")
-
-    if signature_path.suffix == ".sha256" or signature_path.name.endswith(".sha256"):
+    if signature_path.suffix == SHA256_SUFFIX or signature_path.name.endswith(
+        SHA256_SUFFIX
+    ):
         expected = signature_path.read_text(encoding="utf-8").strip().split()[0]
         actual = _compute_sha256(path)
         if expected == actual:
@@ -237,7 +239,7 @@ def _should_copy(
     expected_hash = (
         manifest_entry.get("sha256") if isinstance(manifest_entry, dict) else None
     )
-    if expected_hash:
+    if isinstance(expected_hash, str):
         return _compute_sha256(target) != expected_hash
     return int(source.stat().st_mtime) > int(target.stat().st_mtime)
 
@@ -260,7 +262,7 @@ def _ensure_manifest_signature(
     expected_hash = manifest_entry.get("sha256")
     if not expected_hash:
         return
-    sha_path = destination.with_name(destination.name + ".sha256")
+    sha_path = destination.with_name(destination.name + SHA256_SUFFIX)
     if sha_path.exists():
         return
     sha_path.write_text(f"{expected_hash}  {destination.name}\n", encoding="utf-8")
@@ -419,7 +421,7 @@ def get_mirror_recommendations(
         - packages_available: Packages already in mirror
     """
     to_add: list[dict[str, str]] = []
-    to_update: list[dict[str, str]] = []
+    to_update: list[dict[str, str | int]] = []
     available: list[dict[str, str]] = []
 
     for package_name, version in packages_needed:

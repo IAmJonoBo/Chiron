@@ -21,7 +21,7 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - Python <3.11 fallback
     import importlib
 
-    tomllib = importlib.import_module("tomli")  # type: ignore[assignment]
+    tomllib = importlib.import_module("tomli")
 
 from chiron.deps import drift as dependency_drift
 from chiron.deps import mirror_manager

@@ -61,15 +61,13 @@ class ChironCore:
     ) -> tuple[Any | None, ...]:  # pragma: no cover - import helper
         """Resolve OpenTelemetry modules at runtime."""
         try:
-            from opentelemetry import trace as ot_trace  # type: ignore
+            from opentelemetry import trace as ot_trace
             from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
-                OTLPSpanExporter as exporter_cls,  # type: ignore
+                OTLPSpanExporter as exporter_cls,
             )
-            from opentelemetry.sdk.trace import (
-                TracerProvider as provider_cls,  # type: ignore
-            )
+            from opentelemetry.sdk.trace import TracerProvider as provider_cls
             from opentelemetry.sdk.trace.export import (
-                BatchSpanProcessor as processor_cls,  # type: ignore
+                BatchSpanProcessor as processor_cls,
             )
         except ImportError:
             return (None, None, None, None)

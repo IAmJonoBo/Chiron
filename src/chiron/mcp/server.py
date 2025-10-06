@@ -9,24 +9,18 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
+if TYPE_CHECKING:  # pragma: no cover - type checking only
+    from chiron.deps.bundler import WheelhouseBundler
+    from chiron.deps.policy import DependencyPolicy, PolicyEngine
+    from chiron.features import FeatureFlags
+
+_get_feature_flags_resolver: Optional[Callable[[], "FeatureFlags"]]
 try:  # pragma: no cover - optional dependency
     from chiron.features import get_feature_flags as _get_feature_flags_resolver
 except ImportError:  # pragma: no cover - fallback when features unavailable
     _get_feature_flags_resolver = None
-
-# Import actual implementation modules
-try:
-    from chiron.deps.bundler import WheelhouseBundler
-    from chiron.deps.policy import DependencyPolicy, PolicyEngine
-    from chiron.deps.verify import check_cli_commands, check_script_imports
-except ImportError:  # pragma: no cover - fallback for testing
-    WheelhouseBundler = None
-    DependencyPolicy = None
-    PolicyEngine = None
-    check_cli_commands = None
-    check_script_imports = None
 
 logger = logging.getLogger(__name__)
 
@@ -176,25 +170,23 @@ class MCPServer:
         Returns:
             Tool execution result
         """
-        # This is a skeleton - actual implementation would call Chiron CLI/API
+        handlers: Dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
+            "chiron_build_wheelhouse": self._build_wheelhouse,
+            "chiron_verify_artifacts": self._verify_artifacts,
+            "chiron_create_airgap_bundle": self._create_airgap_bundle,
+            "chiron_check_policy": self._check_policy,
+            "chiron_health_check": self._health_check,
+            "chiron_get_feature_flags": self._get_feature_flags,
+        }
 
-        if tool_name == "chiron_build_wheelhouse":
-            return self._build_wheelhouse(arguments)
-        elif tool_name == "chiron_verify_artifacts":
-            return self._verify_artifacts(arguments)
-        elif tool_name == "chiron_create_airgap_bundle":
-            return self._create_airgap_bundle(arguments)
-        elif tool_name == "chiron_check_policy":
-            return self._check_policy(arguments)
-        elif tool_name == "chiron_health_check":
-            return self._health_check(arguments)
-        elif tool_name == "chiron_get_feature_flags":
-            return self._get_feature_flags(arguments)
-        else:
+        handler = handlers.get(tool_name)
+        if handler is None:
             return {
                 "error": f"Unknown tool: {tool_name}",
                 "available_tools": [t["name"] for t in self.TOOLS],
             }
+
+        return handler(arguments)
 
     def _build_wheelhouse(self, args: dict[str, Any]) -> dict[str, Any]:
         """Build wheelhouse bundle with real implementation."""
@@ -212,14 +204,9 @@ class MCPServer:
                 "with_signatures": with_signatures,
             }
 
-        # Real implementation
-        if WheelhouseBundler is None:
-            return {
-                "status": "error",
-                "message": "WheelhouseBundler module not available",
-            }
-
         try:
+            from chiron.deps.bundler import WheelhouseBundler
+
             wheelhouse_path = Path(output_dir)
             if not wheelhouse_path.exists():
                 return {
@@ -242,6 +229,11 @@ class MCPServer:
                 "bundle_path": str(bundle_path),
                 "metadata": metadata.to_dict(),
             }
+        except ImportError:
+            return {
+                "status": "error",
+                "message": "WheelhouseBundler module not available",
+            }
         except Exception as e:
             logger.error(f"Failed to build wheelhouse: {e}")
             return {
@@ -259,13 +251,12 @@ class MCPServer:
                 "message": "Target path is required for verification",
             }
 
-        if check_script_imports is None or check_cli_commands is None:
-            return {
-                "status": "error",
-                "message": "Verification modules not available",
-            }
-
         try:
+            from chiron.deps.verify import (
+                check_cli_commands,
+                check_script_imports,
+            )
+
             # Perform verification checks
             script_results = check_script_imports()
             cli_results = check_cli_commands()
@@ -281,6 +272,11 @@ class MCPServer:
                     "cli_commands": cli_results,
                 },
                 "all_checks_passed": all_passed,
+            }
+        except ImportError:
+            return {
+                "status": "error",
+                "message": "Verification modules not available",
             }
         except Exception as e:
             logger.error(f"Failed to verify artifacts: {e}")
@@ -306,14 +302,9 @@ class MCPServer:
                 "include_security": include_security,
             }
 
-        # Real implementation using bundler
-        if WheelhouseBundler is None:
-            return {
-                "status": "error",
-                "message": "WheelhouseBundler module not available",
-            }
-
         try:
+            from chiron.deps.bundler import WheelhouseBundler
+
             # Assume a wheelhouse directory exists
             wheelhouse_path = Path("wheelhouse")
             if not wheelhouse_path.exists():
@@ -337,6 +328,11 @@ class MCPServer:
                 "output": str(output_path),
                 "metadata": metadata.to_dict(),
             }
+        except ImportError:
+            return {
+                "status": "error",
+                "message": "WheelhouseBundler module not available",
+            }
         except Exception as e:
             logger.error(f"Failed to create air-gap bundle: {e}")
             return {
@@ -348,13 +344,9 @@ class MCPServer:
         """Check policy compliance with real implementation."""
         config_path = args.get("config_path")
 
-        if DependencyPolicy is None or PolicyEngine is None:
-            return {
-                "status": "error",
-                "message": "Policy engine modules not available",
-            }
-
         try:
+            from chiron.deps.policy import DependencyPolicy
+
             # Load policy configuration
             if config_path:
                 policy_path = Path(config_path)
@@ -384,6 +376,11 @@ class MCPServer:
                     "denylist_count": len(policy.denylist),
                 },
             }
+        except ImportError:
+            return {
+                "status": "error",
+                "message": "Policy engine modules not available",
+            }
         except Exception as e:
             logger.error(f"Failed to check policy: {e}")
             return {
@@ -405,26 +402,20 @@ class MCPServer:
 
     def _get_feature_flags(self, args: dict[str, Any]) -> dict[str, Any]:
         """Get feature flags (skeleton)."""
-        if _get_feature_flags_resolver is None:
+        resolver = _get_feature_flags_resolver
+        if resolver is None:
             return {"error": "Feature flags module not available"}
 
-        try:
-            flags = _get_feature_flags_resolver()
-            return {
-                "flags": {
-                    "allow_public_publish": flags.is_enabled("allow_public_publish"),
-                    "require_slsa_provenance": flags.is_enabled(
-                        "require_slsa_provenance"
-                    ),
-                    "enable_oci_distribution": flags.is_enabled(
-                        "enable_oci_distribution"
-                    ),
-                    "enable_mcp_agent": flags.is_enabled("enable_mcp_agent"),
-                    "dry_run_by_default": flags.is_enabled("dry_run_by_default"),
-                }
+        flags = resolver()
+        return {
+            "flags": {
+                "allow_public_publish": flags.is_enabled("allow_public_publish"),
+                "require_slsa_provenance": flags.is_enabled("require_slsa_provenance"),
+                "enable_oci_distribution": flags.is_enabled("enable_oci_distribution"),
+                "enable_mcp_agent": flags.is_enabled("enable_mcp_agent"),
+                "dry_run_by_default": flags.is_enabled("dry_run_by_default"),
             }
-        except ImportError:
-            return {"error": "Feature flags module not available"}
+        }
 
 
 def create_mcp_server_config() -> dict[str, Any]:

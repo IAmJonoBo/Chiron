@@ -26,9 +26,10 @@ class HealthResponse(BaseModel):
 
 def get_core(request: Request) -> ChironCore:
     """Dependency to get the ChironCore instance."""
-    if not hasattr(request.app.state, "core"):
+    core = getattr(request.app.state, "core", None)
+    if not isinstance(core, ChironCore):
         raise HTTPException(status_code=500, detail="Core not initialized")
-    return request.app.state.core
+    return core
 
 
 @router.get("/", response_model=HealthResponse, summary="Basic health check")

@@ -2,7 +2,7 @@
 
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 import structlog
 from fastapi import Request, Response
@@ -14,7 +14,11 @@ logger = structlog.get_logger(__name__)
 class LoggingMiddleware(BaseHTTPMiddleware):
     """Middleware for structured logging with request/response correlation."""
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
         """Process request with structured logging."""
         # Generate request ID for correlation
         request_id = str(uuid.uuid4())
@@ -67,7 +71,11 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 class SecurityMiddleware(BaseHTTPMiddleware):
     """Middleware for security headers and basic protections."""
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
         """Process request with security enhancements."""
         # Add security headers
         response = await call_next(request)
@@ -83,6 +91,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
         # Remove server identification
-        response.headers.pop("Server", None)
+        if "Server" in response.headers:
+            del response.headers["Server"]
 
         return response

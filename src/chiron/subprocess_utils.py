@@ -171,7 +171,7 @@ def run_subprocess(
     resolve_executable_path: bool = True,
     required_executable: bool = True,
     **kwargs: Any,
-) -> subprocess.CompletedProcess:
+) -> subprocess.CompletedProcess[Any]:
     """Run a subprocess with proper error handling, timeouts, and path resolution.
 
     This is the preferred way to run external commands in Chiron. It provides:

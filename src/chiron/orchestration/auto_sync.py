@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from packaging.version import InvalidVersion, Version
 
@@ -69,7 +69,8 @@ class AutoSyncConfig:
 
         if level not in {SEMVER_MAJOR, SEMVER_MINOR, SEMVER_PATCH}:  # pragma: no cover
             raise ValueError(f"Unsupported semver level: {level}")
-        return getattr(self, f"max_{level}_updates")
+        value = getattr(self, f"max_{level}_updates")
+        return cast(int | None, value)
 
 
 @dataclass(slots=True)

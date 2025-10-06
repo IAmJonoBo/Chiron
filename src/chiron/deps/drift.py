@@ -183,7 +183,7 @@ def _classify_drift(
 def _is_major_upgrade(current: Version, latest: Version) -> bool:
     if not current.release or not latest.release:
         return False
-    return current.release[0] != latest.release[0]
+    return bool(int(current.release[0]) != int(latest.release[0]))
 
 
 def _overall_severity(packages: Iterable[PackageDrift]) -> str:

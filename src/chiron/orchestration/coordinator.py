@@ -16,7 +16,7 @@ import sys
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +100,7 @@ class OrchestrationCoordinator:
         cmd: list[str],
         description: str,
         check: bool = True,
-    ) -> subprocess.CompletedProcess:
+    ) -> subprocess.CompletedProcess[bytes]:
         """Run a command with logging."""
         if self.context.verbose:
             logger.info(f"Running: {description}")
@@ -116,6 +116,28 @@ class OrchestrationCoordinator:
             check=check,
             capture_output=True,
         )
+
+    @staticmethod
+    def _parse_json_bytes(payload: bytes) -> dict[str, Any]:
+        if not payload:
+            return {}
+        try:
+            decoded = payload.decode("utf-8")
+        except UnicodeDecodeError as exc:  # pragma: no cover - defensive
+            logger.warning(f"Failed to decode JSON payload: {exc}")
+            return {}
+
+        try:
+            parsed = json.loads(decoded)
+        except json.JSONDecodeError as exc:
+            logger.warning(f"Failed to parse JSON payload: {exc}")
+            return {}
+
+        if isinstance(parsed, dict):
+            return cast(dict[str, Any], parsed)
+
+        logger.warning("Expected JSON object but received %s", type(parsed).__name__)
+        return {"raw": parsed}
 
     # Dependency Management Operations
 
@@ -133,7 +155,7 @@ class OrchestrationCoordinator:
         output_file.parent.mkdir(parents=True, exist_ok=True)
         output_file.write_bytes(result.stdout)
 
-        data = json.loads(result.stdout) if result.stdout else {}
+        data = self._parse_json_bytes(result.stdout)
         self.context.metadata["preflight"] = data
         self._save_state()
 
@@ -169,7 +191,20 @@ class OrchestrationCoordinator:
 
         self._run_command(cmd, "Upgrade guard", check=False)
 
-        data = json.loads(output_path.read_text()) if output_path.exists() else {}
+        data: dict[str, Any] = {}
+        if output_path.exists():
+            try:
+                parsed = json.loads(output_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                logger.warning(f"Failed to parse guard output: {exc}")
+            else:
+                if isinstance(parsed, dict):
+                    data = cast(dict[str, Any], parsed)
+                else:
+                    logger.warning(
+                        "Expected guard output to be a JSON object, received %s",
+                        type(parsed).__name__,
+                    )
         self.context.metadata["guard"] = data
         self._save_state()
 
@@ -301,7 +336,7 @@ class OrchestrationCoordinator:
         result = self._run_command(cmd, "Offline doctor", check=False)
 
         if format == "json" and result.stdout:
-            data = json.loads(result.stdout)
+            data = self._parse_json_bytes(result.stdout)
         else:
             data = {"success": result.returncode == 0}
 
@@ -356,7 +391,7 @@ class OrchestrationCoordinator:
 
         result = self._run_command(cmd, "Mirror status", check=False)
 
-        data = json.loads(result.stdout) if result.stdout else {}
+        data = self._parse_json_bytes(result.stdout)
         self.context.metadata["mirror_status"] = data
         self._save_state()
 
@@ -404,7 +439,7 @@ class OrchestrationCoordinator:
         """
         logger.info("Starting full dependency workflow...")
 
-        results = {}
+        results: dict[str, Any] = {}
 
         # Step 1: Preflight
         results["preflight"] = self.deps_preflight()
@@ -441,7 +476,7 @@ class OrchestrationCoordinator:
         """
         logger.info("Starting intelligent upgrade workflow...")
 
-        results = {}
+        results: dict[str, Any] = {}
 
         # Step 1: Generate upgrade advice
         logger.info("Generating upgrade advice...")
@@ -496,7 +531,7 @@ class OrchestrationCoordinator:
         """
         logger.info("Starting full packaging workflow...")
 
-        results = {}
+        results: dict[str, Any] = {}
 
         # Step 1: Build wheelhouse
         results["wheelhouse"] = self.build_wheelhouse()
@@ -537,7 +572,7 @@ class OrchestrationCoordinator:
         """
         logger.info("Starting air-gapped preparation workflow...")
 
-        results = {}
+        results: dict[str, Any] = {}
 
         # Step 1: Dependencies
         logger.info("Step 1/6: Dependency management...")
@@ -699,27 +734,6 @@ class OrchestrationCoordinator:
 
         return results
 
-        results = {}
-
-        # Step 1: Wheelhouse
-        results["wheelhouse"] = self.build_wheelhouse()
-
-        # Step 2: Offline package
-        results["offline_package"] = self.offline_package(auto_update=True)
-
-        # Step 3: Validation
-        if validate:
-            results["validation"] = self.offline_doctor()
-
-            # Step 4: Remediation if validation failed
-            if not results["validation"].get("success", True):
-                results["remediation"] = self.remediation_wheelhouse()
-
-        self.context.metadata["packaging_workflow"] = results
-        self._save_state()
-
-        return results
-
     def sync_remote_to_local(
         self,
         artifact_dir: Path,
@@ -733,7 +747,7 @@ class OrchestrationCoordinator:
         """
         logger.info(f"Syncing remote artifacts from {artifact_dir}...")
 
-        results = {}
+        results: dict[str, Any] = {}
 
         # Copy artifacts to vendor
         if artifact_dir.exists():
