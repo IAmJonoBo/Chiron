@@ -134,6 +134,11 @@ class WheelhouseRemediator:
             url,
             headers={"Accept": "application/json"},
         )
+        # Only allow http and https schemes for urlopen
+        if not url.startswith(("http://", "https://")):
+            raise ValueError(
+                f"Only 'http' and 'https' schemes are permitted, got: {url}"
+            )
         try:
             with urllib.request.urlopen(  # noqa: S310 - trusted host list
                 request,
@@ -241,7 +246,7 @@ class WheelhouseRemediator:
         allowed = {entry for entry in allowed if entry}
         if tag.interpreter in allowed:
             return True
-        return tag.interpreter.startswith("cp3")
+        return bool(tag.interpreter.startswith("cp3"))
 
     def _platform_matches(self, tag: Tag, target: WheelTarget) -> bool:
         platform = target.platform

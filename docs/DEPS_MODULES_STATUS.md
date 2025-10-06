@@ -89,12 +89,12 @@ The `chiron.deps` package contains supply-chain management modules for dependenc
 
 ### Medium Priority Modules (Target: 50%+ coverage)
 
-4. **bundler.py** - ✅ **COMPLETE (98%)**
-5. **safe_upgrade.py** - 🔴 Not started
-6. **upgrade_advisor.py** - 🔴 Not started
-7. **conflict_resolver.py** - 🔴 Not started
-8. **drift.py** - 🔴 Not started
-9. **signing.py** - 🔴 Not started
+1. **bundler.py** - ✅ **COMPLETE (98%)**
+2. **safe_upgrade.py** - 🔴 Not started
+3. **upgrade_advisor.py** - 🔴 Not started
+4. **conflict_resolver.py** - 🔴 Not started
+5. **drift.py** - 🔴 Not started
+6. **signing.py** - 🔴 Not started
 
 ### Lower Priority Modules (Target: 30%+ coverage)
 
@@ -291,7 +291,7 @@ def test_property(text_input, int_input):
 - [ ] No property-based tests for complex validation logic
 - [ ] Mock objects could be more comprehensive
 
-### Documentation
+### Documentation Technical Debt
 
 - [ ] Many modules lack comprehensive docstrings
 - [ ] Configuration options not fully documented

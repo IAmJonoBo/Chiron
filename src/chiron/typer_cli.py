@@ -572,6 +572,8 @@ def deps_policy(
     """
     from chiron.deps.policy import PolicyEngine, load_policy
 
+    STATUS_ALLOWED = "   Status: ✅ Allowed"
+
     try:
         policy = load_policy(config)
         engine = PolicyEngine(policy)
@@ -581,7 +583,7 @@ def deps_policy(
 
             typer.echo(f"\n📋 Package: {package}")
             if allowed:
-                typer.echo("   Status: ✅ Allowed")
+                typer.echo(STATUS_ALLOWED)
             else:
                 typer.echo("   Status: ❌ Denied")
                 typer.echo(f"   Reason: {reason}")
@@ -590,7 +592,7 @@ def deps_policy(
                 allowed, reason = engine.check_version_allowed(package, version)
                 typer.echo(f"\n📌 Version: {version}")
                 if allowed:
-                    typer.echo("   Status: ✅ Allowed")
+                    typer.echo(STATUS_ALLOWED)
                 else:
                     typer.echo("   Status: ❌ Denied")
                     typer.echo(f"   Reason: {reason}")
@@ -602,7 +604,7 @@ def deps_policy(
                 typer.echo(f"\n⬆️  Upgrade: {upgrade_from} → {version}")
 
                 if not violations:
-                    typer.echo("   Status: ✅ Allowed")
+                    typer.echo(STATUS_ALLOWED)
                 else:
                     typer.echo(f"   Status: ⚠️  {len(violations)} violation(s)")
                     for v in violations:
