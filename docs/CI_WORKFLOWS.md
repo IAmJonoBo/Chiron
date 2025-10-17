@@ -52,13 +52,13 @@ Use the local quality toolbox to run the same checks as CI:
 
 ```bash
 # Full quality suite
-chiron tools qa --profile full
+hephaestus tools qa --profile full
 
 # Fast checks
-chiron tools qa --profile fast
+hephaestus tools qa --profile fast
 
 # Dry run to see what would execute
-chiron tools qa --profile full --dry-run
+hephaestus tools qa --profile full --dry-run
 ```
 
 ### Individual Quality Checks

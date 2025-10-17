@@ -211,6 +211,9 @@ if [[ ${RUN_SYNC} == true ]]; then
 		SYNC_ARGS=(--all-extras --dev)
 	fi
 	run_cmd uv sync "${SYNC_ARGS[@]}"
+	if [[ -f "hephaestus/pyproject.toml" ]]; then
+		run_cmd uv pip install -e hephaestus[test]
+	fi
 fi
 
 if [[ ${RUN_PREFLIGHT} == true ]]; then

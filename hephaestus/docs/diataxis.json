@@ -1,0 +1,30 @@
+{
+  "tutorials": [
+    {
+      "title": "Getting Started with Hephaestus",
+      "path": "tutorials/getting-started.md",
+      "summary": "Install Hephaestus and run your first refactor analysis in minutes."
+    }
+  ],
+  "how_to": [
+    {
+      "title": "Hephaestus Refactoring Workflow",
+      "path": "how-to/refactoring.md",
+      "summary": "Run hotspot analysis and characterization scaffolds with Hephaestus CLI commands."
+    }
+  ],
+  "reference": [
+    {
+      "title": "Hephaestus CLI Reference",
+      "path": "reference/cli.md",
+      "summary": "Command reference for the Hephaestus Typer CLI entry point."
+    }
+  ],
+  "explanation": [
+    {
+      "title": "Hephaestus Architecture",
+      "path": "explanation/architecture.md",
+      "summary": "Understand how the toolbox, CLI, and standalone scripts fit together."
+    }
+  ]
+}

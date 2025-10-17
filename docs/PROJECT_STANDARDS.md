@@ -36,8 +36,8 @@ Chiron/
 ├── tests/                      # Test suite
 │   ├── test_contracts.py       # Pact contract tests
 │   └── test_*.py               # Unit and integration tests
-├── dev-toolkit/                # Development tools and scripts
-│   └── refactoring/            # Refactoring utilities
+├── hephaestus/                # Hephaestus developer toolkit (sister project)
+│   └── hephaestus-toolkit/     # Refactoring utilities and scripts
 ├── scripts/                    # Utility scripts
 ├── policy/                     # OPA policy definitions
 ├── chaos/                      # Chaos engineering experiments
@@ -210,44 +210,53 @@ def test_function_with_any_string(input_str: str):
 All code must pass 9 comprehensive quality gates:
 
 ### 1. Policy Gate
+
 - OPA/Conftest policy enforcement
 - Custom policies in `policy/` directory
 
 ### 2. Coverage Gate
+
 - Minimum 50% coverage required
 - Target 65%, frontier 80%
 - Currently at 84% ✅
 
 ### 3. Security Gate
+
 - Zero critical vulnerabilities (Bandit, Safety, Semgrep)
 - SBOM generation (CycloneDX, SPDX)
 - Vulnerability scanning (Grype)
 
 ### 4. Type Safety Gate
+
 - Strict MyPy checking
 - All public APIs fully typed
 - No `Any` types without justification
 
 ### 5. SBOM Gate
+
 - Automatic SBOM generation
 - Validation of component count
 - Vulnerability scanning
 
 ### 6. Code Quality Gate
+
 - Ruff linting (zero errors)
 - Ruff formatting check
 - Import organization
 
 ### 7. Test Quality Gate
+
 - All tests must pass
 - 765+ tests currently passing
 
 ### 8. Dependency Gate
+
 - No dependency conflicts
 - Locked dependencies with uv.lock
 - Deptry analysis for unused dependencies
 
 ### 9. Documentation Gate
+
 - Documentation builds successfully
 - No broken links
 - Vale style consistency
@@ -317,6 +326,7 @@ Refs: #issue-number
 ```
 
 Types:
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -330,7 +340,7 @@ Types:
 
 1. Create feature branch from main
 2. Make changes with tests
-3. Run quality gates locally: `chiron tools qa --profile full`
+3. Run quality gates locally: `hephaestus tools qa --profile full`
 4. Commit with conventional commit format
 5. Push and create PR
 6. Address review feedback
@@ -425,17 +435,17 @@ Required hooks (`.pre-commit-config.yaml`):
 
 ### Quality Toolbox
 
-Use `chiron tools qa` for local quality checks:
+Use `hephaestus tools qa` for local quality checks:
 
 ```bash
 # Full suite
-chiron tools qa --profile full
+hephaestus tools qa --profile full
 
 # Fast checks
-chiron tools qa --profile fast
+hephaestus tools qa --profile fast
 
 # With monitoring
-chiron tools qa --profile full --monitor --coverage-xml coverage.xml
+hephaestus tools qa --profile full --monitor --coverage-xml coverage.xml
 ```
 
 ### Environment Sync
@@ -476,7 +486,7 @@ chiron tools qa --profile full --monitor --coverage-xml coverage.xml
 
 - Track in GitHub Issues with `tech-debt` label
 - Address during refactoring sprints
-- Use refactoring tools: `chiron tools refactor hotspots`
+- Use refactoring tools: `hephaestus tools refactor hotspots`
 
 ### Deprecation Policy
 

@@ -85,13 +85,13 @@ Run quality checks locally:
 
 ```bash
 # Run all quality gates
-chiron tools qa --profile full
+hephaestus tools qa --profile full
 
 # Run fast checks (tests + lint)
-chiron tools qa --profile fast
+hephaestus tools qa --profile fast
 
 # Run with coverage monitoring
-chiron tools qa --profile full --monitor --coverage-xml coverage.xml
+hephaestus tools qa --profile full --monitor --coverage-xml coverage.xml
 ```
 
 ### Creating a Wheelhouse

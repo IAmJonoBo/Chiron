@@ -15,9 +15,11 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 ## Immediate Wins (Target: Next Sprint)
 
 ### ✅ Conftest + OPA Bundle
+
 **Status**: IMPLEMENTED
 
 **Evidence**:
+
 - `.pre-commit-config.yaml` includes OPA policy check hook (lines 127-132)
 - `scripts/run_policy_checks.sh` executes policy enforcement
 - `scripts/build_opa_bundle.sh` creates reusable OPA bundles
@@ -27,9 +29,11 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 **Purpose**: Enforce dependency and workflow policies (SBOM freshness, required signing steps) directly in CI and pre-commit.
 
 ### ✅ pytest-xdist
+
 **Status**: IMPLEMENTED
 
 **Evidence**:
+
 - `pyproject.toml` includes pytest-xdist in required_plugins
 - Test configuration uses `-n=auto` and `--dist=worksteal` for parallel execution
 - Significantly speeds up the 3x OS matrix in CI
@@ -37,9 +41,11 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 **Purpose**: Speed up test execution with parallel test running.
 
 ### ✅ pytest-randomly
+
 **Status**: IMPLEMENTED (with minor config issue)
 
 **Evidence**:
+
 - `pyproject.toml` includes pytest-randomly in dependencies
 - Tests run with randomized order to surface order-dependent flakes
 - Note: Config option `randomly_dont_reorganize` had syntax issue (fixed)
@@ -47,9 +53,11 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 **Purpose**: Surface order-dependent test flake risks.
 
 ### ✅ Deptry
+
 **Status**: IMPLEMENTED
 
 **Evidence**:
+
 - `.pre-commit-config.yaml` includes deptry hook (lines 29-33)
 - `Makefile` includes `deptry` target for manual runs
 - Configured with `pyproject.toml` settings
@@ -57,9 +65,11 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 **Purpose**: Catch unused/undeclared dependencies automatically in quality gates (complements `sync_env_deps.py`).
 
 ### ✅ Vale for Docs Linting
+
 **Status**: IMPLEMENTED
 
 **Evidence**:
+
 - `.vale.ini` configuration file created
 - `.vale/styles/config/vocabularies/Chiron/accept.txt` with project-specific terms
 - `.pre-commit-config.yaml` includes Vale hook for markdown files
@@ -71,9 +81,11 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 ## Near-term Upgrades (Target: 1–2 Quarters)
 
 ### ✅ Mutation Testing (mutmut or cosmic-ray)
+
 **Status**: IMPLEMENTED
 
 **Evidence**:
+
 - `mutmut>=3.4.0` added to dev dependencies in `pyproject.toml`
 - `[tool.mutmut]` configuration section added to `pyproject.toml`
 - `Makefile` includes `mutmut-run`, `mutmut-results`, and `mutmut-html` targets
@@ -82,9 +94,11 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 **Purpose**: Validate test suite quality by introducing code mutations and ensuring tests catch them.
 
 ### ✅ Coverage-on-diff Gate (diff-cover)
+
 **Status**: IMPLEMENTED
 
 **Evidence**:
+
 - `diff-cover>=10.0.0` added to dev dependencies in `pyproject.toml`
 - `.github/workflows/diff-cover.yml` workflow runs on pull requests
 - `Makefile` includes `diff-cover` target for local testing
@@ -94,19 +108,23 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 **Purpose**: Accelerate coverage improvement by requiring high coverage on new/changed code without blocking work on existing code.
 
 ### ✅ Refactor Opportunity Scanner
+
 **Status**: IMPLEMENTED
 
 **Evidence**:
-- `chiron tools refactor analyze` CLI command surfaces refactor candidates with severity-ranked insights
-- `src/chiron/dev_toolbox.py` now evaluates function length, class size, cyclomatic complexity, parameter pressure, docstring gaps, TODO markers, and low coverage overlays
-- Regression tests in `tests/test_dev_toolbox.py` and `tests/test_typer_cli_tools.py` validate analysis heuristics, JSON output ordering, and CLI wiring
+
+- `hephaestus tools refactor analyze` CLI command surfaces refactor candidates with severity-ranked insights
+- Implementation lives in `hephaestus/src/hephaestus/toolbox.py` within the standalone Hephaestus project
+- Regression tests moved to `hephaestus/tests/` and cover hotspot analysis, CLI wiring, and report ordering
 
 **Purpose**: Help contributors target high-impact refactors by correlating structural heuristics with coverage gaps and actionable messaging.
 
 ### ✅ CodeQL Workflow
+
 **Status**: FULLY IMPLEMENTED
 
 **Evidence**:
+
 - `.github/workflows/codeql.yml` dedicated CodeQL analysis workflow
 - Runs on push, pull request, and weekly schedule
 - Uses `security-extended` and `security-and-quality` queries
@@ -116,9 +134,11 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 **Purpose**: Layer GitHub's SAST on top of Bandit/Semgrep for defense-in-depth security analysis.
 
 ### ✅ Trivy Container Scanning
+
 **Status**: IMPLEMENTED
 
 **Evidence**:
+
 - `.github/workflows/trivy.yml` comprehensive Trivy scanning workflow
 - Scans both filesystem and container images
 - Runs on push, pull request, and weekly schedule
@@ -130,9 +150,11 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 **Purpose**: Extend SBOM coverage to base images and validate container security.
 
 ### ✅ Sigstore Policy-controller / Cosign Verify-step
+
 **Status**: FULLY IMPLEMENTED
 
 **Evidence**:
+
 - Cosign signing is implemented in `.github/workflows/wheels.yml`
 - `.github/workflows/sigstore-verify.yml` automated verification workflow
 - Verifies signatures using Cosign with certificate identity checks
@@ -146,9 +168,11 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 ## Strategic / Frontier Experiments
 
 ### ✅ Reprotest + Diffoscope Harness
+
 **Status**: IMPLEMENTED
 
 **Evidence**:
+
 - `.github/workflows/reproducibility.yml` comprehensive reproducibility validation
 - Uses reprotest with multiple build variations
 - Uses diffoscope to compare builds byte-by-byte
@@ -160,9 +184,11 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 **Purpose**: Continuously validate the "reproducible wheels" claim with actual rebuild diffs.
 
 ### ✅ In-toto/SLSA Provenance Generator
+
 **Status**: IMPLEMENTED
 
 **Evidence**:
+
 - `.github/workflows/wheels.yml` includes SLSA provenance generation
 - `.github/workflows/release.yml` has dedicated SLSA provenance job
 - `src/chiron/deps/oci_packaging.py` includes provenance media type
@@ -172,9 +198,11 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 **Purpose**: Emit v1.0 attestation artifacts for every build, aligning with SLSA L3+ expectations.
 
 ### ✅ LLM-powered Contract Tests
+
 **Status**: IMPLEMENTED
 
 **Evidence**:
+
 - `src/chiron/mcp/llm_contracts.py` introduces deterministic LLM clients and a contract runner
 - `tests/test_mcp_llm_contracts.py` exercises default scenarios against the MCP server
 - `run_default_contracts()` integrates with CI-friendly deterministic responses
@@ -182,9 +210,11 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 **Purpose**: Validate MCP tool contracts via natural-language prompts, ensuring tool metadata and responses remain consistent as new capabilities ship.
 
 ### ✅ Observability Sandbox (Docker Compose)
+
 **Status**: FULLY IMPLEMENTED
 
 **Evidence**:
+
 - `docker-compose.observability.yml` complete observability stack
 - Includes OpenTelemetry Collector, Jaeger, Prometheus, Grafana, Tempo, and Loki
 - `otel-collector-config.yaml` comprehensive collector configuration
@@ -197,9 +227,11 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 **Purpose**: Enable local visualization of traces/metrics for development and testing.
 
 ### ✅ Chaos & Load Automation (k6/Locust + Chaostoolkit)
+
 **Status**: IMPLEMENTED
 
 **Evidence**:
+
 - `chaos/` directory with complete Chaos Toolkit setup
 - `chaos/experiments/service-availability.json` availability experiment
 - `chaos/actions.py` custom chaos actions (HTTP load generation)
@@ -217,6 +249,7 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 **Not Implemented**: 1/13 (8%)
 
 **By Priority**:
+
 - **Immediate Wins**: 5/5 implemented (100%) ✅
 - **Near-term**: 5/5 implemented (100%) ✅
 - **Strategic**: 2/3 implemented (67%)
@@ -245,6 +278,6 @@ This assessment reviews the tooling opportunities outlined in the original roadm
 
 ---
 
-*Document Version: 2.0.0*
-*Last Updated: 2025-10-06*
-*Status: COMPREHENSIVE IMPLEMENTATION COMPLETE*
+_Document Version: 2.0.0_
+_Last Updated: 2025-10-06_
+_Status: COMPREHENSIVE IMPLEMENTATION COMPLETE_

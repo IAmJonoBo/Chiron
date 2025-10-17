@@ -28,8 +28,8 @@ The sync step provisions every optional extra so the CLI, FastAPI service, and s
 ## 2. Inspect quality profiles
 
 ```bash
-uv run chiron tools qa --list-profiles
-uv run chiron tools qa --profile fast --dry-run --explain
+uv run hephaestus tools qa --list-profiles
+uv run hephaestus tools qa --profile fast --dry-run --explain
 ```
 
 Dry runs preview the execution plan, highlighting which gates are required and where monitoring insights will surface.
@@ -37,7 +37,7 @@ Dry runs preview the execution plan, highlighting which gates are required and w
 ## 3. Run the frontier profile
 
 ```bash
-uv run chiron tools qa --profile full --monitor --coverage-xml coverage.xml --sync-docs docs/QUALITY_GATES.md
+uv run hephaestus tools qa --profile full --monitor --coverage-xml coverage.xml --sync-docs docs/QUALITY_GATES.md
 ```
 
 - Executes tests, lint, typing, security, docs, and build gates.
@@ -55,15 +55,15 @@ Visit `http://127.0.0.1:8000/docs` for interactive OpenAPI documentation. Health
 ## 5. Explore observability
 
 ```bash
-uv run chiron tools qa --profile full --monitor --coverage-xml coverage.xml --json
-uv run chiron tools coverage hotspots --threshold 85 --limit 5
+uv run hephaestus tools qa --profile full --monitor --coverage-xml coverage.xml --json
+uv run hephaestus tools coverage hotspots --threshold 85 --limit 5
 ```
 
 The monitoring report surfaces coverage hotspots for CLI and service modules and identifies follow-up risks for downstream automation.
 
 ## Next steps
 
-- Try `uv run chiron tools docs sync-diataxis` to regenerate the documentation overview.
+- Try `uv run hephaestus tools docs sync-diataxis` to regenerate the documentation overview.
 - Use `uv run chiron doctor offline` to validate air-gapped packaging workflows.
 - Review [QUALITY_GATES.md](../QUALITY_GATES.md) and [ENVIRONMENT_SYNC.md](../ENVIRONMENT_SYNC.md) for deeper operational guidance.
 

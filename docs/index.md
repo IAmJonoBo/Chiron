@@ -142,6 +142,7 @@ graph TB
 ## Documentation overview
 
 <!-- BEGIN DIATAXIS_AUTODOC -->
+
 ### Tutorials
 
 - [Tutorial: First Run with Chiron](tutorials/first-run.md) — Install dependencies, execute the quality toolbox, and launch the FastAPI service locally.
@@ -167,7 +168,8 @@ graph TB
 - [CI Reproducibility Validation Guide](CI_REPRODUCIBILITY_VALIDATION.md) — Explanation of reproducible build guarantees and validation approach.
 - [Module Boundary Testing Gap Analysis](MODULE_BOUNDARY_TESTING.md) — Rationale and coverage notes for cross-module integration tests.
 
-_Updated automatically via `chiron tools docs sync-diataxis --discover`._
+_Updated automatically via `hephaestus tools docs sync-diataxis --discover`._
+
 <!-- END DIATAXIS_AUTODOC -->
 
-Use `uv run chiron tools docs sync-diataxis --discover` after adding or moving guides to refresh the Diataxis map and section automatically.
+Use `uv run hephaestus tools docs sync-diataxis --discover` after adding or moving guides to refresh the Diataxis map and section automatically.

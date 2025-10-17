@@ -10,7 +10,7 @@ summary: Current operational, testing, and documentation gaps with recommended r
 
 - The repository mixes production-ready claims with prototype-level code; several subsystems (CLI/service subprocess flows, supply-chain helpers, MCP tooling) remain skeletal.
 - Latest pytest run (`uv run --group test pytest --cov=src/chiron --cov-report=xml`) completes with **750 passed / 0 failed** and overall coverage of **83.96%**, clearing the 80% gate while exercising benchmarking, MCP flows, dependency policy enforcement, constraints generation, drift analysis, module-boundary graph coverage, and the developer toolbox regression suite.
-- `chiron tools qa` now mirrors CI locally with profile-aware planning, dry-run previews, and JSON reporting, while the expanded `chiron tools coverage` suite surfaces hotspots, gap summaries, and enforces guard thresholds for the remaining supply-chain and service coverage gaps.
+- `hephaestus tools qa` now mirrors CI locally with profile-aware planning, dry-run previews, and JSON reporting, while the expanded `hephaestus tools coverage` suite surfaces hotspots, gap summaries, and enforces guard thresholds for the remaining supply-chain and service coverage gaps.
 - Telemetry initialisation now degrades gracefully when OpenTelemetry is missing, but background OTLP exporters still log connection noise unless configuration disables them.
 - MCP feature-flag tooling now resolves flags correctly, yet the tools still surface `not_implemented` for most actions.
 - Pact contract tests execute against the Ruby mock (roughly 130 pending-deprecation warnings across 145 total warnings) but remain synthetic—no real HTTP client flow has been wired in yet.
@@ -20,11 +20,11 @@ summary: Current operational, testing, and documentation gaps with recommended r
 
 ## Test Outcomes
 
-| Scope                                      | Result | Notes |
-| ------------------------------------------ | ------ | ----- |
-| Unit / integration (`uv run --group test pytest --cov=src/chiron --cov-report=xml`) | ✅     | 750 passed, 0 failed; coverage 83.96%; 145 warnings dominated by Pact deprecation notices |
-| Contract tests (`tests/test_contracts.py`) | ⚠️     | Execute against Pact mock but remain synthetic; no real HTTP clients or contract enforcement yet |
-| Coverage gate (`--cov-fail-under=80`)      | ✅     | Gate tightened to 80%; complex dependency graph branches still need targeted tests |
+| Scope                                                                               | Result | Notes                                                                                            |
+| ----------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------ |
+| Unit / integration (`uv run --group test pytest --cov=src/chiron --cov-report=xml`) | ✅     | 750 passed, 0 failed; coverage 83.96%; 145 warnings dominated by Pact deprecation notices        |
+| Contract tests (`tests/test_contracts.py`)                                          | ⚠️     | Execute against Pact mock but remain synthetic; no real HTTP clients or contract enforcement yet |
+| Coverage gate (`--cov-fail-under=80`)                                               | ✅     | Gate tightened to 80%; complex dependency graph branches still need targeted tests               |
 
 **Current Blockers**
 
@@ -61,7 +61,7 @@ summary: Current operational, testing, and documentation gaps with recommended r
 ## Documentation Gaps
 
 - `IMPLEMENTATION_SUMMARY.md` and `ROADMAP.md` previously marked all phases ✅; several features are still skeletons or missing entry points (see MCP and feature flag issues above).
- - `TESTING_IMPLEMENTATION_SUMMARY.md` claimed "1,437 lines of tests" with ≥80% coverage; the refreshed run now reaches 83.96% coverage, yet 145 Pact warnings persist and branch-level confidence is uneven.
+- `TESTING_IMPLEMENTATION_SUMMARY.md` claimed "1,437 lines of tests" with ≥80% coverage; the refreshed run now reaches 83.96% coverage, yet 145 Pact warnings persist and branch-level confidence is uneven.
 - `docs/README.md` highlighted guides that assume working CI reproducibility and MCP integrations; these paths require revalidation once the underlying tooling is implemented.
 - `docs/index.md` now includes an auto-generated Diataxis overview sourced from `docs/diataxis.json`; update the mapping when adding new guides to keep categories accurate.
 

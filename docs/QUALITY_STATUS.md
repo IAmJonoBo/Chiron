@@ -10,16 +10,16 @@ This document provides a real-time snapshot of Chiron's quality metrics and comp
 
 ### All Gates Passing ✅
 
-| Gate | Status | Details |
-|------|--------|---------|
-| **1. Policy Gate** | ✅ Passing | OPA/Conftest policies enforced |
-| **2. Coverage Gate** | ✅ Passing | 84% (exceeds 80% frontier target) |
-| **3. Security Gate** | ✅ Passing | Zero critical vulnerabilities |
-| **4. Type Safety Gate** | ✅ Passing | MyPy strict mode, 77 files |
-| **5. SBOM Gate** | ✅ Passing | CycloneDX + SPDX generation |
-| **6. Code Quality Gate** | ✅ Passing | Ruff linting, zero errors |
-| **7. Test Quality Gate** | ✅ Passing | 765 tests, all passing |
-| **8. Dependency Gate** | ✅ Passing | No conflicts, locked deps |
+| Gate                      | Status     | Details                            |
+| ------------------------- | ---------- | ---------------------------------- |
+| **1. Policy Gate**        | ✅ Passing | OPA/Conftest policies enforced     |
+| **2. Coverage Gate**      | ✅ Passing | 84% (exceeds 80% frontier target)  |
+| **3. Security Gate**      | ✅ Passing | Zero critical vulnerabilities      |
+| **4. Type Safety Gate**   | ✅ Passing | MyPy strict mode, 77 files         |
+| **5. SBOM Gate**          | ✅ Passing | CycloneDX + SPDX generation        |
+| **6. Code Quality Gate**  | ✅ Passing | Ruff linting, zero errors          |
+| **7. Test Quality Gate**  | ✅ Passing | 765 tests, all passing             |
+| **8. Dependency Gate**    | ✅ Passing | No conflicts, locked deps          |
 | **9. Documentation Gate** | ✅ Passing | Builds successfully, zero warnings |
 
 ## Test Coverage Metrics
@@ -28,22 +28,22 @@ This document provides a real-time snapshot of Chiron's quality metrics and comp
 
 **Status**: Exceeds frontier target of 80%
 
-| Threshold | Target | Current | Status |
-|-----------|--------|---------|--------|
-| Minimum Gate | 50% | 84% | ✅ Pass (+34%) |
-| Target | 65% | 84% | ✅ Pass (+19%) |
-| Frontier | 80% | 84% | ✅ Pass (+4%) |
+| Threshold    | Target | Current | Status         |
+| ------------ | ------ | ------- | -------------- |
+| Minimum Gate | 50%    | 84%     | ✅ Pass (+34%) |
+| Target       | 65%    | 84%     | ✅ Pass (+19%) |
+| Frontier     | 80%    | 84%     | ✅ Pass (+4%)  |
 
 ### Coverage by Module
 
-| Module | Coverage | Status |
-|--------|----------|--------|
-| Core Library | 100% | 🟢 Excellent |
-| Observability | 96-100% | 🟢 Excellent |
-| Service Layer | 88-97% | 🟢 Good |
-| Dev Toolbox | 84% | 🟢 Good |
-| Supply Chain (deps) | 79-100% | 🟡 Variable |
-| CLI | 39% | 🟡 Adequate for core |
+| Module              | Coverage | Status               |
+| ------------------- | -------- | -------------------- |
+| Core Library        | 100%     | 🟢 Excellent         |
+| Observability       | 96-100%  | 🟢 Excellent         |
+| Service Layer       | 88-97%   | 🟢 Good              |
+| Dev Toolbox         | 84%      | 🟢 Good              |
+| Supply Chain (deps) | 79-100%  | 🟡 Variable          |
+| CLI                 | 39%      | 🟡 Adequate for core |
 
 ### Test Statistics
 
@@ -82,12 +82,12 @@ This document provides a real-time snapshot of Chiron's quality metrics and comp
 
 ### Vulnerability Scanning: Clean ✅
 
-| Scanner | Critical | High | Medium | Low | Status |
-|---------|----------|------|--------|-----|--------|
-| Bandit | 0 | 0 | 3 | 89 | ✅ Pass |
-| Safety | 0 | 0 | 0 | 0 | ✅ Pass |
-| Grype | 0 | 0 | - | - | ✅ Pass |
-| Semgrep | 0 | 0 | - | - | ✅ Pass |
+| Scanner | Critical | High | Medium | Low | Status  |
+| ------- | -------- | ---- | ------ | --- | ------- |
+| Bandit  | 0        | 0    | 3      | 89  | ✅ Pass |
+| Safety  | 0        | 0    | 0      | 0   | ✅ Pass |
+| Grype   | 0        | 0    | -      | -   | ✅ Pass |
+| Semgrep | 0        | 0    | -      | -   | ✅ Pass |
 
 **Note**: Medium and Low severity findings are acceptable and documented.
 
@@ -124,13 +124,13 @@ This document provides a real-time snapshot of Chiron's quality metrics and comp
 
 ### Documentation Sections
 
-| Section | Count | Status |
-|---------|-------|--------|
-| Getting Started | 3 | ✅ Complete |
-| Tutorials | 1 | ✅ Active |
-| How-to Guides | 7 | ✅ Complete |
-| Reference | 11 | ✅ Complete |
-| Explanation | 3 | ✅ Complete |
+| Section         | Count | Status      |
+| --------------- | ----- | ----------- |
+| Getting Started | 3     | ✅ Complete |
+| Tutorials       | 1     | ✅ Active   |
+| How-to Guides   | 7     | ✅ Complete |
+| Reference       | 11    | ✅ Complete |
+| Explanation     | 3     | ✅ Complete |
 
 ## Dependency Status
 
@@ -144,50 +144,50 @@ This document provides a real-time snapshot of Chiron's quality metrics and comp
 
 ### Optional Dependency Groups
 
-| Group | Packages | Purpose | Status |
-|-------|----------|---------|--------|
-| dev | 10+ | Development tools | ✅ Active |
-| test | 10+ | Testing frameworks | ✅ Active |
-| security | 5+ | Security scanning | ✅ Active |
-| service | 5+ | FastAPI service | ✅ Active |
-| docs | 5+ | Documentation | ✅ Active |
+| Group    | Packages | Purpose            | Status    |
+| -------- | -------- | ------------------ | --------- |
+| dev      | 10+      | Development tools  | ✅ Active |
+| test     | 10+      | Testing frameworks | ✅ Active |
+| security | 5+       | Security scanning  | ✅ Active |
+| service  | 5+       | FastAPI service    | ✅ Active |
+| docs     | 5+       | Documentation      | ✅ Active |
 
 ## CI/CD Status
 
 ### Workflows: All Active ✅
 
-| Workflow | Trigger | Status | Last Run |
-|----------|---------|--------|----------|
-| CI | Push/PR | ✅ Passing | Active |
-| Quality Gates | Push/PR | ✅ Passing | Active |
-| CodeQL | Weekly | ✅ Passing | Active |
-| Trivy | Weekly | ✅ Passing | Active |
-| Docs Lint | Push/PR | ✅ Passing | Active |
-| Environment Sync | Push | ✅ Passing | Active |
+| Workflow         | Trigger | Status     | Last Run |
+| ---------------- | ------- | ---------- | -------- |
+| CI               | Push/PR | ✅ Passing | Active   |
+| Quality Gates    | Push/PR | ✅ Passing | Active   |
+| CodeQL           | Weekly  | ✅ Passing | Active   |
+| Trivy            | Weekly  | ✅ Passing | Active   |
+| Docs Lint        | Push/PR | ✅ Passing | Active   |
+| Environment Sync | Push    | ✅ Passing | Active   |
 
 ### Badge Status
 
-| Badge | Status | Notes |
-|-------|--------|-------|
-| CI | ✅ Active | All OS/Python passing |
-| Quality Gates | ✅ Active | 9/9 gates passing |
-| Codecov | ✅ Active | 84% coverage |
-| PyPI Version | ⏳ Pending | Awaiting first release |
+| Badge           | Status     | Notes                  |
+| --------------- | ---------- | ---------------------- |
+| CI              | ✅ Active  | All OS/Python passing  |
+| Quality Gates   | ✅ Active  | 9/9 gates passing      |
+| Codecov         | ✅ Active  | 84% coverage           |
+| PyPI Version    | ⏳ Pending | Awaiting first release |
 | Python Versions | ⏳ Pending | Awaiting first release |
-| License | ✅ Active | MIT license |
+| License         | ✅ Active  | MIT license            |
 
 ## Automation Status
 
 ### Pre-commit Hooks: 6 Active ✅
 
-| Hook | Stage | Status |
-|------|-------|--------|
-| Vale | commit | ✅ Active |
-| Ruff (lint) | commit | ✅ Active |
+| Hook          | Stage  | Status    |
+| ------------- | ------ | --------- |
+| Vale          | commit | ✅ Active |
+| Ruff (lint)   | commit | ✅ Active |
 | Ruff (format) | commit | ✅ Active |
-| Deptry | commit | ✅ Active |
-| MyPy | push | ✅ Active |
-| Pytest | push | ✅ Active |
+| Deptry        | commit | ✅ Active |
+| MyPy          | push   | ✅ Active |
+| Pytest        | push   | ✅ Active |
 
 ### Environment Sync: Active ✅
 
@@ -252,16 +252,16 @@ This document provides a real-time snapshot of Chiron's quality metrics and comp
 
 ### Overall Grade: A+ (Frontier Grade)
 
-| Category | Grade | Notes |
-|----------|-------|-------|
-| **Code Quality** | A+ | Zero errors, modern style |
-| **Test Coverage** | A+ | 84%, exceeds frontier |
-| **Security** | A+ | Zero critical issues |
-| **Documentation** | A+ | Complete, well-organized |
-| **Automation** | A+ | Comprehensive, enforced |
-| **Standards** | A+ | Well-documented, enforced |
-| **CI/CD** | A+ | All workflows active |
-| **Dependencies** | A | Healthy, monitored |
+| Category          | Grade | Notes                     |
+| ----------------- | ----- | ------------------------- |
+| **Code Quality**  | A+    | Zero errors, modern style |
+| **Test Coverage** | A+    | 84%, exceeds frontier     |
+| **Security**      | A+    | Zero critical issues      |
+| **Documentation** | A+    | Complete, well-organized  |
+| **Automation**    | A+    | Comprehensive, enforced   |
+| **Standards**     | A+    | Well-documented, enforced |
+| **CI/CD**         | A+    | All workflows active      |
+| **Dependencies**  | A     | Healthy, monitored        |
 
 ### Compliance Summary
 
@@ -278,7 +278,7 @@ This document provides a real-time snapshot of Chiron's quality metrics and comp
 
 ### Maintain Current Quality
 
-1. **Run quality checks**: `chiron tools qa --profile full`
+1. **Run quality checks**: `hephaestus tools qa --profile full`
 2. **Monitor coverage**: Keep above 80%
 3. **Update dependencies**: Monthly review
 4. **Review security scans**: Weekly check
@@ -305,6 +305,6 @@ This document provides a real-time snapshot of Chiron's quality metrics and comp
 **Status**: All quality gates passing ✅  
 **Grade**: A+ (Frontier Grade)  
 **Compliance**: 100%  
-**Ready for**: Production deployment  
+**Ready for**: Production deployment
 
 Last Verified: 2025-01-06

@@ -16,38 +16,11 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Annotated, Literal, cast
 
-from rich.console import Console
-from rich.panel import Panel
-from rich.text import Text
-
 try:
     import typer
 except ImportError as exc:
     raise RuntimeError("Typer must be installed to use the Chiron CLI") from exc
 
-from chiron.dev_toolbox import (
-    CoverageReport,
-    DiataxisEntry,
-    DocumentationSyncError,
-    QualitySuiteProgressEvent,
-    analyze_hotspots,
-    analyze_refactor_opportunities,
-    available_quality_profiles,
-    build_quality_suite_monitoring,
-    build_quality_suite_plan,
-    coverage_focus,
-    coverage_gap_summary,
-    coverage_guard,
-    coverage_hotspots,
-    discover_diataxis_entries,
-    dump_diataxis_entries,
-    execute_quality_suite,
-    load_quality_configuration,
-    prepare_quality_suite_dry_run,
-    quality_suite_manifest,
-    sync_diataxis_documentation,
-    sync_quality_suite_documentation,
-)
 from chiron.github import (
     COPILOT_DISABLE_ENV_VAR,
     CopilotProvisioningError,
@@ -148,67 +121,19 @@ def _invoke_script_command(
     _invoke_cli_callable(command_name, callback, args=forwarded)
 
 
-def _render_progress_bar(completed: int, total: int, *, width: int = 24) -> str:
-    """Return a textual progress bar for *completed*/*total* gates."""
+def _handoff_to_hephaestus(command: Sequence[str] | str) -> None:
+    """Inform the operator that developer tooling lives in Hephaestus."""
 
-    safe_total = max(total, 1)
-    safe_completed = max(0, min(completed, safe_total))
-    ratio = safe_completed / safe_total
-    filled = int(ratio * width)
-    if safe_completed == safe_total:
-        filled = width
-    empty = width - filled
-    bar = "█" * filled + "░" * empty
-    return f"[{bar}] {safe_completed}/{total}"
-
-
-def _format_progress_label(event: QualitySuiteProgressEvent) -> str:
-    """Return a human-readable label for a progress *event*."""
-
-    if event.gate is None:
-        return " ".join(event.command) or event.name
-    label = event.gate.name
-    category = event.gate.category.replace("_", " ")
-    if category:
-        label = f"{label} [{category}]"
-    if event.gate.description and event.gate.description != event.gate.name:
-        label = f"{label} — {event.gate.description}"
-    return label
-
-
-def _build_quality_suite_progress_renderer(
-    console: Console, total: int
-) -> Callable[[QualitySuiteProgressEvent], None]:
-    """Return a renderer that prints progress updates to *console*."""
-
-    def _render(event: QualitySuiteProgressEvent) -> None:
-        if event.status == "started":
-            completed = event.index - 1
-            bar = _render_progress_bar(completed, total)
-            console.print(f"[cyan]▶[/cyan] {bar} {_format_progress_label(event)}")
-            return
-
-        completed = event.index
-        bar = _render_progress_bar(completed, total)
-        success = bool(event.result and event.result.returncode == 0)
-        icon = "[green]✅[/green]" if success else "[red]❌[/red]"
-        duration = "--"
-        if event.result is not None:
-            duration = f"{event.result.duration:.2f}s"
-        console.print(f"{icon} {bar} {_format_progress_label(event)} ({duration})")
-        if not success and event.result is not None:
-            output = event.result.output.strip()
-            if output:
-                console.print(
-                    Panel(
-                        Text(output),
-                        title=f"{event.name} output",
-                        border_style="red",
-                        expand=False,
-                    )
-                )
-
-    return _render
+    if isinstance(command, str):
+        display = command
+    else:
+        display = " ".join(command)
+    typer.secho(
+        "Developer tooling commands have moved to the Hephaestus project. "
+        f"Run `hephaestus {display}` instead.",
+        fg=typer.colors.YELLOW,
+    )
+    raise typer.Exit(1)
 
 
 # ============================================================================
@@ -807,9 +732,7 @@ def deps_policy(
                         icon = (
                             "❌"
                             if v.severity == "error"
-                            else "⚠️"
-                            if v.severity == "warning"
-                            else "ℹ️"
+                            else "⚠️" if v.severity == "warning" else "ℹ️"
                         )
                         typer.echo(f"   {icon} {v.violation_type}: {v.message}")
         else:
@@ -1172,927 +1095,88 @@ def deps_security(
 # ============================================================================
 
 
-@tools_app.command("qa")
-def tools_quality_suite(
-    ctx: typer.Context,
-    profile: str = typer.Option(
-        "full",
-        "--profile",
-        "-p",
-        help="Quality profile to execute",
-    ),
-    list_profiles: bool = typer.Option(
-        False,
-        "--list-profiles",
-        help="List available profiles and exit",
-    ),
-    manifest: bool = typer.Option(
-        False,
-        "--manifest",
-        help="Print a JSON manifest for gates and plans and exit",
-    ),
-    explain: bool = typer.Option(
-        False,
-        "--explain",
-        help="Show resolved gates before executing",
-    ),
-    dry_run: bool = typer.Option(
-        False,
-        "--dry-run",
-        help="Display the plan without running commands",
-    ),
-    guide: bool = typer.Option(
-        False,
-        "--guide",
-        help="Print an agent-focused quickstart guide and exit",
-    ),
-    tests: bool | None = typer.Option(
-        None,
-        "--tests/--no-tests",
-        help="Run pytest with coverage",
-        show_default=False,
-    ),
-    lint: bool | None = typer.Option(
-        None,
-        "--lint/--no-lint",
-        help="Run Ruff linting",
-        show_default=False,
-    ),
-    types: bool | None = typer.Option(
-        None,
-        "--types/--no-types",
-        help="Run mypy type checking",
-        show_default=False,
-    ),
-    security: bool | None = typer.Option(
-        None,
-        "--security/--no-security",
-        help="Run Bandit security scan",
-        show_default=False,
-    ),
-    docs: bool | None = typer.Option(
-        None,
-        "--docs/--no-docs",
-        help="Build project documentation",
-        show_default=False,
-    ),
-    build: bool | None = typer.Option(
-        None,
-        "--build/--no-build",
-        help="Build wheel and sdist",
-        show_default=False,
-    ),
-    contracts: bool | None = typer.Option(
-        None,
-        "--contracts/--no-contracts",
-        help="Run Pact contract tests (requires pact-mock-service)",
-        show_default=False,
-    ),
-    halt: bool = typer.Option(
-        True, "--halt/--keep-going", help="Stop on first failure"
-    ),
-    json_output: bool = typer.Option(False, "--json", help="Emit JSON results"),
-    save_report: Path | None = typer.Option(
-        None,
-        "--save-report",
-        help="Write JSON results to the provided path",
-    ),
-    monitor: bool = typer.Option(
-        False,
-        "--monitor",
-        help="Include coverage monitoring insights for CLI and service focus areas",
-    ),
-    coverage_xml: Path = typer.Option(
-        Path("coverage.xml"),
-        "--coverage-xml",
-        help="Path to coverage XML for monitoring insights",
-    ),
-    monitor_threshold: float = typer.Option(
-        85.0,
-        "--monitor-threshold",
-        help="Threshold used to flag monitored coverage focus areas",
-    ),
-    monitor_limit: int = typer.Option(
-        3,
-        "--monitor-limit",
-        min=1,
-        help="Maximum modules to display per monitored focus area",
-    ),
-    monitor_min_statements: int = typer.Option(
-        25,
-        "--monitor-min-statements",
-        min=0,
-        help="Minimum statements required for modules to be monitored",
-    ),
-    sync_docs: Path | None = typer.Option(
-        None,
-        "--sync-docs",
-        help="Update the documentation snippet at the provided path and exit",
-    ),
-    docs_marker: str = typer.Option(
-        "QUALITY_SUITE_AUTODOC",
-        "--docs-marker",
-        help="Marker name used to locate the auto-generated documentation block",
-    ),
-) -> None:
-    """Run the curated quality gate command suite."""
-
-    console: Console | None = None
-    if not json_output:
-        console = Console()
-
-    config = load_quality_configuration()
-    profiles = available_quality_profiles(config)
-
-    if manifest:
-        typer.echo(json.dumps(quality_suite_manifest(config=config), indent=2))
-        raise typer.Exit(0)
-
-    if list_profiles:
-        lines = ["Available quality profiles:"]
-        for name, gate_names in sorted(profiles.items()):
-            rendered = ", ".join(gate_names) if gate_names else "(none)"
-            lines.append(f"  • {name}: {rendered}")
-        typer.echo("\n".join(lines))
-        raise typer.Exit(0)
-
-    try:
-        plan = build_quality_suite_plan(
-            profile,
-            config=config,
-            toggles={
-                "tests": tests,
-                "lint": lint,
-                "types": types,
-                "security": security,
-                "docs": docs,
-                "build": build,
-                "contracts": contracts,
-            },
-        )
-    except KeyError as exc:
-        typer.echo(str(exc), err=True)
-        raise typer.Exit(1) from exc
-
-    if not plan.gates:
-        typer.echo("No quality gates selected.")
-        raise typer.Exit(code=0)
-
-    monitoring = None
-    if monitor:
-        try:
-            coverage_report = CoverageReport.from_xml(coverage_xml)
-        except FileNotFoundError as exc:
-            typer.echo(f"Coverage report not found at {coverage_xml}", err=True)
-            raise typer.Exit(1) from exc
-        monitoring = build_quality_suite_monitoring(
-            plan,
-            coverage_report,
-            threshold=monitor_threshold,
-            limit=monitor_limit,
-            min_statements=monitor_min_statements,
-            source=str(coverage_xml),
-        )
-
-    dry_run_snapshot = prepare_quality_suite_dry_run(plan, monitoring=monitoring)
-    plan_insights = dry_run_snapshot.insights
-
-    if sync_docs is not None:
-        try:
-            updated_path = sync_quality_suite_documentation(
-                dry_run_snapshot,
-                sync_docs,
-                marker=docs_marker,
-            )
-        except DocumentationSyncError as exc:
-            typer.echo(str(exc), err=True)
-            raise typer.Exit(1) from exc
-        documentation_lines = list(dry_run_snapshot.render_documentation_lines())
-        if json_output:
-            typer.echo(
-                json.dumps(
-                    {
-                        "status": "updated",
-                        "path": str(updated_path),
-                        "marker": docs_marker,
-                        "documentation": documentation_lines,
-                    },
-                    indent=2,
-                )
-            )
-        else:
-            typer.echo(
-                f"Documentation block updated in {updated_path} using marker {docs_marker}."
-            )
-        raise typer.Exit(0)
-
-    if guide:
-        guide_lines = list(dry_run_snapshot.guide)
-        if json_output:
-            typer.echo(
-                json.dumps(
-                    {
-                        "guide": guide_lines,
-                        "dry_run": dry_run_snapshot.to_payload(),
-                    },
-                    indent=2,
-                )
-            )
-        else:
-            typer.echo("\n".join(guide_lines))
-        raise typer.Exit(0)
-
-    if explain or dry_run:
-        if not json_output and console is not None:
-            console.print("[bold]Resolved quality gates:[/bold]")
-            console.print(
-                render_execution_plan_table(
-                    plan.execution_plan, title="Quality Gate Execution Plan"
-                )
-            )
-            console.print("[bold]Plan insights:[/bold]")
-            for line in plan_insights.render_lines():
-                console.print(line)
-            if monitoring is not None:
-                console.print("")
-                console.print("[bold]Monitoring insights:[/bold]")
-                for line in monitoring.render_lines():
-                    console.print(line)
-            if dry_run_snapshot.actions:
-                console.print("")
-                console.print("[bold]Recommended actions:[/bold]")
-                for action in dry_run_snapshot.actions:
-                    console.print(f"• {action}")
-        if dry_run:
-            payload = dry_run_snapshot.to_payload()
-            if json_output:
-                typer.echo(json.dumps(payload, indent=2))
-            raise typer.Exit(0)
-
-    progress_callback: Callable[[QualitySuiteProgressEvent], None] | None = None
-    if console is not None and plan.gates:
-        console.print()
-        console.rule("[bold]Quality Suite Progress[/bold]")
-        progress_callback = _build_quality_suite_progress_renderer(
-            console, len(plan.gates)
-        )
-
-    report = execute_quality_suite(
-        plan,
-        halt_on_failure=halt,
-        monitoring=monitoring,
-        progress=progress_callback,
-    )
-    report_payload = report.to_payload()
-
-    if json_output:
-        typer.echo(json.dumps(report_payload, indent=2))
-    else:
-        if console is None:
-            typer.echo(report.render_text_summary())
-            if report.monitoring is not None:
-                typer.echo("")
-                typer.echo("Monitoring insights:")
-                for line in report.render_monitoring_lines():
-                    typer.echo(line)
-        else:
-            console.print()
-            summary_style = "green" if report.succeeded else "red"
-            console.print(
-                Panel(
-                    Text(report.render_text_summary()),
-                    title=f"Quality Suite — {report.status.upper()}",
-                    border_style=summary_style,
-                )
-            )
-            if report.monitoring is not None:
-                monitoring_lines = report.render_monitoring_lines()
-                console.print()
-                console.print(
-                    Panel(
-                        Text("\n".join(monitoring_lines) or "No monitoring insights."),
-                        title="Monitoring Insights",
-                        border_style="cyan",
-                    )
-                )
-
-    if save_report is not None:
-        save_report.parent.mkdir(parents=True, exist_ok=True)
-        save_report.write_text(json.dumps(report_payload, indent=2), encoding="utf-8")
-        if console is not None and not json_output:
-            console.print(f"[dim]Report saved to {save_report}[/dim]")
-        else:
-            typer.echo(f"Report saved to {save_report}")
-
-    if not report.succeeded:
-        raise typer.Exit(1)
-
-
-@coverage_app.command("hotspots")
-def coverage_hotspots_cli(
-    xml: Path = typer.Option(
-        Path("coverage.xml"), "--xml", help="Path to coverage XML"
-    ),
-    threshold: float = typer.Option(90.0, "--threshold", help="Coverage threshold"),
-    limit: int = typer.Option(10, "--limit", min=1, help="Number of modules to show"),
-) -> None:
-    """List modules falling below the specified coverage threshold."""
-
-    report = CoverageReport.from_xml(xml)
-    typer.echo(coverage_hotspots(report, threshold=threshold, limit=limit))
-
-
-@coverage_app.command("focus")
-def coverage_focus_cli(
-    module: str = typer.Argument(..., help="Module path as listed in coverage.xml"),
-    xml: Path = typer.Option(
-        Path("coverage.xml"), "--xml", help="Path to coverage XML"
-    ),
-    lines: int | None = typer.Option(
-        None, "--lines", min=1, help="Limit of missing lines to display"
-    ),
-) -> None:
-    """Show missing lines for a specific module."""
-
-    report = CoverageReport.from_xml(xml)
-    typer.echo(coverage_focus(report, module, line_limit=lines))
-
-
-@coverage_app.command("summary")
-def coverage_summary_cli(
-    xml: Path = typer.Option(
-        Path("coverage.xml"), "--xml", help="Path to coverage XML"
-    ),
-    limit: int = typer.Option(5, "--limit", min=1, help="Number of entries to include"),
-) -> None:
-    """Display the best and worst performing modules from coverage."""
-
-    report = CoverageReport.from_xml(xml)
-    best = report.best(limit=limit)
-    worst = report.worst(limit=limit)
-    lines = ["🔥 Coverage hotspots:"]
-    if worst:
-        lines.extend(
-            f"  • {module.name} — {module.coverage:.2f}% (missing {module.missing})"
-            for module in worst
-        )
-    else:
-        lines.append("  • None! 🎉")
-
-    lines.append(
-        f"\n📊 Overall coverage: {report.summary.coverage:.2f}% ({report.summary.covered}/{report.summary.total_statements})"
-    )
-    lines.append("\n🌟 Top performers:")
-    if best:
-        lines.extend(f"  • {module.name} — {module.coverage:.2f}%" for module in best)
-    else:
-        lines.append("  • No modules found")
-
-    typer.echo("\n".join(lines))
-
-
-@coverage_app.command("guard")
-def coverage_guard_cli(
-    xml: Path = typer.Option(
-        Path("coverage.xml"), "--xml", help="Path to coverage XML"
-    ),
-    threshold: float = typer.Option(
-        80.0, "--threshold", help="Minimum acceptable coverage"
-    ),
-    limit: int = typer.Option(5, "--limit", min=1, help="Hotspot limit"),
-) -> None:
-    """Fail if overall coverage drops below the specified threshold."""
-
-    report = CoverageReport.from_xml(xml)
-    passed, message = coverage_guard(report, threshold=threshold, limit=limit)
-    typer.echo(message)
-    if not passed:
-        raise typer.Exit(1)
-
-
-@coverage_app.command("gaps")
-def coverage_gaps_cli(
-    xml: Path = typer.Option(
-        Path("coverage.xml"), "--xml", help="Path to coverage XML"
-    ),
-    min_statements: int = typer.Option(
-        0,
-        "--min-statements",
-        help="Only include modules with at least this many statements",
-    ),
-    limit: int = typer.Option(5, "--limit", min=1, help="Number of modules to show"),
-) -> None:
-    """Highlight modules with the most missing lines."""
-
-    report = CoverageReport.from_xml(xml)
-    typer.echo(coverage_gap_summary(report, min_statements=min_statements, limit=limit))
-
-
-@refactor_app.command("analyze")
-def refactor_analyze(
-    path: list[Path] = typer.Option(
-        [],
-        "--path",
-        "-p",
-        help="Files or directories to inspect (defaults to src/ and tests/)",
-    ),
-    coverage_xml: Path | None = typer.Option(
-        None,
-        "--coverage-xml",
-        help="Optional coverage XML file to correlate with analysis",
-    ),
-    max_function_length: int = typer.Option(
-        60,
-        "--max-function-length",
-        min=10,
-        help="Maximum allowed function length before flagging",
-    ),
-    max_class_methods: int = typer.Option(
-        12,
-        "--max-class-methods",
-        min=1,
-        help="Maximum allowed class method count before flagging",
-    ),
-    max_cyclomatic_complexity: int = typer.Option(
-        10,
-        "--max-cyclomatic-complexity",
-        min=1,
-        help="Cyclomatic complexity threshold for functions",
-    ),
-    max_parameters: int = typer.Option(
-        6,
-        "--max-parameters",
-        min=1,
-        help="Maximum allowed number of parameters for a callable",
-    ),
-    min_docstring_length: int = typer.Option(
-        20,
-        "--min-docstring-length",
-        min=1,
-        help="Flag public callables without docstrings once they exceed this length",
-    ),
-    coverage_threshold: float = typer.Option(
-        85.0,
-        "--coverage-threshold",
-        min=0.0,
-        help="Coverage percentage gate for highlighting modules",
-    ),
-    json_output: bool = typer.Option(
-        False,
-        "--json",
-        help="Emit machine-readable JSON report",
-    ),
-) -> None:
-    report = analyze_refactor_opportunities(
-        tuple(path) or None,
-        coverage_xml=coverage_xml,
-        max_function_length=max_function_length,
-        max_class_methods=max_class_methods,
-        max_cyclomatic_complexity=max_cyclomatic_complexity,
-        max_parameters=max_parameters,
-        min_docstring_length=min_docstring_length,
-        coverage_threshold=coverage_threshold,
-    )
-
-    if json_output:
-        typer.echo(json.dumps(report.to_payload(), indent=2))
-        return
-
-    console = Console()
-    if not report.opportunities:
-        console.print("[green]No refactor opportunities detected.[/green]")
-        return
-
-    console.print()
-    console.rule("[bold]Refactor Opportunities[/bold]")
-    severity_styles = {
-        "critical": "bold red",
-        "warning": "yellow",
-        "info": "cyan",
-    }
-    for opportunity in report.opportunities:
-        style = severity_styles.get(opportunity.severity, "white")
-        metric_hint = ""
-        if opportunity.metric is not None and opportunity.threshold is not None:
-            metric_hint = (
-                f" (observed {opportunity.metric}, threshold {opportunity.threshold})"
-            )
-        symbol = f" · {opportunity.symbol}" if opportunity.symbol else ""
-        console.print(
-            f"[{style}]{opportunity.severity.upper()}[/] "
-            f"{opportunity.path}:{opportunity.line}{symbol} — "
-            f"{opportunity.message}{metric_hint}"
-        )
-
-
-@refactor_app.command("hotspots")
-def refactor_hotspots(
-    since: str = typer.Option(
-        "12 months ago",
-        "--since",
-        help="Git log time specification for churn analysis",
-    ),
-    limit: int = typer.Option(
-        20,
-        "--limit",
-        min=1,
-        help="Number of top hotspots to display",
-    ),
-    min_complexity: int = typer.Option(
-        10,
-        "--min-complexity",
-        min=0,
-        help="Minimum complexity score threshold",
-    ),
-    min_churn: int = typer.Option(
-        2,
-        "--min-churn",
-        min=1,
-        help="Minimum number of changes threshold",
-    ),
-    json_output: bool = typer.Option(
-        False,
-        "--json",
-        help="Emit machine-readable JSON report",
-    ),
-) -> None:
-    """Identify code hotspots by combining churn and complexity.
-
-    Implements hotspot targeting from Next Steps.md: prioritize files
-    that are both complex and frequently changed (complexity × churn).
-    These are the best candidates for refactoring investment.
-    """
-    report = analyze_hotspots(
-        since=since,
-        min_complexity=min_complexity,
-        min_churn=min_churn,
-    )
-
-    if json_output:
-        typer.echo(json.dumps(report.to_payload(), indent=2))
-        return
-
-    console = Console()
-    if not report.entries:
-        console.print("[green]No hotspots detected with current thresholds.[/green]")
-        return
-
-    console.print()
-    console.rule("[bold]Code Hotspots (Complexity × Churn)[/bold]")
-    console.print()
-    console.print(
-        f"Analyzed files changed since [cyan]{since}[/cyan] "
-        f"with complexity ≥ {min_complexity} and churn ≥ {min_churn}"
-    )
-    console.print()
-
-    for idx, entry in enumerate(report.entries[:limit], start=1):
-        # Color code by hotspot severity
-        if entry.hotspot_score > 1000:
-            style = "bold red"
-        elif entry.hotspot_score > 500:
-            style = "yellow"
-        else:
-            style = "cyan"
-
-        console.print(
-            f"[{style}]{idx:2d}.[/] {entry.path} "
-            f"(complexity={entry.complexity_score}, "
-            f"churn={entry.churn_count}, "
-            f"[{style}]hotspot={entry.hotspot_score}[/])"
-        )
-
-    if len(report.entries) > limit:
-        console.print()
-        console.print(
-            f"[dim]... and {len(report.entries) - limit} more. "
-            f"Use --limit to see more.[/dim]"
-        )
-
-
-@refactor_app.command("codemod")
-def refactor_codemod(
-    old_name: str = typer.Option(
-        ...,
-        "--old-name",
-        help="Current function/method name to rename",
-    ),
-    new_name: str = typer.Option(
-        ...,
-        "--new-name",
-        help="New function/method name",
-    ),
-    path: list[Path] = typer.Option(
-        [],
-        "--path",
-        "-p",
-        help="Python files to transform",
-    ),
-    directory: Path | None = typer.Option(
-        None,
-        "--dir",
-        help="Directory to scan for Python files (recursive)",
-    ),
-    include_tests: bool = typer.Option(
-        False,
-        "--include-tests",
-        help="Include test files when scanning directory",
-    ),
-    dry_run: bool = typer.Option(
-        True,
-        "--dry-run/--apply",
-        help="Dry run mode (default) or apply changes",
-    ),
-) -> None:
-    """Run LibCST-based code transformations.
-
-    Currently supports function/method renaming. Uses LibCST for lossless
-    transformations that preserve formatting and comments.
-
-    Example:
-        chiron tools refactor codemod --old-name foo --new-name bar --path src/module.py
-    """
-    import subprocess
-    import sys
-
-    script_path = Path("dev-toolkit/refactoring/scripts/codemods/py/rename_function.py")
-
-    if not script_path.exists():
-        typer.secho(
-            f"Error: Codemod script not found: {script_path}",
-            fg=typer.colors.RED,
-            err=True,
-        )
-        typer.secho(
-            "Ensure dev-toolkit/refactoring/ structure is present",
-            fg=typer.colors.YELLOW,
-            err=True,
-        )
-        raise typer.Exit(1)
-
-    # Build command
-    cmd = [
-        sys.executable,
-        str(script_path),
-        "--old-name",
-        old_name,
-        "--new-name",
-        new_name,
-    ]
-
-    if directory:
-        cmd.extend(["--dir", str(directory)])
-        if include_tests:
-            cmd.append("--include-tests")
-
-    for p in path:
-        cmd.append(str(p))
-
-    if not dry_run:
-        cmd.append("--apply")
-
-    # Execute
-    console = Console()
-    mode = "DRY RUN" if dry_run else "APPLY"
-    console.print(f"\n[bold]Running codemod ({mode})[/bold]")
-    console.print(f"Transform: {old_name} → {new_name}\n")
-
-    try:
-        result = subprocess.run(cmd, check=False)
-        if result.returncode != 0:
-            raise typer.Exit(result.returncode)
-    except FileNotFoundError as exc:
-        typer.secho(f"Error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(1)
-
-
-@refactor_app.command("verify")
-def refactor_verify(
-    path: Path = typer.Option(
-        ...,
-        "--path",
-        "-p",
-        help="Python file to generate characterization tests for",
-    ),
-    output: Path = typer.Option(
-        Path("tests/snapshots"),
-        "--output",
-        "-o",
-        help="Output directory for test scaffolds",
-    ),
-    max_functions: int = typer.Option(
-        10,
-        "--max-functions",
-        min=1,
-        help="Maximum number of functions to generate tests for",
-    ),
-) -> None:
-    """Generate characterization test scaffolds.
-
-    Creates pytest test skeletons that lock in current behavior before
-    refactoring. These "golden file" or "approval" tests help ensure
-    refactorings are behavior-preserving.
-
-    Example:
-        chiron tools refactor verify --path src/chiron/module.py
-    """
-    import subprocess
-    import sys
-
-    script_path = Path("dev-toolkit/refactoring/scripts/verify/snapshot_scaffold.py")
-
-    if not script_path.exists():
-        typer.secho(
-            f"Error: Verification script not found: {script_path}",
-            fg=typer.colors.RED,
-            err=True,
-        )
-        raise typer.Exit(1)
-
-    if not path.exists():
-        typer.secho(
-            f"Error: File not found: {path}",
-            fg=typer.colors.RED,
-            err=True,
-        )
-        raise typer.Exit(1)
-
-    # Build command
-    cmd = [
-        sys.executable,
-        str(script_path),
-        "--path",
-        str(path),
-        "--output",
-        str(output),
-        "--max-functions",
-        str(max_functions),
-    ]
-
-    # Execute
-    console = Console()
-    console.print("\n[bold]Generating characterization test scaffolds[/bold]")
-    console.print(f"Source: {path}")
-    console.print(f"Output: {output}\n")
-
-    try:
-        result = subprocess.run(cmd, check=False)
-        if result.returncode != 0:
-            raise typer.Exit(result.returncode)
-    except FileNotFoundError as exc:
-        typer.secho(f"Error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(1)
-
-
-@refactor_app.command("shard")
-def refactor_shard(
-    input_file: Path | None = typer.Option(
-        None,
-        "--input",
-        "-i",
-        help="File containing list of changed files (one per line)",
-    ),
-    use_stdin: bool = typer.Option(
-        False,
-        "--stdin",
-        help="Read file list from stdin",
-    ),
-    shard_size: int = typer.Option(
-        50,
-        "--shard-size",
-        "-s",
-        min=1,
-        help="Number of files per PR shard",
-    ),
-    output_file: Path | None = typer.Option(
-        None,
-        "--output",
-        "-o",
-        help="Output file for shard plan (default: stdout)",
-    ),
-    format_type: str = typer.Option(
-        "markdown",
-        "--format",
-        "-f",
-        help="Output format: markdown, text, or json",
-    ),
-) -> None:
-    """Split large refactorings into manageable PR shards.
-
-    Helps organize refactoring work that affects many files by splitting
-    changes into reviewable chunks (default: 50 files per PR).
-
-    Example:
-        git diff --name-only main | chiron tools refactor shard --stdin
-        chiron tools refactor shard --input changed.txt --shard-size 30
-    """
-    import subprocess
-    import sys
-
-    script_path = Path("dev-toolkit/refactoring/scripts/rollout/shard_pr_list.py")
-
-    if not script_path.exists():
-        typer.secho(
-            f"Error: Shard script not found: {script_path}",
-            fg=typer.colors.RED,
-            err=True,
-        )
-        raise typer.Exit(1)
-
-    if not input_file and not use_stdin:
-        typer.secho(
-            "Error: Must specify --input or --stdin",
-            fg=typer.colors.RED,
-            err=True,
-        )
-        raise typer.Exit(1)
-
-    # Build command
-    cmd = [
-        sys.executable,
-        str(script_path),
-        "--shard-size",
-        str(shard_size),
-        "--format",
-        format_type,
-    ]
-
-    if use_stdin:
-        cmd.append("--stdin")
-    elif input_file:
-        cmd.extend(["--input", str(input_file)])
-
-    if output_file:
-        cmd.extend(["--output", str(output_file)])
-
-    # Execute
-    try:
-        result = subprocess.run(cmd, check=False)
-        if result.returncode != 0:
-            raise typer.Exit(result.returncode)
-    except FileNotFoundError as exc:
-        typer.secho(f"Error: {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(1)
-
-
-@docs_app.command("sync-diataxis")
-def docs_sync_diataxis(
-    config: Path = typer.Option(
-        Path("docs/diataxis.json"),
-        "--config",
-        help="Path to Diataxis configuration JSON",
-    ),
-    target: Path = typer.Option(
-        Path("docs/index.md"),
-        "--target",
-        help="Markdown file containing Diataxis markers",
-    ),
-    marker: str = typer.Option(
-        "DIATAXIS_AUTODOC",
-        "--marker",
-        help="Documentation marker name to update",
-    ),
-    discover: bool = typer.Option(
-        False,
-        "--discover/--no-discover",
-        help="Discover Diataxis entries from docs front matter before syncing",
-    ),
-    docs_dir: Path = typer.Option(
-        Path("docs"),
-        "--docs-dir",
-        help="Docs directory to scan when using --discover",
-    ),
-    write_config: bool = typer.Option(
-        True,
-        "--write-config/--no-write-config",
-        help="Persist discovered entries back to the Diataxis JSON map",
-    ),
-) -> None:
-    """Synchronise the Diataxis documentation overview."""
-
-    try:
-        discovered_entries: dict[str, tuple[DiataxisEntry, ...]] | None = None
-        if discover:
-            discovered_entries = discover_diataxis_entries(docs_dir)
-            if write_config:
-                dump_diataxis_entries(config, discovered_entries)
-
-        sync_diataxis_documentation(
-            config,
-            target,
-            marker=marker,
-            entries=discovered_entries,
-        )
-    except DocumentationSyncError as exc:
-        typer.secho(f"❌ {exc}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(1) from exc
-
-    if discover:
-        total = sum(len(bucket) for bucket in (discovered_entries or {}).values())
-        typer.echo(
-            f"Discovered {total} Diataxis entries from {docs_dir} and updated {config}"
-        )
-    typer.echo(f"Updated {target} using {config}")
+@tools_app.command("qa", context_settings=_SCRIPT_PROXY_CONTEXT)
+def tools_quality_suite(ctx: Context) -> None:
+    """Forward operator to Hephaestus for quality-suite automation."""
+
+    _handoff_to_hephaestus(["tools", "qa"])
+
+
+@coverage_app.command("hotspots", context_settings=_SCRIPT_PROXY_CONTEXT)
+def coverage_hotspots_cli(ctx: Context) -> None:
+    """Forward to Hephaestus coverage hotspots."""
+
+    _handoff_to_hephaestus(["tools", "coverage", "hotspots"])
+
+
+@coverage_app.command("focus", context_settings=_SCRIPT_PROXY_CONTEXT)
+def coverage_focus_cli(ctx: Context) -> None:
+    """Forward to Hephaestus coverage focus."""
+
+    _handoff_to_hephaestus(["tools", "coverage", "focus"])
+
+
+@coverage_app.command("summary", context_settings=_SCRIPT_PROXY_CONTEXT)
+def coverage_summary_cli(ctx: Context) -> None:
+    """Forward to Hephaestus coverage summary."""
+
+    _handoff_to_hephaestus(["tools", "coverage", "summary"])
+
+
+@coverage_app.command("guard", context_settings=_SCRIPT_PROXY_CONTEXT)
+def coverage_guard_cli(ctx: Context) -> None:
+    """Forward to Hephaestus coverage guard."""
+
+    _handoff_to_hephaestus(["tools", "coverage", "guard"])
+
+
+@coverage_app.command("gaps", context_settings=_SCRIPT_PROXY_CONTEXT)
+def coverage_gaps_cli(ctx: Context) -> None:
+    """Forward to Hephaestus coverage gaps."""
+
+    _handoff_to_hephaestus(["tools", "coverage", "gaps"])
+
+
+@refactor_app.command("analyze", context_settings=_SCRIPT_PROXY_CONTEXT)
+def refactor_analyze(ctx: Context) -> None:
+    """Forward to Hephaestus refactor analyze."""
+
+    _handoff_to_hephaestus(["tools", "refactor", "analyze"])
+
+
+@refactor_app.command("hotspots", context_settings=_SCRIPT_PROXY_CONTEXT)
+def refactor_hotspots(ctx: Context) -> None:
+    """Forward to Hephaestus refactor hotspots."""
+
+    _handoff_to_hephaestus(["tools", "refactor", "hotspots"])
+
+
+@refactor_app.command("codemod", context_settings=_SCRIPT_PROXY_CONTEXT)
+def refactor_codemod(ctx: Context) -> None:
+    """Forward to Hephaestus codemods."""
+
+    _handoff_to_hephaestus(["tools", "refactor", "codemod"])
+
+
+@refactor_app.command("verify", context_settings=_SCRIPT_PROXY_CONTEXT)
+def refactor_verify(ctx: Context) -> None:
+    """Forward to Hephaestus verification scaffolds."""
+
+    _handoff_to_hephaestus(["tools", "refactor", "verify"])
+
+
+@refactor_app.command("shard", context_settings=_SCRIPT_PROXY_CONTEXT)
+def refactor_shard(ctx: Context) -> None:
+    """Forward to Hephaestus shard planner."""
+
+    _handoff_to_hephaestus(["tools", "refactor", "shard"])
+
+
+@docs_app.command("sync-diataxis", context_settings=_SCRIPT_PROXY_CONTEXT)
+def docs_sync_diataxis(ctx: Context) -> None:
+    """Forward to Hephaestus documentation tooling."""
+
+    _handoff_to_hephaestus(["tools", "docs", "sync-diataxis"])
 
 
 @tools_app.command(

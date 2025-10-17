@@ -22,6 +22,7 @@ Chiron implements 8 comprehensive quality gates that run on every push and pull 
 8. **Documentation Gate** - Docs build successfully
 
 <!-- BEGIN QUALITY_SUITE_AUTODOC -->
+
 ### Developer Toolbox Quality Suite Snapshot
 
 Use the developer toolbox to keep local quality gates aligned with CI.
@@ -29,19 +30,20 @@ Use the developer toolbox to keep local quality gates aligned with CI.
 **Primary profile**: `full` (7 gates)
 **Generated**: 2025-10-06T10:56:50.744702+00:00
 
-| Order | Gate | Category | Critical | Command |
-| --- | --- | --- | --- | --- |
-| 1 | `tests` | tests | Required | `uv run --extra dev --extra test pytest --cov=src/chiron --cov-report=term` |
-| 2 | `contracts` | tests | Optional | `uv run --extra test pytest tests/test_contracts.py -k contract` |
-| 3 | `lint` | lint | Required | `uv run --extra dev ruff check` |
-| 4 | `types` | types | Required | `uv run --extra dev mypy src` |
-| 5 | `security` | security | Required | `uv run --extra security bandit -r src -lll` |
-| 6 | `docs` | docs | Optional | `uv run --extra docs mkdocs build --strict` |
-| 7 | `build` | build | Required | `uv build` |
+| Order | Gate        | Category | Critical | Command                                                                     |
+| ----- | ----------- | -------- | -------- | --------------------------------------------------------------------------- |
+| 1     | `tests`     | tests    | Required | `uv run --extra dev --extra test pytest --cov=src/chiron --cov-report=term` |
+| 2     | `contracts` | tests    | Optional | `uv run --extra test pytest tests/test_contracts.py -k contract`            |
+| 3     | `lint`      | lint     | Required | `uv run --extra dev ruff check`                                             |
+| 4     | `types`     | types    | Required | `uv run --extra dev mypy src`                                               |
+| 5     | `security`  | security | Required | `uv run --extra security bandit -r src -lll`                                |
+| 6     | `docs`      | docs     | Optional | `uv run --extra docs mkdocs build --strict`                                 |
+| 7     | `build`     | build    | Required | `uv build`                                                                  |
 
 **Applied toggles**: _None_
 
-_Updated automatically via `chiron tools qa --sync-docs docs/QUALITY_GATES.md`._
+_Updated automatically via `hephaestus tools qa --sync-docs docs/QUALITY_GATES.md`._
+
 <!-- END QUALITY_SUITE_AUTODOC -->
 
 ## Quality Gate Details
@@ -62,37 +64,37 @@ _Updated automatically via `chiron tools qa --sync-docs docs/QUALITY_GATES.md`._
 
 ```bash
 # Discover available quality profiles and preview the plan
-chiron tools qa --list-profiles
-chiron tools qa --profile fast --explain --dry-run
+hephaestus tools qa --list-profiles
+hephaestus tools qa --profile fast --explain --dry-run
 
 # Run the curated local gate suite and archive the result
-chiron tools qa --profile full --save-report reports/qa.json
+hephaestus tools qa --profile full --save-report reports/qa.json
 
 # Export machine-readable plan metadata (plan + insights) for AI agents
-chiron tools qa --profile fast --dry-run --json > reports/qa-plan.json
+hephaestus tools qa --profile fast --dry-run --json > reports/qa-plan.json
 
 # Capture a monitored run report with gate outcomes and failing gate summaries
-chiron tools qa --profile full --json > reports/qa-run.json
+hephaestus tools qa --profile full --json > reports/qa-run.json
 
 # Generate CLI/service coverage focus insights during dry-runs
-chiron tools qa --profile full --monitor --dry-run --coverage-xml coverage.xml
+hephaestus tools qa --profile full --monitor --dry-run --coverage-xml coverage.xml
 
 # Produce machine-readable monitoring payloads for AI agents
-chiron tools qa --profile fast --monitor --json > reports/qa-monitored.json
+hephaestus tools qa --profile fast --monitor --json > reports/qa-monitored.json
 
 # Emit an agent-facing quickstart with actionable coverage follow-ups
-chiron tools qa --profile full --guide --monitor --coverage-xml coverage.xml
+hephaestus tools qa --profile full --guide --monitor --coverage-xml coverage.xml
 
 # Exercise Pact contract validation alongside the core quality suite
-chiron tools qa --profile full --contracts --dry-run
+hephaestus tools qa --profile full --contracts --dry-run
 
 # Export a complete dry-run snapshot (plan, guide, insights, actions)
-chiron tools qa --profile fast --dry-run --monitor --json > reports/qa-dry-run.json
+hephaestus tools qa --profile fast --dry-run --monitor --json > reports/qa-dry-run.json
 
 # Inspect hotspots and enforce the guard locally
-chiron tools coverage hotspots --threshold 85 --limit 5
-chiron tools coverage gaps --min-statements 40 --limit 3
-chiron tools coverage guard --threshold 90
+hephaestus tools coverage hotspots --threshold 85 --limit 5
+hephaestus tools coverage gaps --min-statements 40 --limit 3
+hephaestus tools coverage guard --threshold 90
 ```
 
 Interactive executions render rich progress bars and colour-coded panels so you
@@ -102,13 +104,13 @@ while the suite runs.
 **Improving Coverage**:
 
 - Focus on high-impact modules first (deps, service, CLI)
-- Use `chiron tools coverage focus <module>` to list missing lines
-- Use `chiron tools coverage gaps` to surface files with the most missing lines
-- Configure additional gates or profiles in `[tool.chiron.dev_toolbox]` inside `pyproject.toml`
+- Use `hephaestus tools coverage focus <module>` to list missing lines
+- Use `hephaestus tools coverage gaps` to surface files with the most missing lines
+- Configure additional gates or profiles in `[tool.hephaestus.toolkit]` inside `pyproject.toml`
 - Add unit tests for core logic and integration tests for subprocess flows
 - See [DEPS_MODULES_STATUS.md](DEPS_MODULES_STATUS.md) for systematic plan
 
-JSON payloads emitted by `chiron tools qa` now include plan insights (category
+JSON payloads emitted by `hephaestus tools qa` now include plan insights (category
 breakdowns, toggles, and critical gate lists) as well as monitored execution
 reports that highlight failing gates for rapid remediation. When `--monitor`
 is enabled these payloads also describe CLI and service coverage focus areas,
@@ -357,7 +359,7 @@ python3 -c "import tomllib; tomllib.load(open('pyproject.toml', 'rb'))"
 uv run mkdocs build --strict
 
 # Regenerate the Quality Suite snapshot in this guide
-chiron tools qa --profile full --sync-docs docs/QUALITY_GATES.md
+hephaestus tools qa --profile full --sync-docs docs/QUALITY_GATES.md
 ```
 
 **Documentation Structure**:
@@ -375,10 +377,12 @@ chiron tools qa --profile full --sync-docs docs/QUALITY_GATES.md
 **Purpose**: Enforce dependency and workflow policies directly in CI and pre-commit.
 
 **Tools**:
+
 - **OPA (Open Policy Agent)**: Policy engine for declarative policy enforcement
 - **Conftest**: Tool for testing configuration files against OPA policies
 
 **Integration Points**:
+
 - Pre-commit hook: Runs on every commit via `.pre-commit-config.yaml`
 - CI workflow: Policy gate in `.github/workflows/quality-gates.yml`
 - Manual execution: `make policy-check` or `scripts/run_policy_checks.sh`
@@ -397,6 +401,7 @@ bash scripts/install_conftest.sh
 ```
 
 **Policy Examples**:
+
 - SBOM freshness requirements
 - Required signing steps for releases
 - Dependency constraint validation
@@ -409,6 +414,7 @@ bash scripts/install_conftest.sh
 **Purpose**: Detect unused and undeclared dependencies automatically.
 
 **Integration Points**:
+
 - Pre-commit hook: Runs when dependencies change
 - Manual execution: `make deptry`
 
@@ -423,6 +429,7 @@ uv run deptry --config pyproject.toml src/chiron tests
 ```
 
 **What it Checks**:
+
 - Unused dependencies declared in `pyproject.toml`
 - Undeclared dependencies imported in code
 - Transitive dependency issues
@@ -459,6 +466,7 @@ make test-all
 ```
 
 **Benefits**:
+
 - 3-4x faster test execution with parallel workers
 - Early detection of test interdependencies
 - Reproducible test failures via seed tracking

@@ -16,7 +16,7 @@
 - 📊 **Observability**: OpenTelemetry instrumentation with structured logging
 - 🚀 **Service Mode**: FastAPI with auto-generated OpenAPI documentation
 - 🛡️ **Supply Chain Security**: SLSA provenance and reproducible builds
-- 🔧 **Developer Experience**: uv, pre-commit, dev containers, profile-driven `chiron tools qa`
+- 🔧 **Developer Experience**: uv, pre-commit, dev containers, profile-driven `hephaestus tools qa`
 - 🔄 **Environment Sync**: Automatic synchronization between dev and CI environments
 - 📦 **Reproducible Builds**: Binary reproducibility verification and rebuild workflows
 - 🐳 **Offline Deployment**: Container image caching for air-gapped environments
@@ -32,8 +32,10 @@
 - 🔄 **Reproducibility**: Automated reprotest/diffoscope validation
 - 📊 **Observability Sandbox**: Complete local observability stack
 - 🔥 **Chaos Testing**: Chaos Toolkit for resilience validation
-- 🧾 **Documentation Parity**: Auto-sync quality suite docs via `chiron tools qa --sync-docs`
+- 🧾 **Documentation Parity**: Auto-sync quality suite docs via `hephaestus tools qa --sync-docs`
 - 🔧 **Refactoring Tools**: Hotspot analysis (complexity × churn) and code quality insights for prioritizing improvements
+
+> Developer tooling commands (`tools qa`, `tools coverage`, `tools refactor`, `tools docs`) now live in the Hephaestus sister project. Install Hephaestus to continue using them alongside Chiron.
 
 ## 🚀 Quick Start
 
@@ -136,39 +138,39 @@ commands:
 
 ```bash
 # Discover and preview quality profiles before running them
-chiron tools qa --list-profiles
-chiron tools qa --profile fast --explain --dry-run
+hephaestus tools qa --list-profiles
+hephaestus tools qa --profile fast --explain --dry-run
 
 # Run the full suite (tests, lint, typing, security, build) and archive results
-chiron tools qa --profile full --save-report reports/qa.json
+hephaestus tools qa --profile full --save-report reports/qa.json
 
 # Produce machine-readable output or trim to focused gates
-chiron tools qa --profile verify --no-security --json
+hephaestus tools qa --profile verify --no-security --json
 
 # Monitor CLI/service coverage focus areas and capture actionable insights
-chiron tools qa --profile full --monitor --coverage-xml coverage.xml --json
+hephaestus tools qa --profile full --monitor --coverage-xml coverage.xml --json
 
 # Generate an agent-ready quickstart with monitored follow-ups
-chiron tools qa --profile full --guide --monitor --coverage-xml coverage.xml
+hephaestus tools qa --profile full --guide --monitor --coverage-xml coverage.xml
 
 # Exercise Pact contract validation gates alongside the standard suite
-chiron tools qa --profile full --contracts --dry-run
+hephaestus tools qa --profile full --contracts --dry-run
 
 # Synchronise documentation snapshots with the resolved plan
-chiron tools qa --profile full --sync-docs docs/QUALITY_GATES.md
+hephaestus tools qa --profile full --sync-docs docs/QUALITY_GATES.md
 
 # Surface under-tested modules and enforce coverage thresholds
-chiron tools coverage hotspots --threshold 85 --limit 5
-chiron tools coverage gaps --min-statements 40 --limit 3
-chiron tools coverage guard --threshold 90
-chiron tools coverage focus src/chiron/deps/verify.py --lines 5
+hephaestus tools coverage hotspots --threshold 85 --limit 5
+hephaestus tools coverage gaps --min-statements 40 --limit 3
+hephaestus tools coverage guard --threshold 90
+hephaestus tools coverage focus src/chiron/deps/verify.py --lines 5
 
 # Inspect refactor opportunities with structural heuristics and coverage overlays
-chiron tools refactor analyze --json
+hephaestus tools refactor analyze --json
 # → flags long functions, deep complexity, parameter pressure, missing docstrings, TODO markers, and low coverage
 
 # Identify code hotspots by combining complexity and git churn (prioritize refactoring)
-chiron tools refactor hotspots --limit 10 --since "6 months ago"
+hephaestus tools refactor hotspots --limit 10 --since "6 months ago"
 # → ranks files by hotspot score (complexity × churn) to find the best refactoring candidates
 ```
 

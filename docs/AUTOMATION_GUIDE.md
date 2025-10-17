@@ -146,23 +146,27 @@ All workflows in `.github/workflows/`:
 ### Workflow Triggers
 
 #### On Push
+
 - `ci.yml` - All branches
 - `quality-gates.yml` - main, develop
 - `codeql.yml` - main, develop
 - `trivy.yml` - All branches
 
 #### On Pull Request
+
 - `ci.yml` - To main
 - `quality-gates.yml` - To main
 - `diff-cover.yml` - All PRs
 - `docs-lint.yml` - Docs changes
 
 #### On Schedule
+
 - `codeql.yml` - Weekly (Monday)
 - `trivy.yml` - Weekly (Sunday)
 - `reproducibility.yml` - Weekly
 
 #### On Release
+
 - `release.yml` - Version tags
 - `wheels.yml` - Version tags
 
@@ -207,17 +211,17 @@ jobs:
 
 ```bash
 # Run all gates
-chiron tools qa --profile full
+hephaestus tools qa --profile full
 
 # Run specific profile
-chiron tools qa --profile fast    # tests + lint
-chiron tools qa --profile verify  # tests + lint + types
+hephaestus tools qa --profile fast    # tests + lint
+hephaestus tools qa --profile verify  # tests + lint + types
 
 # Dry run (show what would run)
-chiron tools qa --profile full --dry-run
+hephaestus tools qa --profile full --dry-run
 
 # With monitoring
-chiron tools qa --profile full --monitor --coverage-xml coverage.xml
+hephaestus tools qa --profile full --monitor --coverage-xml coverage.xml
 ```
 
 ### Custom Quality Profiles
@@ -310,7 +314,7 @@ Auto-sync quality gates:
 
 ```bash
 # Update documentation with current gates
-chiron tools qa --profile full --sync-docs docs/QUALITY_GATES.md
+hephaestus tools qa --profile full --sync-docs docs/QUALITY_GATES.md
 ```
 
 #### Diátaxis Structure
@@ -319,7 +323,7 @@ Auto-sync documentation structure:
 
 ```bash
 # Update index with Diátaxis sections
-chiron tools docs sync-diataxis --discover
+hephaestus tools docs sync-diataxis --discover
 ```
 
 ### Link Validation
@@ -515,13 +519,13 @@ Track coverage trends:
 
 ```bash
 # Monitor current coverage
-chiron tools coverage guard --threshold 80
+hephaestus tools coverage guard --threshold 80
 
 # Find hotspots
-chiron tools coverage hotspots --threshold 85 --limit 5
+hephaestus tools coverage hotspots --threshold 85 --limit 5
 
 # Identify gaps
-chiron tools coverage gaps --min-statements 40
+hephaestus tools coverage gaps --min-statements 40
 ```
 
 ### Quality Metrics
@@ -530,10 +534,10 @@ Track quality over time:
 
 ```bash
 # Run with monitoring
-chiron tools qa --profile full --monitor --coverage-xml coverage.xml
+hephaestus tools qa --profile full --monitor --coverage-xml coverage.xml
 
 # Generate report
-chiron tools qa --profile full --save-report reports/qa.json
+hephaestus tools qa --profile full --save-report reports/qa.json
 ```
 
 ## Extending Automation
@@ -599,7 +603,7 @@ full = ["tests", "lint", "types", "my-gate"]
 3. Run:
 
 ```bash
-chiron tools qa --profile full
+hephaestus tools qa --profile full
 ```
 
 ## Troubleshooting
@@ -635,13 +639,13 @@ gh workflow run ci.yml
 
 ```bash
 # Run gate individually
-chiron tools qa --profile <profile> --explain
+hephaestus tools qa --profile <profile> --explain
 
 # Show what would run
-chiron tools qa --profile <profile> --dry-run
+hephaestus tools qa --profile <profile> --dry-run
 
 # Check gate configuration
-uv run python -c "from chiron.dev_toolbox import *; print(DEFAULT_QUALITY_GATES)"
+uv run python -c "from hephaestus.toolbox import DEFAULT_QUALITY_GATES; print(DEFAULT_QUALITY_GATES)"
 ```
 
 ## Best Practices
@@ -661,25 +665,25 @@ uv run python -c "from chiron.dev_toolbox import *; print(DEFAULT_QUALITY_GATES)
 
 ## Automation Inventory
 
-| Category | Tool | Trigger | Status |
-|----------|------|---------|--------|
-| **Pre-commit** | Vale | Every commit | ✅ Active |
-| **Pre-commit** | Ruff | Every commit | ✅ Active |
-| **Pre-commit** | Deptry | Every commit | ✅ Active |
-| **Pre-commit** | OPA | Every commit | ✅ Active |
-| **Pre-commit** | MyPy | Pre-push | ✅ Active |
-| **Pre-commit** | Pytest | Pre-push | ✅ Active |
-| **CI** | Multi-OS Tests | Push/PR | ✅ Active |
-| **CI** | Quality Gates | Push/PR | ✅ Active |
-| **CI** | Security Scan | Push/PR | ✅ Active |
-| **CI** | CodeQL | Weekly | ✅ Active |
-| **CI** | Trivy | Weekly | ✅ Active |
-| **CI** | Docs Build | Push/PR | ✅ Active |
-| **CI** | Reproducibility | Weekly | ✅ Active |
-| **CI** | Env Sync | Push | ✅ Active |
-| **Release** | Wheels | Tag | ✅ Active |
-| **Release** | PyPI Publish | Tag | ✅ Active |
-| **Release** | SBOM | Build | ✅ Active |
-| **Release** | Signing | Build | ✅ Active |
+| Category       | Tool            | Trigger      | Status    |
+| -------------- | --------------- | ------------ | --------- |
+| **Pre-commit** | Vale            | Every commit | ✅ Active |
+| **Pre-commit** | Ruff            | Every commit | ✅ Active |
+| **Pre-commit** | Deptry          | Every commit | ✅ Active |
+| **Pre-commit** | OPA             | Every commit | ✅ Active |
+| **Pre-commit** | MyPy            | Pre-push     | ✅ Active |
+| **Pre-commit** | Pytest          | Pre-push     | ✅ Active |
+| **CI**         | Multi-OS Tests  | Push/PR      | ✅ Active |
+| **CI**         | Quality Gates   | Push/PR      | ✅ Active |
+| **CI**         | Security Scan   | Push/PR      | ✅ Active |
+| **CI**         | CodeQL          | Weekly       | ✅ Active |
+| **CI**         | Trivy           | Weekly       | ✅ Active |
+| **CI**         | Docs Build      | Push/PR      | ✅ Active |
+| **CI**         | Reproducibility | Weekly       | ✅ Active |
+| **CI**         | Env Sync        | Push         | ✅ Active |
+| **Release**    | Wheels          | Tag          | ✅ Active |
+| **Release**    | PyPI Publish    | Tag          | ✅ Active |
+| **Release**    | SBOM            | Build        | ✅ Active |
+| **Release**    | Signing         | Build        | ✅ Active |
 
 Last Updated: 2025-01-06

@@ -19,6 +19,7 @@ Chiron uses semantic versioning (MAJOR.MINOR.PATCH):
 ### Current Version
 
 See the latest version in:
+
 - `pyproject.toml` - Source of truth
 - `src/chiron/__init__.py` - Python version string
 - GitHub releases - Tagged releases
@@ -69,7 +70,7 @@ def old_feature():
 
 # Version 0.8.0: Feature deprecated
 def old_feature():
-    warnings.warn("old_feature is deprecated, use new_feature instead", 
+    warnings.warn("old_feature is deprecated, use new_feature instead",
                   DeprecationWarning)
 
 # Version 0.10.0: Still available with warnings
@@ -165,7 +166,7 @@ chiron tools validate-config
 uv run pytest
 
 # Verify quality gates
-chiron tools qa --profile full
+hephaestus tools qa --profile full
 ```
 
 ## Release Process
