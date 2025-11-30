@@ -97,7 +97,7 @@ jobs:
 
       - name: Upload diffoscope report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: reproducibility-report
           path: |

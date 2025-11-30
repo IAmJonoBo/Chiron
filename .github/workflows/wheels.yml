@@ -139,7 +139,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload wheels and attestations
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: wheels-${{ matrix.os }}
           path: |
@@ -172,7 +172,7 @@ jobs:
         run: python -m build --sdist
 
       - name: Upload sdist
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sdist
           path: dist/*.tar.gz
