@@ -78,7 +78,7 @@ services:
 
   # Loki for logs
   loki:
-    image: grafana/loki:3.5.5
+    image: grafana/loki:3.6.2
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
