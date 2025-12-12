@@ -269,7 +269,7 @@ jobs:
           subject-path: airgap-bundles/*.tar.gz
 
       - name: Upload airgap bundle artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: airgap-bundle-${{ github.run_number }}
           path: airgap-bundles/

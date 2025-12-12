@@ -53,7 +53,7 @@ jobs:
           cd dist && echo "hashes=$(sha256sum * | base64 -w0)" >> "$GITHUB_OUTPUT"
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: python-package-distributions
           path: dist/
@@ -88,7 +88,7 @@ jobs:
           CIBW_BUILD_VERBOSITY: 1
 
       - name: Upload wheel artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: wheels-${{ matrix.os }}
           path: wheelhouse/*.whl
@@ -115,7 +115,7 @@ jobs:
 
     steps:
       - name: Download distributions
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           pattern: "*"
           merge-multiple: true
@@ -147,7 +147,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload signed artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: signed-distributions
           path: dist/
@@ -164,13 +164,13 @@ jobs:
 
     steps:
       - name: Download distributions
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: python-package-distributions
           path: dist/
 
       - name: Download wheels
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           pattern: "wheels-*"
           merge-multiple: true
@@ -190,14 +190,14 @@ jobs:
 
     steps:
       - name: Download distributions
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           pattern: "*"
           merge-multiple: true
           path: dist/
 
       - name: Download provenance
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: ${{ needs.provenance.outputs.provenance-name }}
           path: dist/
@@ -234,7 +234,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           pattern: "*"
           merge-multiple: true
@@ -260,7 +260,7 @@ jobs:
           tar czf ../chiron-wheelhouse-$(date +%Y%m%d).tar.gz .
 
       - name: Upload wheelhouse
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: wheelhouse-bundle
           path: chiron-wheelhouse-*.tar.gz
