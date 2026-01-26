@@ -65,7 +65,7 @@ services:
 
   # Grafana Tempo for traces
   tempo:
-    image: grafana/tempo:2.9.0
+    image: grafana/tempo:2.10.0
     command: ["-config.file=/etc/tempo.yaml"]
     volumes:
       - ./tempo.yaml:/etc/tempo.yaml
